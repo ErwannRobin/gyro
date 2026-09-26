@@ -138,6 +138,9 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 .seg button.on{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
 #modeSeg{margin-top:20px}
 #modeSeg button{min-width:128px;min-height:44px;font-size:13px}
+#tgKid{margin-top:10px}
+#tgKid:not(.off){color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold));border-color:transparent}
+#ovRails{margin-top:10px;padding:6px 14px;border-radius:12px;font-size:13px;font-weight:800;letter-spacing:.06em;color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold))}
 #modeInfo{margin-top:8px;font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.04em;min-height:16px;text-shadow:0 2px 6px #000}
 .tgRow{display:flex;gap:8px}
 .tg{min-height:44px;padding:0 13px;border-radius:14px;background:var(--glass);border:1px solid var(--glass-brd);display:inline-flex;align-items:center;gap:7px;
@@ -262,6 +265,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     <div id="tagline">How far can you go?</div>
     <div class="seg" id="modeSeg"><button data-mode="random" data-i18n="modeRandom"></button><button data-mode="daily" data-i18n="modeDaily"></button></div>
     <div id="modeInfo"></div>
+    <button class="tg" id="tgKid"><span class="ic">🛡</span><span data-i18n="kid"></span></button>
     <div id="menuBest">BEST <span class="num" id="mBest">0 m</span></div>
   </div>
   <div class="mcol" id="mRight">
@@ -293,6 +297,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 <div class="screen hidden" id="over">
   <h2 data-i18n="gameOver"></h2>
   <div id="ovMode"></div>
+  <div id="ovRails" class="hidden"></div>
   <div id="record" class="hidden"><div class="rays"></div><div class="txt" data-i18n="newRecord"></div></div>
   <div id="ovDist" class="num">0<small>m</small></div>
   <div id="ovScore" class="num">SCORE 0</div>

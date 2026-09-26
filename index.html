@@ -138,6 +138,9 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 .seg button.on{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
 #modeSeg{margin-top:20px}
 #modeSeg button{min-width:128px;min-height:44px;font-size:13px}
+#tgKid{margin-top:10px}
+#tgKid:not(.off){color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold));border-color:transparent}
+#ovRails{margin-top:10px;padding:6px 14px;border-radius:12px;font-size:13px;font-weight:800;letter-spacing:.06em;color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold))}
 #modeInfo{margin-top:8px;font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.04em;min-height:16px;text-shadow:0 2px 6px #000}
 .tgRow{display:flex;gap:8px}
 .tg{min-height:44px;padding:0 13px;border-radius:14px;background:var(--glass);border:1px solid var(--glass-brd);display:inline-flex;align-items:center;gap:7px;
@@ -262,6 +265,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     <div id="tagline">How far can you go?</div>
     <div class="seg" id="modeSeg"><button data-mode="random" data-i18n="modeRandom"></button><button data-mode="daily" data-i18n="modeDaily"></button></div>
     <div id="modeInfo"></div>
+    <button class="tg" id="tgKid"><span class="ic">🛡</span><span data-i18n="kid"></span></button>
     <div id="menuBest">BEST <span class="num" id="mBest">0 m</span></div>
   </div>
   <div class="mcol" id="mRight">
@@ -293,6 +297,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 <div class="screen hidden" id="over">
   <h2 data-i18n="gameOver"></h2>
   <div id="ovMode"></div>
+  <div id="ovRails" class="hidden"></div>
   <div id="record" class="hidden"><div class="rays"></div><div class="txt" data-i18n="newRecord"></div></div>
   <div id="ovDist" class="num">0<small>m</small></div>
   <div id="ovScore" class="num">SCORE 0</div>
@@ -496,6 +501,7 @@ const I18N = {
     touchHint: 'Glissez le doigt pour guider la bille', keysHint: 'Flèches / WASD / ZQSD · ou glisser à la souris',
     permDenied: 'Accès au gyroscope refusé — contrôle tactile activé.', permNone: 'Gyroscope indisponible — contrôle tactile activé.',
     ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TACTILE', ctrlKeys: 'CLAVIER', record: 'NOUVEAU RECORD !', dailyTag: 'DÉFI DU JOUR · {date}', randomTag: 'PARTIE ALÉATOIRE',
+    kid: 'MODE ENFANT · RAILS LATÉRAUX', kidInfo: 'Des petits rails rattrapent la bille sur les côtés', kidBadge: '🛡 Réalisé avec les rails latéraux', kidShare: 'avec les rails latéraux', kidTag: 'RAILS',
     install: 'INSTALLER L’APPLI', iosInstall: 'Touchez Partager ⎋ puis « Sur l’écran d’accueil ».',
     noGL: 'WebGL est indisponible sur cet appareil / navigateur. Activez l’accélération matérielle ou essayez un Chrome / Safari récent.',
   },
@@ -510,6 +516,7 @@ const I18N = {
     touchHint: 'Drag your finger to steer the ball', keysHint: 'Arrows / WASD · or drag with the mouse',
     permDenied: 'Gyroscope access denied — touch control enabled.', permNone: 'Gyroscope unavailable — touch control enabled.',
     ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TOUCH', ctrlKeys: 'KEYBOARD', record: 'NEW RECORD!', dailyTag: 'DAILY RUN · {date}', randomTag: 'RANDOM RUN',
+    kid: 'KID MODE · SIDE RAILS', kidInfo: 'Small rails catch the ball on the sides', kidBadge: '🛡 Achieved with side rails on', kidShare: 'with side rails on', kidTag: 'RAILS',
     install: 'INSTALL THE APP', iosInstall: 'Tap Share ⎋, then “Add to Home Screen”.',
     noGL: 'WebGL is not available on this device / browser. Enable hardware acceleration or try a recent Chrome / Safari.',
   },
@@ -1589,7 +1596,7 @@ const TrackMesher = {
     if (j < T.minIndex() || j >= T.n - 1) return false;
     return T.solidAt(j, 0.5, u) >= 0;
   },
-  build(T, c) {
+  build(T, c, kid) {
     const CR = CFG.CHUNK_ROWS, DS = CFG.DS, TH = CFG.THICK, RIM = 0.05, RW = 0.09, M = T.mask;
     const mb = new MeshBuilder(CR * 110);
     const i0 = c * CR;
@@ -1654,8 +1661,15 @@ const TrackMesher = {
             mb.strut(e, t, 0.03);
           }
         };
-        if ((flags & RF.RAIL_L) && ao) rail(a0, a1, -1);
-        if ((flags & RF.RAIL_R) && bo) rail(b0, b1, 1);
+        // kid mode: a small glowing bumper on every outer edge that has no real rail
+        const kidRail = (u0, u1, sg) => {
+          mb.M[0] = 7; mb.M[3] = 0.7;
+          const o0 = u0 - sg * 0.01, o1 = u1 - sg * 0.01, q0 = u0 - sg * 0.1, q1 = u1 - sg * 0.1;
+          mb.hexa([P(fA, o0, 0.04), P(fA, q0, 0.04), P(fB, q1, 0.04), P(fB, o1, 0.04), P(fA, o0, 0.2), P(fA, q0, 0.2), P(fB, q1, 0.2), P(fB, o1, 0.2)]);
+          mb.M[3] = 1;
+        };
+        if ((flags & RF.RAIL_L) && ao) rail(a0, a1, -1); else if (kid && ao) kidRail(a0, a1, -1);
+        if ((flags & RF.RAIL_R) && bo) rail(b0, b1, 1); else if (kid && bo) kidRail(b0, b1, 1);
       }
       // under-structure
       if (n > 0) {
@@ -2317,7 +2331,7 @@ class Physics {
   }
 
   rails(b, L) {
-    const T = this.T, m = L.i & T.mask, f = T.rowF[m];
+    const T = this.T, m = L.i & T.mask, f = T.rowF[m] | (this.kid ? RF.RAIL_L | RF.RAIL_R : 0);
     if (!(f & (RF.RAIL_L | RF.RAIL_R)) || b.p[1] > b.surfY + 1.2) return;
     const hw = L.w / 2 - 0.1, R = CFG.R;
     const n = T.rowN[m]; if (!n) return;
@@ -3133,7 +3147,7 @@ class UI {
       hud: $('hud'), dist: $('hDist'), score: $('hScore'), best: $('hBest'), speed: $('hSpeed'), bar: $('hSpeedBar'), mult: $('mult'),
       ctrl: $('ctrlTag'), toasts: $('toasts'), danger: $('danger'), flash: $('flash'), menu: $('menu'), calib: $('calib'),
       calibNum: $('calibNum'), calibTxt: $('calibTxt'), calibSub: $('calibSub'), go: $('go'), pause: $('pause'), over: $('over'),
-      record: $('record'), ovDist: $('ovDist'), ovScore: $('ovScore'), ovBest: $('ovBest'), ovMode: $('ovMode'), mBest: $('mBest'), perm: $('permMsg'),
+      record: $('record'), ovDist: $('ovDist'), ovScore: $('ovScore'), ovBest: $('ovBest'), ovMode: $('ovMode'), ovRails: $('ovRails'), mBest: $('mBest'), perm: $('permMsg'),
       btnTilt: $('btnTilt'), btnTouch: $('btnTouch'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), share: $('btnShare'), recal: $('btnRecal'),
     };
     this.cache = {};
@@ -3434,6 +3448,7 @@ class Game {
     let qm;
     try { qm = new URLSearchParams(location.search).get('mode'); } catch (e) { qm = null; }
     this.gameMode = (qm === 'daily' || qm === 'random' ? qm : Store.get('mode', 'random')) === 'daily' ? 'daily' : 'random';
+    this.kid = Store.get('kid', false) === true;
     this.best = this.modeBest();
     this.bestScore = Math.max(0, +Store.get('bestScore', 0) || 0);
     this.state = 'menu'; this.time = 0; this.timeScale = 1; this.acc = 0; this.used = false; this.mode = 'touch';
@@ -3459,6 +3474,7 @@ class Game {
     const U = this.ui, E = U.el, $ = U.$;
     const tap = (el, fn) => el.addEventListener('click', (e) => { e.preventDefault(); fn(e); });
     for (const b of document.querySelectorAll('#langSeg button')) tap(b, () => { LANG = b.dataset.lang; Store.set('lang', LANG); this.refreshTexts(); this.audio.tick(); });
+    tap($('tgKid'), () => { if (this.state === 'menu') { this.setKid(!this.kid); this.audio.tick(); } });
     for (const b of document.querySelectorAll('#modeSeg button')) tap(b, () => { if (this.state === 'menu' && b.dataset.mode !== this.gameMode) { this.setGameMode(b.dataset.mode); this.audio.tick(); } });
     const toggles = () => U.setToggles(this.audio.musicOn, this.audio.sfxOn);
     for (const b of document.querySelectorAll('.tgMusic')) tap(b, () => { this.audio.init(); this.audio.setMusic(!this.audio.musicOn); toggles(); });
@@ -3517,6 +3533,8 @@ class Game {
     E.btnTilt.textContent = tr(this.mobile ? 'playGyro' : 'play');
     U.setMode(this.gameMode, this.gameMode === 'daily' ? tr('infoDaily', { date: dayLabel(dayKey()) }) : tr('infoRandom'));
     E.mBest.textContent = fmt(this.modeBest()) + ' m';
+    const kb = U.$('tgKid'); kb.classList.toggle('off', !this.kid); kb.title = tr('kidInfo');
+    if (this.kid) E.modeInfo.textContent += ' · ' + tr('kidInfo');
     if (this.shareSt) U.shareState(this.shareSt, this.shareP || 0);
   }
   // ------------------------------------------------------------- game modes
@@ -3525,13 +3543,21 @@ class Game {
     this.best = this.modeBest(); this.refreshTexts();
     this.newWorld(); this.used = false;
   }
+  // Kid mode (side rails) keeps its own records so they never mix with real ones.
+  setKid(on) {
+    this.kid = !!on; Store.set('kid', this.kid);
+    this.best = this.modeBest(); this.refreshTexts();
+    this.newWorld(); this.used = false;
+  }
   modeBest() {
-    if (this.gameMode === 'daily') { const d = Store.get('daily', null); return d && d.day === dayKey() ? Math.max(0, +d.best || 0) : 0; }
-    return Math.max(0, +Store.get('bestDist', 0) || 0);
+    const k = this.kid ? '_kid' : '';
+    if (this.gameMode === 'daily') { const d = Store.get('daily' + k, null); return d && d.day === dayKey() ? Math.max(0, +d.best || 0) : 0; }
+    return Math.max(0, +Store.get('bestDist' + k, 0) || 0);
   }
   saveBest(dist) {
-    if (this.gameMode === 'daily') Store.set('daily', { day: this.runDay, best: dist });
-    else Store.set('bestDist', dist);
+    const k = this.kid ? '_kid' : '';
+    if (this.gameMode === 'daily') Store.set('daily' + k, { day: this.runDay, best: dist });
+    else Store.set('bestDist' + k, dist);
   }
   runSeed() {
     if (this.gameMode === 'daily') { this.runDay = dayKey(); return dailySeed(this.runDay); }
@@ -3585,7 +3611,7 @@ class Game {
     this.track.pointAt(CFG.START_S, 0, CFG.R, this.tmp);
     b.p[0] = this.tmp[0]; b.p[1] = this.tmp[1]; b.p[2] = this.tmp[2]; b.hint = Math.floor(CFG.START_S / CFG.DS);
     const L = this.track.locate(b.p[0], b.p[2], b.hint); b.s = L.s; b.u = L.u; b.surfY = this.tmp[1] - CFG.R;
-    this.physics.collapseS = this.collapseS = -1e9; this.physics.time = 0;
+    this.physics.collapseS = this.collapseS = -1e9; this.physics.kid = this.kid; this.physics.time = 0;
     this.startS = b.s; this.maxS = b.s; this.score = 0; this.dist = 0; this.mult = 1; this.recordShown = false;
     this.danger = 0; this.timeScale = 1; this.acc = 0; this.runT = 0;
     this.parts.clear();
@@ -3602,7 +3628,7 @@ class Game {
     while ((this.nextChunk + 1) * CR + 1 < T.n && built < maxBuild) {
       const c = this.nextChunk++;
       if ((c + 1) * CR * CFG.DS < b.s - CFG.BEHIND || c * CR < T.minIndex()) continue;
-      const res = TrackMesher.build(T, c);
+      const res = TrackMesher.build(T, c, this.kid);
       this.chunks.set(c, { mesh: this.R.upload(res.mb), cx: res.cx, cy: res.cy, cz: res.cz, rad: res.rad, sEnd: res.sEnd });
       built++;
     }
@@ -3619,7 +3645,7 @@ class Game {
     this.best = this.modeBest();
     U.show('menu', false); U.show('over', false); U.show('pause', false);
     U.hud(true);
-    U.el.ctrl.textContent = tr(mode === 'tilt' ? 'ctrlTilt' : mode === 'keys' ? 'ctrlKeys' : 'ctrlTouch');
+    U.el.ctrl.textContent = tr(mode === 'tilt' ? 'ctrlTilt' : mode === 'keys' ? 'ctrlKeys' : 'ctrlTouch') + (this.kid ? ' · 🛡 ' + tr('kidTag') : '');
     E.recal.classList.toggle('hidden', mode !== 'tilt');
     this.input.enabled = true; this.input.release();
     this.cam.mode = 'follow';
@@ -3630,7 +3656,7 @@ class Game {
       clearTimeout(this.hintT); this.hintT = setTimeout(() => { U.el.touchHint.style.opacity = 0; }, 3500);
     } else U.el.touchHint.classList.add('hidden');
     this.lockWake();
-    Analytics.event('run_start', { mode: this.gameMode, control: mode });
+    Analytics.event('run_start', { mode: this.gameMode, control: mode, kid: this.kid });
   }
   beginCountdown(calibrate, dur) {
     this.state = 'calib'; this.calibT = 0; this.calibDur = dur; this.calibrating = calibrate; this.lastNum = -1;
@@ -3695,7 +3721,8 @@ class Game {
     E.ovScore.textContent = 'SCORE ' + fmt(score);
     E.ovBest.textContent = 'BEST '; const bb = document.createElement('b'); bb.textContent = fmt(this.best) + ' m'; E.ovBest.appendChild(bb);
     this.prepareShare(record);
-    Analytics.event('game_over', { mode: this.gameMode, control: this.mode, zone: ZONES[zoneAt(CFG.START_S + dist)].id, meters: Math.floor(dist / 50) * 50, record: !!record });
+    Analytics.event('game_over', { mode: this.gameMode, control: this.mode, zone: ZONES[zoneAt(CFG.START_S + dist)].id, meters: Math.floor(dist / 50) * 50, record: !!record, kid: this.kid });
+    E.ovRails.textContent = tr('kidBadge'); E.ovRails.classList.toggle('hidden', !this.kid);
     E.ovMode.textContent = this.gameMode === 'daily' ? tr('dailyTag', { date: dayLabel(this.runDay || dayKey()) }) : tr('randomTag');
     E.record.classList.add('hidden');
     U.hud(false); U.el.danger.style.opacity = 0; U.cache.dg = '0.00';
@@ -3982,7 +4009,7 @@ class Game {
     const th = TRACK_THEMES[this.themeIdx], css = (c) => `rgb(${c.map((v) => Math.round(v * 255)).join(',')})`;
     const info = {
       dist: Math.floor(this.dist), score: Math.floor(this.score), best: Math.floor(this.best), record, recordTxt: tr('newRecord'),
-      tag: this.gameMode === 'daily' ? tr('dailyTag', { date: dayLabel(this.runDay || dayKey()) }) : '',
+      tag: [this.gameMode === 'daily' ? tr('dailyTag', { date: dayLabel(this.runDay || dayKey()) }) : '', this.kid ? '🛡 ' + tr('kidShare').toUpperCase() : ''].filter(Boolean).join(' · '),
       accent: css(th.accent), accent2: css(th.accent2), portrait: this.R.h >= this.R.w,
     };
     this.shareInfo = info; this.shareFile = null; this.setShare('busy', 0);
@@ -4001,6 +4028,7 @@ class Game {
     const url = PROD_URL + (this.gameMode === 'daily' ? '?mode=daily' : '');
     let text = tr('shareText', { d: fmt(info.dist), s: fmt(info.score) });
     if (this.gameMode === 'daily') text += ' — ' + tr('shareDaily', { date: dayLabel(this.runDay || dayKey()) });
+    if (this.kid) text += ' (🛡 ' + tr('kidShare') + ')';
     text += ' ' + url;
     let canFiles;
     try { canFiles = !!(f && navigator.canShare && navigator.canShare({ files: [f] })); } catch (e) { canFiles = false; }

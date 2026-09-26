@@ -29,6 +29,7 @@ The whole game is **one self-contained `index.html` file** (about 230 KB): HTML,
 - **Two game modes:**
   - **Random**: a new track every run.
   - **Daily run**: everyone gets the same track on the same day. The seed comes from the UTC date, and the daily best is saved separately. The link `?mode=daily` opens the daily run directly.
+- **Kid mode (side rails).** A menu toggle adds small glowing rails along both edges of the track, so the ball bounces back instead of falling off the side. Holes and gaps still count. Kid-mode runs keep their own best scores, and the game over screen, the share text and the share video all say "with side rails".
 - **Five worlds** that change every 500 m and blend smoothly into each other:
   - **Tech** (0–500 m): towers with lit windows, beacons, a glowing grid below
   - **Landscape** (500–1000 m): sunset, floating rock islands, mountains, a sea of clouds

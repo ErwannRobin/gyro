@@ -94,7 +94,7 @@ class Physics {
   }
 
   rails(b, L) {
-    const T = this.T, m = L.i & T.mask, f = T.rowF[m];
+    const T = this.T, m = L.i & T.mask, f = T.rowF[m] | (this.kid ? RF.RAIL_L | RF.RAIL_R : 0);
     if (!(f & (RF.RAIL_L | RF.RAIL_R)) || b.p[1] > b.surfY + 1.2) return;
     const hw = L.w / 2 - 0.1, R = CFG.R;
     const n = T.rowN[m]; if (!n) return;

@@ -32,6 +32,7 @@ class Game {
     let qm;
     try { qm = new URLSearchParams(location.search).get('mode'); } catch (e) { qm = null; }
     this.gameMode = (qm === 'daily' || qm === 'random' ? qm : Store.get('mode', 'random')) === 'daily' ? 'daily' : 'random';
+    this.kid = Store.get('kid', false) === true;
     this.best = this.modeBest();
     this.bestScore = Math.max(0, +Store.get('bestScore', 0) || 0);
     this.state = 'menu'; this.time = 0; this.timeScale = 1; this.acc = 0; this.used = false; this.mode = 'touch';
@@ -57,6 +58,7 @@ class Game {
     const U = this.ui, E = U.el, $ = U.$;
     const tap = (el, fn) => el.addEventListener('click', (e) => { e.preventDefault(); fn(e); });
     for (const b of document.querySelectorAll('#langSeg button')) tap(b, () => { LANG = b.dataset.lang; Store.set('lang', LANG); this.refreshTexts(); this.audio.tick(); });
+    tap($('tgKid'), () => { if (this.state === 'menu') { this.setKid(!this.kid); this.audio.tick(); } });
     for (const b of document.querySelectorAll('#modeSeg button')) tap(b, () => { if (this.state === 'menu' && b.dataset.mode !== this.gameMode) { this.setGameMode(b.dataset.mode); this.audio.tick(); } });
     const toggles = () => U.setToggles(this.audio.musicOn, this.audio.sfxOn);
     for (const b of document.querySelectorAll('.tgMusic')) tap(b, () => { this.audio.init(); this.audio.setMusic(!this.audio.musicOn); toggles(); });
@@ -115,6 +117,8 @@ class Game {
     E.btnTilt.textContent = tr(this.mobile ? 'playGyro' : 'play');
     U.setMode(this.gameMode, this.gameMode === 'daily' ? tr('infoDaily', { date: dayLabel(dayKey()) }) : tr('infoRandom'));
     E.mBest.textContent = fmt(this.modeBest()) + ' m';
+    const kb = U.$('tgKid'); kb.classList.toggle('off', !this.kid); kb.title = tr('kidInfo');
+    if (this.kid) E.modeInfo.textContent += ' · ' + tr('kidInfo');
     if (this.shareSt) U.shareState(this.shareSt, this.shareP || 0);
   }
   // ------------------------------------------------------------- game modes
@@ -123,13 +127,21 @@ class Game {
     this.best = this.modeBest(); this.refreshTexts();
     this.newWorld(); this.used = false;
   }
+  // Kid mode (side rails) keeps its own records so they never mix with real ones.
+  setKid(on) {
+    this.kid = !!on; Store.set('kid', this.kid);
+    this.best = this.modeBest(); this.refreshTexts();
+    this.newWorld(); this.used = false;
+  }
   modeBest() {
-    if (this.gameMode === 'daily') { const d = Store.get('daily', null); return d && d.day === dayKey() ? Math.max(0, +d.best || 0) : 0; }
-    return Math.max(0, +Store.get('bestDist', 0) || 0);
+    const k = this.kid ? '_kid' : '';
+    if (this.gameMode === 'daily') { const d = Store.get('daily' + k, null); return d && d.day === dayKey() ? Math.max(0, +d.best || 0) : 0; }
+    return Math.max(0, +Store.get('bestDist' + k, 0) || 0);
   }
   saveBest(dist) {
-    if (this.gameMode === 'daily') Store.set('daily', { day: this.runDay, best: dist });
-    else Store.set('bestDist', dist);
+    const k = this.kid ? '_kid' : '';
+    if (this.gameMode === 'daily') Store.set('daily' + k, { day: this.runDay, best: dist });
+    else Store.set('bestDist' + k, dist);
   }
   runSeed() {
     if (this.gameMode === 'daily') { this.runDay = dayKey(); return dailySeed(this.runDay); }
@@ -183,7 +195,7 @@ class Game {
     this.track.pointAt(CFG.START_S, 0, CFG.R, this.tmp);
     b.p[0] = this.tmp[0]; b.p[1] = this.tmp[1]; b.p[2] = this.tmp[2]; b.hint = Math.floor(CFG.START_S / CFG.DS);
     const L = this.track.locate(b.p[0], b.p[2], b.hint); b.s = L.s; b.u = L.u; b.surfY = this.tmp[1] - CFG.R;
-    this.physics.collapseS = this.collapseS = -1e9; this.physics.time = 0;
+    this.physics.collapseS = this.collapseS = -1e9; this.physics.kid = this.kid; this.physics.time = 0;
     this.startS = b.s; this.maxS = b.s; this.score = 0; this.dist = 0; this.mult = 1; this.recordShown = false;
     this.danger = 0; this.timeScale = 1; this.acc = 0; this.runT = 0;
     this.parts.clear();
@@ -200,7 +212,7 @@ class Game {
     while ((this.nextChunk + 1) * CR + 1 < T.n && built < maxBuild) {
       const c = this.nextChunk++;
       if ((c + 1) * CR * CFG.DS < b.s - CFG.BEHIND || c * CR < T.minIndex()) continue;
-      const res = TrackMesher.build(T, c);
+      const res = TrackMesher.build(T, c, this.kid);
       this.chunks.set(c, { mesh: this.R.upload(res.mb), cx: res.cx, cy: res.cy, cz: res.cz, rad: res.rad, sEnd: res.sEnd });
       built++;
     }
@@ -217,7 +229,7 @@ class Game {
     this.best = this.modeBest();
     U.show('menu', false); U.show('over', false); U.show('pause', false);
     U.hud(true);
-    U.el.ctrl.textContent = tr(mode === 'tilt' ? 'ctrlTilt' : mode === 'keys' ? 'ctrlKeys' : 'ctrlTouch');
+    U.el.ctrl.textContent = tr(mode === 'tilt' ? 'ctrlTilt' : mode === 'keys' ? 'ctrlKeys' : 'ctrlTouch') + (this.kid ? ' · 🛡 ' + tr('kidTag') : '');
     E.recal.classList.toggle('hidden', mode !== 'tilt');
     this.input.enabled = true; this.input.release();
     this.cam.mode = 'follow';
@@ -228,7 +240,7 @@ class Game {
       clearTimeout(this.hintT); this.hintT = setTimeout(() => { U.el.touchHint.style.opacity = 0; }, 3500);
     } else U.el.touchHint.classList.add('hidden');
     this.lockWake();
-    Analytics.event('run_start', { mode: this.gameMode, control: mode });
+    Analytics.event('run_start', { mode: this.gameMode, control: mode, kid: this.kid });
   }
   beginCountdown(calibrate, dur) {
     this.state = 'calib'; this.calibT = 0; this.calibDur = dur; this.calibrating = calibrate; this.lastNum = -1;
@@ -293,7 +305,8 @@ class Game {
     E.ovScore.textContent = 'SCORE ' + fmt(score);
     E.ovBest.textContent = 'BEST '; const bb = document.createElement('b'); bb.textContent = fmt(this.best) + ' m'; E.ovBest.appendChild(bb);
     this.prepareShare(record);
-    Analytics.event('game_over', { mode: this.gameMode, control: this.mode, zone: ZONES[zoneAt(CFG.START_S + dist)].id, meters: Math.floor(dist / 50) * 50, record: !!record });
+    Analytics.event('game_over', { mode: this.gameMode, control: this.mode, zone: ZONES[zoneAt(CFG.START_S + dist)].id, meters: Math.floor(dist / 50) * 50, record: !!record, kid: this.kid });
+    E.ovRails.textContent = tr('kidBadge'); E.ovRails.classList.toggle('hidden', !this.kid);
     E.ovMode.textContent = this.gameMode === 'daily' ? tr('dailyTag', { date: dayLabel(this.runDay || dayKey()) }) : tr('randomTag');
     E.record.classList.add('hidden');
     U.hud(false); U.el.danger.style.opacity = 0; U.cache.dg = '0.00';
@@ -580,7 +593,7 @@ class Game {
     const th = TRACK_THEMES[this.themeIdx], css = (c) => `rgb(${c.map((v) => Math.round(v * 255)).join(',')})`;
     const info = {
       dist: Math.floor(this.dist), score: Math.floor(this.score), best: Math.floor(this.best), record, recordTxt: tr('newRecord'),
-      tag: this.gameMode === 'daily' ? tr('dailyTag', { date: dayLabel(this.runDay || dayKey()) }) : '',
+      tag: [this.gameMode === 'daily' ? tr('dailyTag', { date: dayLabel(this.runDay || dayKey()) }) : '', this.kid ? '🛡 ' + tr('kidShare').toUpperCase() : ''].filter(Boolean).join(' · '),
       accent: css(th.accent), accent2: css(th.accent2), portrait: this.R.h >= this.R.w,
     };
     this.shareInfo = info; this.shareFile = null; this.setShare('busy', 0);
@@ -599,6 +612,7 @@ class Game {
     const url = PROD_URL + (this.gameMode === 'daily' ? '?mode=daily' : '');
     let text = tr('shareText', { d: fmt(info.dist), s: fmt(info.score) });
     if (this.gameMode === 'daily') text += ' — ' + tr('shareDaily', { date: dayLabel(this.runDay || dayKey()) });
+    if (this.kid) text += ' (🛡 ' + tr('kidShare') + ')';
     text += ' ' + url;
     let canFiles;
     try { canFiles = !!(f && navigator.canShare && navigator.canShare({ files: [f] })); } catch (e) { canFiles = false; }

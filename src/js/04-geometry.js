@@ -186,7 +186,7 @@ const TrackMesher = {
     if (j < T.minIndex() || j >= T.n - 1) return false;
     return T.solidAt(j, 0.5, u) >= 0;
   },
-  build(T, c) {
+  build(T, c, kid) {
     const CR = CFG.CHUNK_ROWS, DS = CFG.DS, TH = CFG.THICK, RIM = 0.05, RW = 0.09, M = T.mask;
     const mb = new MeshBuilder(CR * 110);
     const i0 = c * CR;
@@ -251,8 +251,15 @@ const TrackMesher = {
             mb.strut(e, t, 0.03);
           }
         };
-        if ((flags & RF.RAIL_L) && ao) rail(a0, a1, -1);
-        if ((flags & RF.RAIL_R) && bo) rail(b0, b1, 1);
+        // kid mode: a small glowing bumper on every outer edge that has no real rail
+        const kidRail = (u0, u1, sg) => {
+          mb.M[0] = 7; mb.M[3] = 0.7;
+          const o0 = u0 - sg * 0.01, o1 = u1 - sg * 0.01, q0 = u0 - sg * 0.1, q1 = u1 - sg * 0.1;
+          mb.hexa([P(fA, o0, 0.04), P(fA, q0, 0.04), P(fB, q1, 0.04), P(fB, o1, 0.04), P(fA, o0, 0.2), P(fA, q0, 0.2), P(fB, q1, 0.2), P(fB, o1, 0.2)]);
+          mb.M[3] = 1;
+        };
+        if ((flags & RF.RAIL_L) && ao) rail(a0, a1, -1); else if (kid && ao) kidRail(a0, a1, -1);
+        if ((flags & RF.RAIL_R) && bo) rail(b0, b1, 1); else if (kid && bo) kidRail(b0, b1, 1);
       }
       // under-structure
       if (n > 0) {

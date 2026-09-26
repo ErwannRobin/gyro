@@ -43,7 +43,7 @@ class UI {
       hud: $('hud'), dist: $('hDist'), score: $('hScore'), best: $('hBest'), speed: $('hSpeed'), bar: $('hSpeedBar'), mult: $('mult'),
       ctrl: $('ctrlTag'), toasts: $('toasts'), danger: $('danger'), flash: $('flash'), menu: $('menu'), calib: $('calib'),
       calibNum: $('calibNum'), calibTxt: $('calibTxt'), calibSub: $('calibSub'), go: $('go'), pause: $('pause'), over: $('over'),
-      record: $('record'), ovDist: $('ovDist'), ovScore: $('ovScore'), ovBest: $('ovBest'), ovMode: $('ovMode'), mBest: $('mBest'), perm: $('permMsg'),
+      record: $('record'), ovDist: $('ovDist'), ovScore: $('ovScore'), ovBest: $('ovBest'), ovMode: $('ovMode'), ovRails: $('ovRails'), mBest: $('mBest'), perm: $('permMsg'),
       btnTilt: $('btnTilt'), btnTouch: $('btnTouch'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), share: $('btnShare'), recal: $('btnRecal'),
     };
     this.cache = {};
