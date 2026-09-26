@@ -6,9 +6,14 @@ GYROLL is an endless 3D marble game for your phone. Tilt the phone to roll a hea
 
 **▶ Play: [gyroll.vercel.app](https://gyroll.vercel.app/)** (best on a phone)
 
+[![CI](https://github.com/ErwannRobin/gyro/actions/workflows/ci.yml/badge.svg)](https://github.com/ErwannRobin/gyro/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 ![The five worlds of GYROLL](docs/worlds.jpg)
 
-The whole game is **one self-contained `index.html` file** (about 230 KB): HTML, CSS, JavaScript, GLSL shaders and synthesized audio. It uses no libraries, no build step, no network requests and no external assets.
+The whole game is **one self-contained `index.html` file** (about 230 KB): HTML, CSS, JavaScript, GLSL shaders and synthesized audio.
+- It uses no libraries and no external assets, and it needs no network to play.
+- It is assembled from readable source files in [`src/`](src) by a tiny build script that has no dependencies.
+- A few optional files next to it make it installable and nice to share: icons, a manifest, a service worker and a preview image.
 
 ---
 
@@ -45,7 +50,9 @@ The whole game is **one self-contained `index.html` file** (about 230 KB): HTML,
   - portrait first, landscape supported
   - no scrolling or zooming, large touch targets, readable in sunlight
   - screen stays awake while playing, pauses on focus loss
-- **Adaptive quality.** Resolution, bloom, particles and scenery density adjust automatically to hold the frame rate.
+- **Adaptive quality.** Resolution, bloom, particles and scenery density adjust automatically to hold the frame rate. Repeated scenery is drawn with GPU instancing: about 35 draw calls per frame instead of about 105.
+- **Installable app (PWA).** Add GYROLL to your home screen. It then opens full screen, locked in portrait so the screen does not rotate while you tilt, and it works offline.
+- **Nice link previews.** Shared links show a preview image and a description.
 
 ## Screenshots
 
@@ -78,30 +85,75 @@ The whole game is **one self-contained `index.html` file** (about 230 KB): HTML,
 
 ## Run it locally
 
-Desktop: just open `index.html` in a recent Chrome, Edge, Firefox or Safari.
+- **Quick:** open `index.html` in a recent Chrome, Edge, Firefox or Safari on your computer.
+- **With a local server** (needed for the installable app and offline mode):
 
-Phone: motion sensors only work on **HTTPS** pages, so you need a hosted copy (see below). On plain HTTP the game still works, but falls back to touch control.
+  ```sh
+  npm run serve        # http://127.0.0.1:4173/ (no install needed, Node 20+)
+  ```
 
-To serve the folder locally:
+- **On a phone:** motion sensors only work on **HTTPS** pages, so use a hosted copy (see below). On plain HTTP the game still works, but falls back to touch control.
+
+## Development
+
+```
+src/shell.html        page markup + CSS (the <head> and screens)
+src/js/01-core.js     math, i18n, themes, world zones, daily seed, analytics
+src/js/02-track.js    track storage + procedural generator
+src/js/03-shaders.js  all GLSL shaders
+src/js/04-…11-*.js    geometry, renderer, physics & camera, input & audio,
+                      particles & environment, UI, replay/share, game loop
+scripts/build.mjs     src/ → index.html (and --check for CI)
+scripts/serve.mjs     tiny static server
+tests/                Playwright browser tests
+sw.js, manifest.webmanifest, icons/, og.jpg   installable app + link preview
+```
+
+The files in `src/js/` are joined, in name order, into one classic `<script>`. Their top-level names are therefore shared between files.
 
 ```sh
-npx serve .
-# or
-python3 -m http.server 8080
+npm install          # dev tools only: ESLint + Playwright (the game has no dependencies)
+npm run build        # rebuild index.html after editing src/
+npm run lint
+npm test             # headless Chromium, software WebGL (first time: npx playwright install chromium)
+npm run ci           # check + lint + test, same as GitHub Actions
 ```
+
+Always commit `src/` **and** the rebuilt `index.html`; CI fails if they differ.
+
+The tests drive the game loop step by step instead of waiting for real frames, so they are fast and stable even with software rendering. They cover:
+- booting and a full keyboard run (play, pause, fall, game over, replay)
+- NaN checks over a long run
+- track feasibility over 4 km on many seeds
+- daily-run determinism
+- tilt directions and the touch fallback
+- language switching, sound toggles and skins
+- the share link and the share video
+- all five worlds rendering
+- the installable app, including offline play
 
 ## Deploy
 
-It is a static site with no build step.
+It is a static site.
 
-- **Vercel** (production: <https://gyroll.vercel.app/>): import the repository, choose the "Other" framework preset, and leave the build command empty. The output directory is the repository root.
-- **GitHub Pages**: Settings → Pages → deploy from the `main` branch, root folder.
+- **Vercel** (production: <https://gyroll.vercel.app/>): import the repository. `vercel.json` already sets the build (`node scripts/build.mjs`, nothing to install), the output folder (the repository root) and cache headers for the service worker. To get statistics, enable **Web Analytics** in the Vercel project settings.
+- **GitHub Pages**: Settings → Pages → deploy from the `main` branch, root folder. The built `index.html` is committed, so no build step runs there.
 
-If you fork the project, change the `PROD_URL` constant near the top of the script in `index.html`. It is the link used in shared scores and on the video end card.
+If you fork the project, change the `PROD_URL` constant in `src/js/01-core.js`. It is the link used in shared scores, on the video end card and for analytics, and it also appears in the `og:` tags of `src/shell.html`.
+
+## Privacy
+
+- **No cookies, no accounts.** Best scores and settings stay in the browser (`localStorage`).
+- **Anonymous statistics, official site only.** On `gyroll.vercel.app`, and only when "Do Not Track" is off, the game loads Vercel Web Analytics. It counts page views and sends a few anonymous game events:
+  - `run_start`: game mode and control type
+  - `game_over`: mode, world reached, distance rounded to 50 m
+  - `share`: how the score was shared
+  - `install`: whether the app was installed
+- Local copies, forks and other domains send nothing.
 
 ## How it works
 
-Everything lives in `index.html`. The script is split into small classes:
+The game code lives in `src/js/` and is built into `index.html`. It is split into small classes:
 
 | Part | Role |
 |---|---|
@@ -117,6 +169,7 @@ Everything lives in `index.html`. The script is split into small classes:
 | `Environment` | Zone-driven scenery in three parallax layers. |
 | `Replay` | Timelapse capture and share-video composition. |
 | `QualityManager`, `UI`, `Game` | Adaptive quality, DOM overlay with FR/EN strings, and the state machine / main loop. |
+| `Analytics`, `sw.js` | Opt-out-friendly stats on the official site, and the offline cache for the installable app. |
 
 ## Browser support and known limitations
 
@@ -132,10 +185,11 @@ Everything lives in `index.html`. The script is split into small classes:
 - **Not yet verified on real devices:**
   - Landscape tilt directions have not been checked on a real phone. Portrait tilt was checked with simulated sensor events.
   - Development and automated tests ran in headless Chromium (software rendering). Reports from real phones are very welcome.
+- **Analytics events.** Page views work whenever Web Analytics is on. Custom events (`run_start`, `game_over`…) may need a Vercel plan that supports them; if not, they are simply ignored.
 
 ## Contributing
 
-Issues and pull requests are welcome. Please keep the project a **single dependency-free HTML file**. Test on a real phone when you touch controls, performance or sharing.
+Issues and pull requests are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). The game must stay a **single dependency-free HTML file**. Please test on a real phone when you touch controls, performance or sharing.
 
 ## Credits
 
@@ -610,3 +664,23 @@ Ha and the game name is “gyroll”
 ````
 
 </details>
+
+<details>
+<summary><strong>Later prompts</strong> (open-source release)</summary>
+
+````markdown
+Yes please switch to main and create the readme with all relevant information to then open source the repo. Also include the original prompt. And please fix the link to the prod url
+````
+
+````markdown
+What else can we improve ?
+````
+
+````markdown
+Let’s apply : 
+* Sharing and growth
+* Open-source quality
+````
+
+</details>
+

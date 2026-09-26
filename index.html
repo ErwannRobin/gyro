@@ -14,7 +14,15 @@
 <meta property="og:title" content="GYROLL — How far can you go?">
 <meta property="og:description" content="Tilt your phone to roll a marble along an endless floating track. Daily run, 5 worlds, share your best run.">
 <meta property="og:url" content="https://gyroll.vercel.app/">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://gyroll.vercel.app/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="GYROLL — a marble rolling on a neon track floating in the void">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://gyroll.vercel.app/og.jpg">
+<meta name="apple-mobile-web-app-title" content="GYROLL">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <style>
 :root{
   --accent:#4ef2ff;
@@ -140,6 +148,7 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 .tg:active{transform:scale(.95)}
 .skins{margin-top:20px;display:flex;flex-direction:column;gap:10px;align-items:center;width:100%;max-width:420px}
 .skinName{font-size:12px;font-weight:700;letter-spacing:.14em;color:rgba(255,255,255,.75);min-height:16px}
+.ghostBtn.small{min-height:42px;margin-top:14px;padding:8px 18px;width:auto;font-size:12px}
 .shareBtn{position:relative;overflow:hidden}
 .shareBtn .prog{position:absolute;left:0;bottom:0;height:3px;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .2s}
 .shareBtn.busy{opacity:.75}
@@ -260,6 +269,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     <button class="ghostBtn" id="btnTouch" data-i18n="playTouch"></button>
     <div id="permMsg" class="hidden"></div>
     <div class="skins" id="skinsMenu"></div>
+    <button class="ghostBtn small hidden" id="btnInstall" data-i18n="install"></button>
   </div>
 </div>
 
@@ -486,6 +496,7 @@ const I18N = {
     touchHint: 'Glissez le doigt pour guider la bille', keysHint: 'Flèches / WASD / ZQSD · ou glisser à la souris',
     permDenied: 'Accès au gyroscope refusé — contrôle tactile activé.', permNone: 'Gyroscope indisponible — contrôle tactile activé.',
     ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TACTILE', ctrlKeys: 'CLAVIER', record: 'NOUVEAU RECORD !', dailyTag: 'DÉFI DU JOUR · {date}', randomTag: 'PARTIE ALÉATOIRE',
+    install: 'INSTALLER L’APPLI', iosInstall: 'Touchez Partager ⎋ puis « Sur l’écran d’accueil ».',
     noGL: 'WebGL est indisponible sur cet appareil / navigateur. Activez l’accélération matérielle ou essayez un Chrome / Safari récent.',
   },
   en: {
@@ -499,6 +510,7 @@ const I18N = {
     touchHint: 'Drag your finger to steer the ball', keysHint: 'Arrows / WASD · or drag with the mouse',
     permDenied: 'Gyroscope access denied — touch control enabled.', permNone: 'Gyroscope unavailable — touch control enabled.',
     ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TOUCH', ctrlKeys: 'KEYBOARD', record: 'NEW RECORD!', dailyTag: 'DAILY RUN · {date}', randomTag: 'RANDOM RUN',
+    install: 'INSTALL THE APP', iosInstall: 'Tap Share ⎋, then “Add to Home Screen”.',
     noGL: 'WebGL is not available on this device / browser. Enable hardware acceleration or try a recent Chrome / Safari.',
   },
 };
@@ -519,6 +531,23 @@ const tr = (key, vars) => {
 // Used in shared scores (text, video end card). "?mode=daily" opens the daily run directly.
 const PROD_URL = 'https://gyroll.vercel.app/';
 const PROD_HOST = PROD_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+// ---------------------------------------------------------------- analytics
+// Cookieless Vercel Web Analytics, loaded only on the production host and never when
+// "Do Not Track" is on. Forks and local copies send nothing.
+const Analytics = {
+  on: false,
+  init() {
+    try {
+      if (location.hostname !== PROD_HOST || navigator.doNotTrack === '1' || window.doNotTrack === '1') return;
+      window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+      const s = document.createElement('script'); s.defer = true; s.src = '/_vercel/insights/script.js';
+      document.head.appendChild(s);
+      this.on = true;
+    } catch (e) { this.on = false; }
+  },
+  event(name, data) { if (this.on) try { window.va('event', { name, data }); } catch (e) { /* ignore */ } },
+};
 
 // ---------------------------------------------------------------- daily run
 // Same seed for every player on the same UTC day.
@@ -917,11 +946,21 @@ vec2 equirect(vec3 d){ return vec2(atan(d.x, d.z) * 0.15915494 + 0.5, acos(clamp
 // Lit surfaces: track chunks + props. Materials selected by a_mat.x
 const VS_LIT = `
 attribute vec3 a_pos; attribute vec3 a_nrm; attribute vec2 a_uv; attribute vec4 a_aux; attribute vec4 a_mat;
-uniform mat4 u_vp; uniform mat4 u_model; uniform float u_collapse; uniform float u_time;
-varying vec3 v_wp; varying vec3 v_n; varying vec2 v_uv; varying vec4 v_aux; varying vec4 v_mat; varying float v_warn;
+#ifdef INST
+attribute vec4 a_m0; attribute vec4 a_m1; attribute vec4 a_m2; attribute vec4 a_m3; attribute vec4 a_ic;
+#else
+uniform mat4 u_model; uniform vec3 u_color; uniform float u_emis;
+#endif
+uniform mat4 u_vp; uniform float u_collapse; uniform float u_time;
+varying vec3 v_wp; varying vec3 v_n; varying vec2 v_uv; varying vec4 v_aux; varying vec4 v_mat; varying float v_warn; varying vec4 v_ic;
 void main(){
-  vec4 wp = u_model * vec4(a_pos, 1.0);
-  vec3 n = (u_model * vec4(a_nrm, 0.0)).xyz;
+#ifdef INST
+  mat4 model = mat4(a_m0, a_m1, a_m2, a_m3); v_ic = a_ic;      // per-instance transform + color/emissive
+#else
+  mat4 model = u_model; v_ic = vec4(u_color, u_emis);
+#endif
+  vec4 wp = model * vec4(a_pos, 1.0);
+  vec3 n = (model * vec4(a_nrm, 0.0)).xyz;
   float dt = u_collapse - a_aux.x;          // seconds-ish since this row started falling
   v_warn = 0.0;
   if (dt > -3.0 && a_aux.x < 1e8) {
@@ -944,13 +983,13 @@ void main(){
 }`;
 
 const FS_LIT = GLSL_COMMON + `
-varying vec3 v_wp; varying vec3 v_n; varying vec2 v_uv; varying vec4 v_aux; varying vec4 v_mat; varying float v_warn;
+varying vec3 v_wp; varying vec3 v_n; varying vec2 v_uv; varying vec4 v_aux; varying vec4 v_mat; varying float v_warn; varying vec4 v_ic;
 uniform vec3 u_cam; uniform vec3 u_sunDir; uniform vec3 u_sunCol; uniform vec3 u_fogCol; uniform vec3 u_abyss; uniform vec3 u_skyMid;
 uniform vec3 u_deckA; uniform vec3 u_deckB; uniform vec3 u_trim; uniform vec3 u_under; uniform vec3 u_metal;
 uniform vec3 u_accent; uniform vec3 u_accent2; uniform vec3 u_hazard;
 uniform float u_pattern; uniform float u_gloss; uniform float u_time; uniform float u_fogDen; uniform float u_fogBase;
 uniform vec4 u_ball; uniform vec3 u_ballGlow; uniform float u_ballLight; uniform float u_shadow;
-uniform vec3 u_color; uniform float u_emis; uniform float u_fogK;
+uniform float u_fogK;
 uniform sampler2D u_env; uniform sampler2D u_env2; uniform float u_envMix;
 
 vec3 envLookup(vec3 d){ vec2 q = equirect(d); return mix(texture2D(u_env, q).rgb, texture2D(u_env2, q).rgb, u_envMix); }
@@ -1071,17 +1110,17 @@ void main(){
     base = mix(vec3(0.05), u_hazard, str); gloss = 0.7; spec = 1.2;
     emis += u_hazard * str * 0.15;
   } else if (mat < 9.5) {                             // generic prop colored by uniform
-    base = u_color; gloss = 0.75; spec = 1.4; metal = 0.7;
+    base = v_ic.rgb; gloss = 0.75; spec = 1.4; metal = 0.7;
     float band = smoothstep(0.04, 0.0, abs(v_uv.y - 0.82) - 0.05);
     emis += u_accent * band * 1.6; glow += band;
   } else if (mat < 10.5) {                            // gem
-    base = u_color * 0.55; gloss = 0.9; spec = 1.6; metal = 0.5;
+    base = v_ic.rgb * 0.55; gloss = 0.9; spec = 1.6; metal = 0.5;
     float facet = abs(dot(N, normalize(vec3(0.3, 0.8, 0.5))));
-    emis = u_color * (0.28 + 0.35 * facet + 0.12 * sin(u_time * 5.0 + v_wp.x)) * u_emis; glow = 0.7;
+    emis = v_ic.rgb * (0.28 + 0.35 * facet + 0.12 * sin(u_time * 5.0 + v_wp.x)) * v_ic.a; glow = 0.7;
   } else if (mat < 11.5) {                            // gate / monolith frame lights
     float e = max(smoothstep(0.1, 0.0, min(v_uv.x, 1.0 - v_uv.x)), smoothstep(0.1, 0.0, min(v_uv.y, 1.0 - v_uv.y)));
     base = u_metal * 0.5; gloss = 0.6; spec = 1.0;
-    emis = u_color * e * 1.8 * u_emis; glow = e * u_emis;
+    emis = v_ic.rgb * e * 1.8 * v_ic.a; glow = e * v_ic.a;
   } else if (mat < 12.5) {                            // hole walls / caps: dark + hazard glow line
     base = u_under * 0.7; gloss = 0.2; spec = 0.3;
     float top = smoothstep(0.16, 0.02, v_uv.y);
@@ -1093,27 +1132,27 @@ void main(){
     float win = step(0.2, f.x) * step(f.x, 0.8) * step(0.25, f.y) * step(f.y, 0.75);
     float on = step(0.55, hash(floor(w) + floor(v_wp.xz * 0.01)));
     float band = smoothstep(0.03, 0.0, abs(fract(v_uv.y * 3.0) - 0.5) - 0.47);
-    emis = u_color * (win * on * 0.9 + band * 1.2) * u_emis; glow = win * on * 0.5 + band;
+    emis = v_ic.rgb * (win * on * 0.9 + band * 1.2) * v_ic.a; glow = win * on * 0.5 + band;
   } else if (mat < 14.5) {                            // floating rock / island with grass top
     float grass = smoothstep(0.55, 0.8, N.y);
     float n = noise(v_wp.xz * 0.8 + v_wp.y);
-    base = mix(u_color * (0.45 + 0.25 * n), vec3(0.3, 0.52, 0.22) * (0.8 + 0.3 * n), grass); gloss = 0.1; spec = 0.15; metal = 0.0;
+    base = mix(v_ic.rgb * (0.45 + 0.25 * n), vec3(0.3, 0.52, 0.22) * (0.8 + 0.3 * n), grass); gloss = 0.1; spec = 0.15; metal = 0.0;
   } else if (mat < 15.5) {                            // neon wire triangles
     float e = min(min(1.0 - v_uv.x, v_uv.x - v_uv.y), v_uv.y);
     float ln = smoothstep(0.05, 0.0, e);
     base = vec3(0.02); gloss = 0.8; spec = 0.8;
-    emis = u_color * (ln * 2.2 + 0.06) * u_emis; glow = ln;
+    emis = v_ic.rgb * (ln * 2.2 + 0.06) * v_ic.a; glow = ln;
   } else if (mat < 16.5) {                            // glossy abstract primitives
-    base = u_color; gloss = 0.95; spec = 2.0; metal = 0.55;
-    emis = u_color * 0.08 * u_emis;
+    base = v_ic.rgb; gloss = 0.95; spec = 2.0; metal = 0.55;
+    emis = v_ic.rgb * 0.08 * v_ic.a;
   } else if (mat < 17.5) {                            // chaos shard with glowing cracks
     base = vec3(0.07, 0.04, 0.04); gloss = 0.7; spec = 1.2; metal = 0.6;
     float c = abs(noise(v_wp.xz * 1.7 + v_wp.y * 1.3) * 2.0 - 1.0);
     float crack = smoothstep(0.1, 0.0, c) * (0.7 + 0.3 * sin(u_time * 6.0 + v_wp.y));
-    emis = u_color * crack * 2.0 * u_emis; glow = crack;
+    emis = v_ic.rgb * crack * 2.0 * v_ic.a; glow = crack;
   } else {                                            // solid glow
     base = vec3(0.0); gloss = 0.0; spec = 0.0;
-    emis = u_color * u_emis; glow = clamp(u_emis * 0.8, 0.0, 1.0);
+    emis = v_ic.rgb * v_ic.a; glow = clamp(v_ic.a * 0.8, 0.0, 1.0);
   }
 
   // collapse warning tint
@@ -1804,7 +1843,14 @@ class Renderer {
 
   initGL() {
     const gl = this.gl;
-    this.pLit = this.program(VS_LIT, FS_LIT, ['a_pos', 'a_nrm', 'a_uv', 'a_aux', 'a_mat']);
+    // Instanced drawing batches repeated scenery into a few draw calls (WebGL1 extension,
+    // needs 10 vertex attributes); otherwise every object is drawn on its own.
+    const ext = window.GYROLL_NO_INSTANCING ? null : gl.getExtension('ANGLE_instanced_arrays');
+    this.inst = ext && gl.getParameter(gl.MAX_VERTEX_ATTRIBS) >= 10 ? ext : null;
+    const litAttrs = ['a_pos', 'a_nrm', 'a_uv', 'a_aux', 'a_mat'];
+    this.pLit = this.inst ? this.program('#define INST\n' + VS_LIT, FS_LIT, litAttrs.concat(['a_m0', 'a_m1', 'a_m2', 'a_m3', 'a_ic'])) : this.program(VS_LIT, FS_LIT, litAttrs);
+    if (this.inst) for (let i = 5; i < 10; i++) this.inst.vertexAttribDivisorANGLE(i, 1);
+    this.instBuf = gl.createBuffer(); this.batches = new Map(); this.drawCalls = 0;
     this.pBall = this.program(VS_BALL, FS_BALL, ['a_pos', 'a_nrm']);
     this.pSky = this.program(VS_SKY, FS_SKY, ['a_pos']);
     this.pPts = this.program(VS_PTS, FS_PTS, ['a_pos', 'a_col', 'a_size']);
@@ -1856,7 +1902,7 @@ class Renderer {
   use(pr) { if (this.cur !== pr) { this.gl.useProgram(pr.p); this.cur = pr; } return pr; }
   attribs(n) {
     const gl = this.gl;
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 10; i++) {
       const want = i < n, has = (this.enabled >> i) & 1;
       if (want && !has) gl.enableVertexAttribArray(i); else if (!want && has) gl.disableVertexAttribArray(i);
     }
@@ -2045,6 +2091,7 @@ class Renderer {
     gl.uniform1f(p.u('u_ballLight'), o.ballLight); gl.uniform1f(p.u('u_shadow'), o.shadow);
     gl.uniform1f(p.u('u_collapse'), o.collapse);
     gl.uniform3fv(p.u('u_color'), [1, 1, 1]); gl.uniform1f(p.u('u_emis'), 1); gl.uniform1f(p.u('u_fogK'), 1);
+    this.setInstConst(this.ident, [1, 1, 1], 1);
     this.bindZoneTex(p, 'blur', 'u_env', 'u_env2', 0, 1); gl.uniform1f(p.u('u_envMix'), this.zMix);
     gl.uniformMatrix4fv(p.u('u_model'), false, this.ident);
   }
@@ -2056,15 +2103,60 @@ class Renderer {
     this.bindMesh(ch.mesh, 5);
     this.gl.drawElements(this.gl.TRIANGLES, ch.mesh.count, this.gl.UNSIGNED_SHORT, 0);
   }
+  // With instancing on, a single object uses constant attribute values (arrays 5–9 disabled).
+  setInstConst(m, c, e) {
+    if (!this.inst) return;
+    const gl = this.gl;
+    gl.vertexAttrib4f(5, m[0], m[1], m[2], m[3]); gl.vertexAttrib4f(6, m[4], m[5], m[6], m[7]);
+    gl.vertexAttrib4f(7, m[8], m[9], m[10], m[11]); gl.vertexAttrib4f(8, m[12], m[13], m[14], m[15]);
+    gl.vertexAttrib4f(9, c[0], c[1], c[2], e);
+  }
   drawProp(mesh, model, color, emis) {
     const gl = this.gl, p = this.pLit;
-    gl.uniformMatrix4fv(p.u('u_model'), false, model);
-    gl.uniform3fv(p.u('u_color'), color); gl.uniform1f(p.u('u_emis'), emis);
+    if (this.inst) this.setInstConst(model, color, emis);
+    else { gl.uniformMatrix4fv(p.u('u_model'), false, model); gl.uniform3fv(p.u('u_color'), color); gl.uniform1f(p.u('u_emis'), emis); }
     this.bindMesh(mesh, 5);
     gl.drawElements(gl.TRIANGLES, mesh.count, gl.UNSIGNED_SHORT, 0);
   }
+  // Queue one instance of `mesh`; flushBatches() draws each mesh's queue at once.
+  addInst(mesh, model, color, emis) {
+    let b = this.batches.get(mesh);
+    if (!b) { b = { mesh, data: new Float32Array(20 * 32), n: 0 }; this.batches.set(mesh, b); }
+    if ((b.n + 1) * 20 > b.data.length) { const d = new Float32Array(b.data.length * 2); d.set(b.data); b.data = d; }
+    const o = b.n * 20, d = b.data;
+    d.set(model, o); d[o + 16] = color[0]; d[o + 17] = color[1]; d[o + 18] = color[2]; d[o + 19] = emis;
+    b.n++;
+  }
+  flushBatches() {
+    const gl = this.gl, p = this.pLit;
+    for (const b of this.batches.values()) {
+      if (!b.n) continue;
+      if (this.inst) {
+        this.bindMesh(b.mesh, 5);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.instBuf);
+        gl.bufferData(gl.ARRAY_BUFFER, b.data.subarray(0, b.n * 20), gl.DYNAMIC_DRAW);
+        for (let i = 0; i < 5; i++) gl.vertexAttribPointer(5 + i, 4, gl.FLOAT, false, 80, i * 16);
+        this.attribs(10);
+        this.inst.drawElementsInstancedANGLE(gl.TRIANGLES, b.mesh.count, gl.UNSIGNED_SHORT, 0, b.n);
+        this.attribs(5);
+      } else {
+        this.bindMesh(b.mesh, 5);
+        for (let k = 0; k < b.n; k++) {
+          const o = k * 20;
+          gl.uniformMatrix4fv(p.u('u_model'), false, b.data.subarray(o, o + 16));
+          gl.uniform3f(p.u('u_color'), b.data[o + 16], b.data[o + 17], b.data[o + 18]); gl.uniform1f(p.u('u_emis'), b.data[o + 19]);
+          gl.drawElements(gl.TRIANGLES, b.mesh.count, gl.UNSIGNED_SHORT, 0);
+        }
+      }
+      b.n = 0;
+    }
+  }
   setFogK(k) { this.gl.uniform1f(this.pLit.u('u_fogK'), k); }
-  endLit() { this.gl.uniformMatrix4fv(this.pLit.u('u_model'), false, this.ident); }
+  endLit() {
+    this.flushBatches();
+    if (this.inst) this.setInstConst(this.ident, [1, 1, 1], 1);
+    else this.gl.uniformMatrix4fv(this.pLit.u('u_model'), false, this.ident);
+  }
 
   drawBall(model, skin, speed, fade) {
     const gl = this.gl, T = this.theme, p = this.use(this.pBall);
@@ -2767,7 +2859,7 @@ class Environment {
   spawnSide(T, s, M) {
     const r = this.rng, z = zoneAt(s), Z = ZONES[z], f = this.frame(T, s), sg = r.sign();
     const at = (lat, h) => [f.x + f.rx * lat, f.y + h, f.z + f.rz * lat];
-    let step = 10;
+    let step;
     if (z === 0) {
       if (r.chance(0.16)) { this.item(this.side, s, M.gate, f.x, f.y, f.z, 1.55, 1.6, 1, Z.c1, { yaw: f.th, emis: 1.2 }); step = 14; }
       else {
@@ -2887,9 +2979,8 @@ class Environment {
       const by = it.bob ? Math.sin(time * 0.7 + it.s) * it.bob : 0;
       M4.fromTRS(this.model, it.x, it.y + by, it.z, q, it.sx, it.sy, it.sz);
       const e = it.blink ? it.emis * (Math.sin(time * 5 + it.s) > 0.2 ? 1 : 0.15) : it.emis;
-      if (it.fogK !== 1) R.setFogK(it.fogK);
-      R.drawProp(it.mesh, this.model, it.col, e);
-      if (it.fogK !== 1) R.setFogK(1);
+      if (it.fogK !== 1) { R.setFogK(it.fogK); R.drawProp(it.mesh, this.model, it.col, e); R.setFogK(1); }   // far giants: own fog
+      else R.addInst(it.mesh, this.model, it.col, e);
     };
     for (const h of this.heroes) for (const it of h.items) one(it);
     for (const it of this.mid) one(it);
@@ -3340,7 +3431,7 @@ class Game {
     this.chunks = new Map(); this.nextChunk = 0;
     this.themeIdx = clamp(Store.get('theme', 0) | 0, 0, TRACK_THEMES.length - 1);
     this.skinIdx = clamp(Store.get('skin', 0) | 0, 0, BALL_SKINS.length - 1);
-    let qm = null;
+    let qm;
     try { qm = new URLSearchParams(location.search).get('mode'); } catch (e) { qm = null; }
     this.gameMode = (qm === 'daily' || qm === 'random' ? qm : Store.get('mode', 'random')) === 'daily' ? 'daily' : 'random';
     this.best = this.modeBest();
@@ -3356,6 +3447,8 @@ class Game {
     this.resize(true);
     this.newWorld();
     this.bindWindow();
+    this.setupPWA();
+    Analytics.init();
     this.last = performance.now();
     this.frame = this.frame.bind(this);
     requestAnimationFrame(this.frame);
@@ -3537,6 +3630,7 @@ class Game {
       clearTimeout(this.hintT); this.hintT = setTimeout(() => { U.el.touchHint.style.opacity = 0; }, 3500);
     } else U.el.touchHint.classList.add('hidden');
     this.lockWake();
+    Analytics.event('run_start', { mode: this.gameMode, control: mode });
   }
   beginCountdown(calibrate, dur) {
     this.state = 'calib'; this.calibT = 0; this.calibDur = dur; this.calibrating = calibrate; this.lastNum = -1;
@@ -3601,6 +3695,7 @@ class Game {
     E.ovScore.textContent = 'SCORE ' + fmt(score);
     E.ovBest.textContent = 'BEST '; const bb = document.createElement('b'); bb.textContent = fmt(this.best) + ' m'; E.ovBest.appendChild(bb);
     this.prepareShare(record);
+    Analytics.event('game_over', { mode: this.gameMode, control: this.mode, zone: ZONES[zoneAt(CFG.START_S + dist)].id, meters: Math.floor(dist / 50) * 50, record: !!record });
     E.ovMode.textContent = this.gameMode === 'daily' ? tr('dailyTag', { date: dayLabel(this.runDay || dayKey()) }) : tr('randomTag');
     E.record.classList.add('hidden');
     U.hud(false); U.el.danger.style.opacity = 0; U.cache.dg = '0.00';
@@ -3776,23 +3871,23 @@ class Game {
         T.pointAt(o.s, o.u, o.h + Math.sin(tm * 3 + o.id) * 0.08 + yo, this.tmp);
         Q.yaw(this.q, tm * 2 + o.id);
         M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q, 0.24, 0.32, 0.24);
-        R.drawProp(M.gem, this.model, GEM_COL, 1);
+        R.addInst(M.gem, this.model, GEM_COL, 1);
         if (this.gemGlowN < 96) { this.gemGlow.set([this.tmp[0], this.tmp[1], this.tmp[2]], this.gemGlowN * 3); this.gemGlowN++; }
       } else if (o.kind === 'post') {
         T.pointAt(o.s, o.u, yo - 0.05, this.tmp);
         M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.qi, o.rad, 0.95, o.rad);
-        R.drawProp(M.post, this.model, th.trim, 1);
+        R.addInst(M.post, this.model, th.trim, 1);
       } else if (o.kind === 'slider') {
         const u = o.amp * Math.sin(TAU * this.physics.time / o.period + o.phase);
         T.pointAt(o.s, u, 0.3 + yo, this.tmp);
         Q.yaw(this.q, this.tmp[3]);
         M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q, 0.84, 0.6, 0.84);
-        R.drawProp(M.slider, this.model, th.hazard, 1);
+        R.addInst(M.slider, this.model, th.hazard, 1);
       } else if (o.kind === 'gate') {
         T.pointAt(o.s, 0, yo, this.tmp);
         Q.yaw(this.q, this.tmp[3]);
         M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q, 1, 1, 1);
-        R.drawProp(M.gate, this.model, o.passed ? GEM_COL : th.accent, 1);
+        R.addInst(M.gate, this.model, o.passed ? GEM_COL : th.accent, 1);
       }
     }
     // previous-best marker
@@ -3801,7 +3896,7 @@ class Game {
       T.pointAt(sb, 0, this.fallOffset(sb), this.tmp);
       Q.yaw(this.q, this.tmp[3]);
       M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q, 0.92, 0.8, 1);
-      R.drawProp(M.gate, this.model, GEM_COL, 1.4);
+      R.addInst(M.gate, this.model, GEM_COL, 1.4);
     }
   }
   render() {
@@ -3859,6 +3954,29 @@ class Game {
     clearTimeout(this.thunderT); this.thunderT = setTimeout(() => this.audio.thunder(), 250 + Math.random() * 500);
   }
 
+  // ------------------------------------------------------------- installable app (PWA)
+  // The manifest and service worker only exist on a web server; file:// copies skip them.
+  setupPWA() {
+    const web = /^https?:$/.test(location.protocol), btn = this.ui.$('btnInstall'), E = this.ui.el;
+    if (web) {
+      const l = document.createElement('link'); l.rel = 'manifest'; l.href = 'manifest.webmanifest'; document.head.appendChild(l);
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+    const installed = matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    if (!web || installed) return;
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); this.installEvt = e; btn.classList.remove('hidden'); });
+    window.addEventListener('appinstalled', () => { btn.classList.add('hidden'); Analytics.event('install', { outcome: 'installed' }); });
+    if (ios) btn.classList.remove('hidden');
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (this.installEvt) {
+        const ev = this.installEvt; this.installEvt = null; ev.prompt();
+        ev.userChoice.then((c) => { Analytics.event('install', { outcome: c.outcome }); if (c.outcome === 'accepted') btn.classList.add('hidden'); }).catch(() => {});
+      } else if (ios) { E.perm.textContent = tr('iosInstall'); E.perm.classList.remove('hidden'); }
+    });
+  }
+
   // ------------------------------------------------------------- sharing
   prepareShare(record) {
     const th = TRACK_THEMES[this.themeIdx], css = (c) => `rgb(${c.map((v) => Math.round(v * 255)).join(',')})`;
@@ -3884,13 +4002,16 @@ class Game {
     let text = tr('shareText', { d: fmt(info.dist), s: fmt(info.score) });
     if (this.gameMode === 'daily') text += ' — ' + tr('shareDaily', { date: dayLabel(this.runDay || dayKey()) });
     text += ' ' + url;
-    let canFiles = false;
+    let canFiles;
     try { canFiles = !!(f && navigator.canShare && navigator.canShare({ files: [f] })); } catch (e) { canFiles = false; }
+    const kind = f ? (f.type.startsWith('video') ? 'video' : 'image') : 'text';
     if (navigator.share && (canFiles || !f)) {
+      Analytics.event('share', { kind, via: 'share' });
       navigator.share(canFiles ? { files: [f], text, title: 'GYROLL' } : { text, title: 'GYROLL' })
         .catch((e) => { if (!e || e.name !== 'AbortError') this.download(f, text); });
       return;
     }
+    Analytics.event('share', { kind, via: 'download' });
     this.download(f, text);
   }
   download(f, text) {

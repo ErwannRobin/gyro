@@ -1,0 +1,214 @@
+
+// =====================================================================
+// Ball + Physics — world-space rolling sphere constrained to the deck.
+// =====================================================================
+class Ball {
+  constructor() { this.p = [0, 0, 0]; this.v = [0, 0, 0]; this.q = [0, 0, 0, 1]; this.w = [0, 0, 0]; this.reset(); }
+  reset() {
+    this.p.fill(0); this.v.fill(0); this.q[0] = this.q[1] = this.q[2] = 0; this.q[3] = 1; this.w.fill(0);
+    this.grounded = true; this.lost = false; this.s = 0; this.u = 0; this.hint = 0; this.air = 0;
+    this.boost = 0; this.lastPad = -99; this.speed = 0; this.surfY = 0; this.support = true;
+  }
+}
+
+class Physics {
+  constructor(track, ev) { this.T = track; this.ev = ev; this.collapseS = -1e9; this.time = 0; this.tmp = [0, 0, 0, 0]; }
+
+  supported(L) {
+    if (L.out || L.s < this.collapseS) return false;
+    return this.T.solidAt(L.i, L.t, L.u) >= 0;
+  }
+
+  step(b, ix, iy, camYaw, dt) {
+    const T = this.T, R = CFG.R, G = CFG.G;
+    this.time += dt;
+    if (b.lost) {                                  // free fall into the abyss
+      if (b.p[1] < b.surfY - 150) { b.v.fill(0); return; }
+      b.v[1] -= G * dt; b.v[0] *= 1 - 0.3 * dt; b.v[2] *= 1 - 0.3 * dt;
+      b.p[0] += b.v[0] * dt; b.p[1] += b.v[1] * dt; b.p[2] += b.v[2] * dt;
+      Q.integrate(b.q, b.w[0], b.w[1], b.w[2], dt);
+      return;
+    }
+    const fx = Math.sin(camYaw), fz = Math.cos(camYaw), rx = -fz, rz = fx;
+    const ax = (rx * ix + fx * iy) * CFG.ACC, az = (rz * ix + fz * iy) * CFG.ACC;
+    let L = T.locate(b.p[0], b.p[2], b.hint);
+    b.hint = L.i;
+    b.boost = Math.max(0, b.boost - dt);
+
+    if (b.grounded) {
+      const k = G * 0.714, tb = Math.tan(L.bank);
+      const gA = -k * L.slope, gL = -k * tb;
+      b.v[0] += (ax + L.fx * gA + L.rx * gL) * dt;
+      b.v[2] += (az + L.fz * gA + L.rz * gL) * dt;
+      // rolling resistance + soft top speed
+      let sp = Math.hypot(b.v[0], b.v[2]);
+      const damp = 1 - (0.26 + (Math.abs(ix) + Math.abs(iy) < 0.05 && sp < 1.2 ? 1.4 : 0)) * dt;
+      b.v[0] *= damp; b.v[2] *= damp;
+      sp *= damp;
+      const vmax = CFG.VMAX + (CFG.VBOOST - CFG.VMAX) * clamp(b.boost / 0.9, 0, 1);
+      if (sp > vmax) { const f = Math.max(vmax / sp, 1 - 1.3 * dt); b.v[0] *= f; b.v[2] *= f; }
+      const py = b.p[1];
+      b.p[0] += b.v[0] * dt; b.p[2] += b.v[2] * dt;
+      L = T.locate(b.p[0], b.p[2], b.hint); b.hint = L.i;
+      this.rails(b, L);
+      this.props(b, L);
+      if (this.supported(L)) {
+        b.p[1] = T.surfaceY(L, L.u) + R;
+        b.v[1] = clamp((b.p[1] - py) / dt, -30, 30);
+        const m = L.i & T.mask;
+        if ((T.rowF[m] & RF.BOOST) && Math.abs(L.i - b.lastPad) > 8) {
+          b.lastPad = L.i;
+          // boosters also steady the ball: half of the sideways drift is removed
+          const vf = b.v[0] * L.fx + b.v[2] * L.fz, vl = b.v[0] * L.rx + b.v[2] * L.rz;
+          const add = Math.max(0, CFG.VBOOST - vf);
+          b.v[0] += L.fx * add - L.rx * vl * 0.5; b.v[2] += L.fz * add - L.rz * vl * 0.5; b.boost = 1.3;
+          this.ev.boost(b);
+        }
+      } else {
+        b.grounded = false; b.air = 0;
+      }
+    } else {
+      b.air += dt;
+      b.v[1] -= G * dt;
+      b.p[0] += b.v[0] * dt; b.p[1] += b.v[1] * dt; b.p[2] += b.v[2] * dt;
+      L = T.locate(b.p[0], b.p[2], b.hint); b.hint = L.i;
+      const sy = T.surfaceY(L, L.u);
+      if (b.p[1] - R <= sy + 0.02 && b.v[1] <= 0 && this.supported(L)) {
+        const depth = sy - (b.p[1] - R);
+        if (depth < R * 1.05) {                      // forgiving: catch the lip if the center is still above it
+          b.p[1] = sy + R;
+          const imp = -b.v[1];
+          if (imp > 5) { b.v[1] = imp * 0.26; } else { b.v[1] = 0; b.grounded = true; }
+          this.ev.land(b, imp);
+        } else { b.lost = true; this.ev.lost(b, 'side'); }
+      } else if (b.p[1] < sy - 1.1) { b.lost = true; this.ev.lost(b, 'fall'); }
+      this.rails(b, L);
+    }
+    // rolling without slipping: w = (n x v) / R
+    if (b.grounded) { b.w[0] = b.v[2] / R; b.w[1] = 0; b.w[2] = -b.v[0] / R; }
+    Q.integrate(b.q, b.w[0], b.w[1], b.w[2], dt);
+    b.s = L.s; b.u = L.u; b.surfY = T.surfaceY(L, L.u);
+    b.support = this.supported(L);
+    b.speed = Math.hypot(b.v[0], b.v[2]);
+    for (let j = 0; j < 3; j++) if (!Number.isFinite(b.p[j]) || !Number.isFinite(b.v[j])) { b.v.fill(0); b.p[j] = fin(b.p[j]); b.lost = true; }
+  }
+
+  rails(b, L) {
+    const T = this.T, m = L.i & T.mask, f = T.rowF[m];
+    if (!(f & (RF.RAIL_L | RF.RAIL_R)) || b.p[1] > b.surfY + 1.2) return;
+    const hw = L.w / 2 - 0.1, R = CFG.R;
+    const n = T.rowN[m]; if (!n) return;
+    let side = 0, pen = 0;
+    if ((f & RF.RAIL_R) && T.rowBO[m * 3 + n - 1] && L.u + R > hw) { side = 1; pen = L.u + R - hw; }
+    if ((f & RF.RAIL_L) && T.rowAO[m * 3] && L.u - R < -hw) { side = -1; pen = -hw - (L.u - R); }
+    if (!side || pen > 0.6) return;
+    const nx = -L.rx * side, nz = -L.rz * side;        // normal pointing back to the track
+    b.p[0] += nx * pen; b.p[2] += nz * pen;
+    const vn = b.v[0] * nx + b.v[2] * nz;
+    if (vn < 0) {
+      b.v[0] -= nx * vn * 1.38; b.v[2] -= nz * vn * 1.38;
+      b.v[0] *= 0.97; b.v[2] *= 0.97;
+      if (-vn > 0.8) this.ev.hit(b, -vn, [b.p[0] - nx * CFG.R, b.p[1], b.p[2] - nz * CFG.R]);
+    }
+  }
+
+  props(b, L) {
+    const T = this.T, R = CFG.R;
+    for (const o of T.objects) {
+      if (o.kind !== 'post' && o.kind !== 'slider') continue;
+      if (Math.abs(o.s - L.s) > 3) continue;
+      let ou = o.u, ovx = 0, ovz = 0;
+      if (o.kind === 'slider') {
+        const ph = TAU * this.time / o.period + o.phase;
+        ou = o.amp * Math.sin(ph);
+        const du = o.amp * Math.cos(ph) * TAU / o.period;
+        T.pointAt(o.s, 0, 0, this.tmp);
+        ovx = -Math.cos(this.tmp[3]) * du; ovz = Math.sin(this.tmp[3]) * du;
+      }
+      T.pointAt(o.s, ou, 0, this.tmp);
+      const dx = b.p[0] - this.tmp[0], dz = b.p[2] - this.tmp[2], d = Math.hypot(dx, dz), min = R + o.rad;
+      if (d >= min || d < 1e-5) continue;
+      const nx = dx / d, nz = dz / d;
+      b.p[0] += nx * (min - d); b.p[2] += nz * (min - d);
+      const rvx = b.v[0] - ovx, rvz = b.v[2] - ovz, vn = rvx * nx + rvz * nz;
+      if (vn < 0) {
+        b.v[0] -= nx * vn * 1.5; b.v[2] -= nz * vn * 1.5;
+        if (-vn > 0.6) this.ev.hit(b, -vn, [this.tmp[0] + nx * o.rad, b.p[1], this.tmp[2] + nz * o.rad]);
+      }
+    }
+  }
+}
+
+// =====================================================================
+// CameraRig — smoothed chase cam with anticipation, roll and FOV kick.
+// =====================================================================
+class CameraRig {
+  constructor() {
+    this.pos = [0, 3, -6]; this.look = [0, 0, 0]; this.yaw = 0; this.roll = 0; this.fov = 1.2;
+    this.shake = 0; this.kick = 0; this.mode = 'orbit'; this.t = 0; this.prevYaw = 0; this.yawRate = 0;
+    this.eye = [0, 0, 0]; this.tgt = [0, 0, 0]; this.tmp = [0, 0, 0, 0];
+  }
+  params(aspect, speed) {
+    const portrait = aspect < 0.9;
+    return {
+      dist: (portrait ? 5.7 : 5.2) + speed * 0.1,
+      height: (portrait ? 3.0 : 2.5) + speed * 0.04,
+      fov: ((portrait ? 72 : 56) + speed * 0.75) * Math.PI / 180,
+    };
+  }
+  snap(ball, T, aspect) {
+    T.pointAt(ball.s + 3, 0, 0, this.tmp);
+    this.yaw = this.tmp[3]; this.prevYaw = this.yaw; this.roll = 0;
+    const P = this.params(aspect, 0), fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+    this.pos[0] = ball.p[0] - fx * P.dist; this.pos[1] = ball.p[1] + P.height; this.pos[2] = ball.p[2] - fz * P.dist;
+    this.look[0] = ball.p[0] + fx * 3; this.look[1] = ball.p[1]; this.look[2] = ball.p[2] + fz * 3;
+    this.fov = P.fov;
+  }
+  update(dt, ball, T, aspect) {
+    this.t += dt;
+    const sp = ball.speed, P = this.params(aspect, sp);
+    if (this.mode === 'follow') {
+      T.pointAt(ball.s + 1, 0, 0, this.tmp); const thB = this.tmp[3];
+      T.pointAt(ball.s + 4 + sp * 0.4, 0, 0, this.tmp); const thA = this.tmp[3];
+      let ty = thB + wrapAngle(thA - thB) * 0.65;
+      const vd = wrapAngle(Math.atan2(ball.v[0], ball.v[2]) - ty);
+      if (sp > 3 && Math.abs(vd) < 1.1) ty += vd * clamp((sp - 3) / 20, 0, 0.22);   // ignore when rolling backwards
+      this.yaw += wrapAngle(ty - this.yaw) * damp(3.4, dt);
+      const yr = wrapAngle(this.yaw - this.prevYaw) / Math.max(dt, 1e-4); this.prevYaw = this.yaw;
+      this.yawRate = lerp(this.yawRate, yr, damp(6, dt));
+      this.roll = lerp(this.roll, clamp(-this.yawRate * 0.09 * (0.4 + sp / 14), -0.16, 0.16), damp(4, dt));
+      const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+      const tx = ball.p[0] - fx * P.dist, ty2 = ball.p[1] + P.height, tz = ball.p[2] - fz * P.dist;
+      const kxz = damp(7.5, dt), ky = damp(4.2, dt);
+      this.pos[0] = lerp(this.pos[0], tx, kxz); this.pos[2] = lerp(this.pos[2], tz, kxz); this.pos[1] = lerp(this.pos[1], ty2, ky);
+      const la = 3 + sp * 0.28;
+      const lx = ball.p[0] + fx * la, ly = ball.p[1] + 0.2, lz = ball.p[2] + fz * la;
+      const kl = damp(10, dt);
+      this.look[0] = lerp(this.look[0], lx, kl); this.look[1] = lerp(this.look[1], ly, kl); this.look[2] = lerp(this.look[2], lz, kl);
+      this.fov = lerp(this.fov, P.fov + this.kick * 0.16, damp(3, dt));
+    } else if (this.mode === 'fall') {
+      this.pos[1] = lerp(this.pos[1], Math.max(ball.p[1] + 3.5, this.pos[1] - 40), damp(1.1, dt));
+      const kl = damp(6, dt);
+      for (let j = 0; j < 3; j++) this.look[j] = lerp(this.look[j], ball.p[j], kl);
+      this.roll = lerp(this.roll, 0, damp(2, dt));
+      this.fov = lerp(this.fov, P.fov * 0.8, damp(1.5, dt));
+    } else {                                          // attract mode: slow swing behind the ball, looking down the track
+      T.pointAt(ball.s + 2, 0, 0, this.tmp);
+      const th = this.tmp[3], a = th + Math.PI + Math.sin(this.t * 0.13) * 0.95, r = 6.4;
+      const tx = ball.p[0] + Math.sin(a) * r, tz = ball.p[2] + Math.cos(a) * r;
+      const k = damp(1.6, dt);
+      this.pos[0] = lerp(this.pos[0], tx, k); this.pos[1] = lerp(this.pos[1], ball.p[1] + 2.3 + Math.sin(this.t * 0.21) * 0.6, k); this.pos[2] = lerp(this.pos[2], tz, k);
+      const lx = ball.p[0] + Math.sin(th) * 5, ly = ball.p[1] + 1.7, lz = ball.p[2] + Math.cos(th) * 5;
+      this.look[0] = lerp(this.look[0], lx, k); this.look[1] = lerp(this.look[1], ly, k); this.look[2] = lerp(this.look[2], lz, k);
+      this.yaw = th; this.prevYaw = th;
+      this.roll = lerp(this.roll, Math.sin(this.t * 0.13) * 0.06, k); this.fov = lerp(this.fov, P.fov, k);
+    }
+    this.kick = Math.max(0, this.kick - dt * 1.5);
+    this.shake = Math.max(0, this.shake - dt * 2.2);
+    const sh = this.shake * this.shake * 0.35;
+    const n = (f) => Math.sin(this.t * f) * Math.sin(this.t * f * 1.37 + 1.3);
+    this.eye[0] = this.pos[0] + n(41) * sh; this.eye[1] = this.pos[1] + n(37) * sh; this.eye[2] = this.pos[2] + n(45) * sh;
+    this.tgt[0] = this.look[0]; this.tgt[1] = this.look[1]; this.tgt[2] = this.look[2];
+    for (let j = 0; j < 3; j++) { this.eye[j] = fin(this.eye[j]); this.tgt[j] = fin(this.tgt[j], this.eye[j] + (j === 2 ? 1 : 0)); }
+  }
+}
