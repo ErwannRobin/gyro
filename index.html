@@ -8,6 +8,13 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>GYROLL</title>
+<meta name="description" content="GYROLL — an endless 3D marble run you steer by tilting your phone. How far can you go?">
+<link rel="canonical" href="https://gyroll.vercel.app/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="GYROLL — How far can you go?">
+<meta property="og:description" content="Tilt your phone to roll a marble along an endless floating track. Daily run, 5 worlds, share your best run.">
+<meta property="og:url" content="https://gyroll.vercel.app/">
+<meta name="twitter:card" content="summary">
 <style>
 :root{
   --accent:#4ef2ff;
@@ -507,6 +514,11 @@ const tr = (key, vars) => {
   if (vars) for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);
   return s;
 };
+
+// ---------------------------------------------------------------- production URL
+// Used in shared scores (text, video end card). "?mode=daily" opens the daily run directly.
+const PROD_URL = 'https://gyroll.vercel.app/';
+const PROD_HOST = PROD_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
 
 // ---------------------------------------------------------------- daily run
 // Same seed for every player on the same UTC day.
@@ -3293,6 +3305,7 @@ class Replay {
     g.fillStyle = 'rgba(255,255,255,.7)'; g.font = this.font(Math.round(18 * u), 800); g.fillText('BEST ' + fmt(info.best) + ' m', W / 2, cy + 112 * u);
     if (info.tag) { g.fillStyle = info.accent; g.font = this.font(Math.round(16 * u), 800); g.fillText(info.tag, W / 2, cy + 150 * u); }
     g.fillStyle = 'rgba(255,255,255,.85)'; g.font = this.font(Math.round(20 * u), 500); g.fillText('How far can you go?', W / 2, cy + 200 * u);
+    g.fillStyle = info.accent; g.font = this.font(Math.round(18 * u), 800); g.fillText(PROD_HOST, W / 2, cy + 236 * u);
     g.globalAlpha = 1;
   }
 }
@@ -3327,7 +3340,9 @@ class Game {
     this.chunks = new Map(); this.nextChunk = 0;
     this.themeIdx = clamp(Store.get('theme', 0) | 0, 0, TRACK_THEMES.length - 1);
     this.skinIdx = clamp(Store.get('skin', 0) | 0, 0, BALL_SKINS.length - 1);
-    this.gameMode = Store.get('mode', 'random') === 'daily' ? 'daily' : 'random';
+    let qm = null;
+    try { qm = new URLSearchParams(location.search).get('mode'); } catch (e) { qm = null; }
+    this.gameMode = (qm === 'daily' || qm === 'random' ? qm : Store.get('mode', 'random')) === 'daily' ? 'daily' : 'random';
     this.best = this.modeBest();
     this.bestScore = Math.max(0, +Store.get('bestScore', 0) || 0);
     this.state = 'menu'; this.time = 0; this.timeScale = 1; this.acc = 0; this.used = false; this.mode = 'touch';
@@ -3865,10 +3880,10 @@ class Game {
   share() {
     const f = this.shareFile, info = this.shareInfo;
     if (!info || this.shareSt === 'busy') return;
-    const url = /^https?:$/.test(location.protocol) ? location.href.split('#')[0] : '';
+    const url = PROD_URL + (this.gameMode === 'daily' ? '?mode=daily' : '');
     let text = tr('shareText', { d: fmt(info.dist), s: fmt(info.score) });
     if (this.gameMode === 'daily') text += ' — ' + tr('shareDaily', { date: dayLabel(this.runDay || dayKey()) });
-    if (url) text += ' ' + url;
+    text += ' ' + url;
     let canFiles = false;
     try { canFiles = !!(f && navigator.canShare && navigator.canShare({ files: [f] })); } catch (e) { canFiles = false; }
     if (navigator.share && (canFiles || !f)) {
