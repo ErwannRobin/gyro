@@ -80,6 +80,24 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 #speedBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px}
 #ctrlTag{position:absolute;right:calc(var(--sar) + 16px);bottom:calc(var(--sab) + 18px);font-size:11px;font-weight:800;letter-spacing:.16em;color:var(--dim);
   text-shadow:0 2px 6px rgba(0,0,0,.8)}
+#power{position:absolute;left:50%;bottom:calc(var(--sab) + 44px);transform:translateX(-50%);width:min(56vw,250px);padding:8px 10px;
+  text-shadow:0 2px 6px rgba(0,0,0,.85);pointer-events:none;-webkit-tap-highlight-color:transparent}
+#power .row{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;font-size:11px;font-weight:900;letter-spacing:.12em;margin-bottom:5px;white-space:nowrap}
+#pwCoin{color:var(--gold);transition:transform .2s}
+#pwCoin::before{content:"";display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#fff7d6,var(--gold) 55%,#b8801e);box-shadow:0 0 6px rgba(255,211,107,.7)}
+#pwCoin.up{transform:scale(1.35)}
+#pwTxt{color:var(--dim);overflow:hidden;text-overflow:ellipsis}
+#power .bar{height:8px;border-radius:5px;background:rgba(255,255,255,.14);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);overflow:hidden}
+#pwFill{display:block;height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,#ffe9a8,var(--gold),#ff9d5c);transition:width .15s linear}
+#power.ready{pointer-events:auto;cursor:pointer}
+#power.ready .bar{animation:pwPulse .6s ease-in-out infinite alternate}
+#power.ready #pwTxt,#power.on #pwTxt{color:#fff3c4}
+#power.on #pwFill{background:linear-gradient(90deg,#fff,#fff3c4,var(--gold));box-shadow:0 0 12px var(--gold)}
+@keyframes pwPulse{from{box-shadow:0 0 0 1px rgba(255,211,107,.5),0 0 6px rgba(255,211,107,.4)}to{box-shadow:0 0 0 2px rgba(255,230,160,1),0 0 22px rgba(255,211,107,.95)}}
+#starGlow{position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0;transition:opacity .5s;
+  background:radial-gradient(ellipse 90% 80% at 50% 50%,rgba(255,210,110,0) 50%,rgba(255,196,80,.32) 100%)}
+body.star #starGlow{opacity:1}
 #toasts{position:absolute;left:0;right:0;top:32%;display:flex;flex-direction:column;align-items:center;gap:6px}
 .toast{font-weight:900;letter-spacing:.14em;font-size:20px;text-shadow:0 0 2px #000,0 0 3px rgba(0,0,0,.9),0 3px 12px rgba(0,0,0,.8);animation:toast 1.4s ease-out forwards;white-space:nowrap}
 .toast.big{font-size:28px}
@@ -96,7 +114,7 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 #joy.on{opacity:1}
 #joy i{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;
   background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.9),rgba(160,230,255,.45) 45%,rgba(78,242,255,.15) 75%);box-shadow:0 0 18px rgba(78,242,255,.45)}
-#touchHint{position:fixed;left:0;right:0;bottom:calc(var(--sab) + 70px);text-align:center;z-index:6;pointer-events:none;
+#touchHint{position:fixed;left:0;right:0;bottom:calc(var(--sab) + 104px);text-align:center;z-index:6;pointer-events:none;
   font-size:14px;font-weight:700;letter-spacing:.06em;color:var(--dim);text-shadow:0 2px 6px #000;transition:opacity .6s}
 
 /* ---------- Screens ---------- */
@@ -234,6 +252,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 
 <div id="vignette"></div>
 <div id="danger"></div>
+<div id="starGlow"></div>
 <div id="flash"></div>
 <div id="joy"><i></i></div>
 <div id="touchHint" class="hidden"></div>
@@ -252,6 +271,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   </div>
   <div id="speedo"><span class="v num" id="hSpeed">0</span><span class="u">KM/H</span><div id="speedBar"><i id="hSpeedBar"></i></div></div>
   <div id="ctrlTag"></div>
+  <div id="power" role="button" aria-label="Star power"><div class="row"><span id="pwCoin" class="num">×1</span><span id="pwTxt"></span></div><div class="bar"><i id="pwFill"></i></div></div>
   <div id="toasts"></div>
 </div>
 
@@ -501,7 +521,9 @@ const I18N = {
     touchHint: 'Glissez le doigt pour guider la bille', keysHint: 'Flèches / WASD / ZQSD · ou glisser à la souris',
     permDenied: 'Accès au gyroscope refusé — contrôle tactile activé.', permNone: 'Gyroscope indisponible — contrôle tactile activé.',
     ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TACTILE', ctrlKeys: 'CLAVIER', record: 'NOUVEAU RECORD !', dailyTag: 'DÉFI DU JOUR · {date}', randomTag: 'PARTIE ALÉATOIRE',
-    kid: 'MODE ENFANT · RAILS LATÉRAUX', kidInfo: 'Des petits rails rattrapent la bille sur les côtés', kidBadge: '🛡 Réalisé avec les rails latéraux', kidShare: 'avec les rails latéraux', kidTag: 'RAILS',
+    kid: 'MODE ENFANT · RAILS LATÉRAUX', kidInfo: 'Des petits rails rattrapent la bille sur les côtés', kidBadge: '🛡 Réalisé avec les rails latéraux', kidShare: 'avec les rails latéraux', kidTag: 'RAILS', tooFast: 'TROP VITE !',
+    star: 'POUVOIR ÉTOILE', starGo: 'LEVEZ D’UN COUP ↑', starGoTouch: 'TAPEZ 2 FOIS', starGoKeys: 'ESPACE', starReady: 'ÉTOILE PRÊTE !',
+    starOn: '★ ÉTOILE ★', starActive: '★ SCORE ×2', starEnd: 'FIN DE L’ÉTOILE', combo: 'PIÈCES ×{n}', comboLost: 'SÉRIE PERDUE',
     install: 'INSTALLER L’APPLI', iosInstall: 'Touchez Partager ⎋ puis « Sur l’écran d’accueil ».',
     noGL: 'WebGL est indisponible sur cet appareil / navigateur. Activez l’accélération matérielle ou essayez un Chrome / Safari récent.',
   },
@@ -516,7 +538,9 @@ const I18N = {
     touchHint: 'Drag your finger to steer the ball', keysHint: 'Arrows / WASD · or drag with the mouse',
     permDenied: 'Gyroscope access denied — touch control enabled.', permNone: 'Gyroscope unavailable — touch control enabled.',
     ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TOUCH', ctrlKeys: 'KEYBOARD', record: 'NEW RECORD!', dailyTag: 'DAILY RUN · {date}', randomTag: 'RANDOM RUN',
-    kid: 'KID MODE · SIDE RAILS', kidInfo: 'Small rails catch the ball on the sides', kidBadge: '🛡 Achieved with side rails on', kidShare: 'with side rails on', kidTag: 'RAILS',
+    kid: 'KID MODE · SIDE RAILS', kidInfo: 'Small rails catch the ball on the sides', kidBadge: '🛡 Achieved with side rails on', kidShare: 'with side rails on', kidTag: 'RAILS', tooFast: 'TOO FAST!',
+    star: 'STAR POWER', starGo: 'FLICK PHONE UP ↑', starGoTouch: 'DOUBLE-TAP', starGoKeys: 'PRESS SPACE', starReady: 'STAR POWER READY!',
+    starOn: '★ STAR POWER ★', starActive: '★ SCORE ×2', starEnd: 'STAR POWER OVER', combo: 'COINS ×{n}', comboLost: 'STREAK LOST',
     install: 'INSTALL THE APP', iosInstall: 'Tap Share ⎋, then “Add to Home Screen”.',
     noGL: 'WebGL is not available on this device / browser. Enable hardware acceleration or try a recent Chrome / Safari.',
   },
@@ -581,9 +605,14 @@ const CFG = {
   R: 0.42,               // ball radius
   G: 24,                 // gravity
   ACC: 15,               // tilt acceleration at full input
-  VMAX: 14,              // soft top speed
+  VMAX: 14,              // reference speed (score/visual tiers)
+  VFADE: 13,             // speed at which the forward push is halved (it never reaches 0)
+  RAIL_BREAK: 6.5,       // sideways impact (m/s) above which the ball jumps a small safety rail
   VBOOST: 20,            // boost speed
   CHECKPOINT: 250,       // meters between checkpoints
+  COIN_POWER: 0.07,      // star gauge gained per coin (× coin multiplier)
+  COIN_STEP: 4,          // coins in a row needed for each coin multiplier step
+  STAR_TIME: 6.5,        // seconds a full star gauge lasts once triggered
   START_S: 8,            // ball spawn arc length
 };
 
@@ -1210,7 +1239,7 @@ void main(){ vec4 wp = u_model * vec4(a_pos, 1.0); v_wp = wp.xyz; v_n = normaliz
 const FS_BALL = GLSL_COMMON + `
 varying vec3 v_wp; varying vec3 v_n; varying vec3 v_on;
 uniform vec3 u_cam; uniform vec3 u_sunDir; uniform vec3 u_sunCol; uniform vec3 u_floor; uniform vec3 u_accent; uniform vec3 u_skyMid; uniform vec3 u_abyss;
-uniform vec3 u_base; uniform vec3 u_glowCol; uniform float u_type; uniform float u_time; uniform float u_speed; uniform float u_fade;
+uniform vec3 u_base; uniform vec3 u_glowCol; uniform float u_type; uniform float u_time; uniform float u_speed; uniform float u_fade; uniform float u_star;
 uniform sampler2D u_env; uniform sampler2D u_envBlur; uniform sampler2D u_env2; uniform sampler2D u_envBlur2; uniform float u_envMix;
 vec3 env(vec3 d){ vec2 q = equirect(d); return mix(texture2D(u_env, q).rgb, texture2D(u_env2, q).rgb, u_envMix); }
 vec3 envB(vec3 d){ vec2 q = equirect(d); return mix(texture2D(u_envBlur, q).rgb, texture2D(u_envBlur2, q).rgb, u_envMix); }
@@ -1263,6 +1292,12 @@ void main(){
   }
   col += u_sunCol * spec;
   col += u_glowCol * fres * (0.25 + u_speed * 0.6);
+  if (u_star > 0.0) {                          // star power: the ball lights up from inside
+    float pulse = 0.75 + 0.25 * sin(u_time * 14.0);
+    vec3 starCol = mix(vec3(1.0, 0.82, 0.35), vec3(1.0), 0.35 + 0.35 * fres);
+    col = mix(col, col * 0.4 + starCol * (0.9 + fres * 1.5) * pulse, u_star);
+    glow = max(glow, u_star);
+  }
   gl_FragColor = vec4(col * u_fade, clamp(glow + spec * 0.15 + u_speed * fres * 0.5, 0.0, 1.0));
 }`;
 
@@ -1573,6 +1608,20 @@ Prims.rock = (seed) => {
   });
   const mb = new MeshBuilder(F2.length * 4 + 8); mb.M = [14, 0, 0, 1];
   for (const [a, b, c] of F2) mb.face(V[a], V[b], V[c], V[a], [0, 0.1, 0]);
+  return mb;
+};
+// Coin: short cylinder (axis Y, height 1, radius 1) with both caps, gem material.
+Prims.coin = (seg = 22) => {
+  const mb = new MeshBuilder(seg * 12); mb.M = [10, 0, 0, 1];
+  for (let k = 0; k < seg; k++) {
+    const a0 = k / seg * TAU, a1 = (k + 1) / seg * TAU, c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
+    mb.quad([c0, -0.5, s0], [c1, -0.5, s1], [c1, 0.5, s1], [c0, 0.5, s0], [c0, 0, s0], [0, 0, 1, 0, 1, 1, 0, 1], [c1, 0, s1]);
+    mb.grow(6, 6);
+    for (const y of [0.5, -0.5]) {
+      const n = Math.sign(y), c = mb.V(0, y, 0, 0, n, 0, 0.5, 0.5), p = mb.V(c0 * 0.999, y, s0 * 0.999, 0, n, 0, 0, 0), q = mb.V(c1 * 0.999, y, s1 * 0.999, 0, n, 0, 1, 0);
+      mb.tri(c, p, q);
+    }
+  }
   return mb;
 };
 Prims.pyramid = () => {
@@ -1887,7 +1936,7 @@ class Renderer {
       rocks: [1, 2, 3].map((k) => this.upload(Prims.rock(k * 17))), shards: [1, 2, 3].map((k) => this.upload(Prims.shard(k * 29))),
       sphere: this.upload(Prims.withMat(Prims.sphere(22, 14), 16)), box16: this.upload(Prims.box(16)), box17: this.upload(Prims.box(17)),
       glow: this.upload(Prims.box(18)), ringGlow: this.upload(Prims.torus(1, 0.05, 56, 6, 18)), torus16: this.upload(Prims.torus(1, 0.22, 40, 12, 16)),
-      ring17: this.upload(Prims.torus(1, 0.08, 40, 6, 17)),
+      ring17: this.upload(Prims.torus(1, 0.08, 40, 6, 17)), coin: this.upload(Prims.coin()),
     };
     this.dynBuf = gl.createBuffer();
     this.ptsBuf = gl.createBuffer();
@@ -2172,14 +2221,14 @@ class Renderer {
     else this.gl.uniformMatrix4fv(this.pLit.u('u_model'), false, this.ident);
   }
 
-  drawBall(model, skin, speed, fade) {
+  drawBall(model, skin, speed, fade, star = 0) {
     const gl = this.gl, T = this.theme, p = this.use(this.pBall);
     gl.uniformMatrix4fv(p.u('u_vp'), false, this.vp); gl.uniformMatrix4fv(p.u('u_model'), false, model);
     const Z = this.Z;
     gl.uniform3fv(p.u('u_cam'), this.cam); gl.uniform3fv(p.u('u_sunDir'), this.sunDir); gl.uniform3fv(p.u('u_sunCol'), Z.sun);
     gl.uniform3fv(p.u('u_floor'), T.deckA); gl.uniform3fv(p.u('u_accent'), T.accent); gl.uniform3fv(p.u('u_skyMid'), Z.skyMid); gl.uniform3fv(p.u('u_abyss'), Z.abyss);
     gl.uniform3fv(p.u('u_base'), skin.base); gl.uniform3fv(p.u('u_glowCol'), skin.glow); gl.uniform1f(p.u('u_type'), skin.type);
-    gl.uniform1f(p.u('u_time'), this.time % 1000); gl.uniform1f(p.u('u_speed'), speed); gl.uniform1f(p.u('u_fade'), fade);
+    gl.uniform1f(p.u('u_time'), this.time % 1000); gl.uniform1f(p.u('u_speed'), speed); gl.uniform1f(p.u('u_fade'), fade); gl.uniform1f(p.u('u_star'), star);
     this.bindZoneTex(p, 'mid', 'u_env', 'u_env2', 0, 1); this.bindZoneTex(p, 'blur', 'u_envBlur', 'u_envBlur2', 2, 3);
     gl.uniform1f(p.u('u_envMix'), this.zMix);
     this.bindMesh(this.meshes.ball, 2);
@@ -2244,7 +2293,7 @@ class Ball {
   reset() {
     this.p.fill(0); this.v.fill(0); this.q[0] = this.q[1] = this.q[2] = 0; this.q[3] = 1; this.w.fill(0);
     this.grounded = true; this.lost = false; this.s = 0; this.u = 0; this.hint = 0; this.air = 0;
-    this.boost = 0; this.lastPad = -99; this.speed = 0; this.surfY = 0; this.support = true;
+    this.boost = 0; this.hop = 0; this.lastPad = -99; this.speed = 0; this.surfY = 0; this.support = true;
   }
 }
 
@@ -2271,25 +2320,31 @@ class Physics {
     let L = T.locate(b.p[0], b.p[2], b.hint);
     b.hint = L.i;
     b.boost = Math.max(0, b.boost - dt);
+    b.hop = Math.max(0, b.hop - dt);
 
     if (b.grounded) {
       const k = G * 0.714, tb = Math.tan(L.bank);
       const gA = -k * L.slope, gL = -k * tb;
-      b.v[0] += (ax + L.fx * gA + L.rx * gL) * dt;
-      b.v[2] += (az + L.fz * gA + L.rz * gL) * dt;
-      // rolling resistance + soft top speed
-      let sp = Math.hypot(b.v[0], b.v[2]);
-      const damp = 1 - (0.26 + (Math.abs(ix) + Math.abs(iy) < 0.05 && sp < 1.2 ? 1.4 : 0)) * dt;
+      // No speed cap: the forward push fades with speed (halved at VFADE) but never stops.
+      // Braking and steering keep their full strength.
+      let iax = ax, iaz = az;
+      const sp0 = Math.hypot(b.v[0], b.v[2]);
+      if (sp0 > 0.5) {
+        const ux = b.v[0] / sp0, uz = b.v[2] / sp0, along = iax * ux + iaz * uz;
+        if (along > 0) { const cut = along * sp0 * sp0 / (CFG.VFADE * CFG.VFADE + sp0 * sp0); iax -= ux * cut; iaz -= uz * cut; }
+      }
+      b.v[0] += (iax + L.fx * gA + L.rx * gL) * dt;
+      b.v[2] += (iaz + L.fz * gA + L.rz * gL) * dt;
+      // rolling resistance: stronger when slow (so the ball settles), light at speed
+      const sp = Math.hypot(b.v[0], b.v[2]);
+      const damp = 1 - (0.05 + 0.2 * Math.exp(-sp / 6) + (Math.abs(ix) + Math.abs(iy) < 0.05 && sp < 1.2 ? 1.4 : 0)) * dt;
       b.v[0] *= damp; b.v[2] *= damp;
-      sp *= damp;
-      const vmax = CFG.VMAX + (CFG.VBOOST - CFG.VMAX) * clamp(b.boost / 0.9, 0, 1);
-      if (sp > vmax) { const f = Math.max(vmax / sp, 1 - 1.3 * dt); b.v[0] *= f; b.v[2] *= f; }
       const py = b.p[1];
       b.p[0] += b.v[0] * dt; b.p[2] += b.v[2] * dt;
       L = T.locate(b.p[0], b.p[2], b.hint); b.hint = L.i;
       this.rails(b, L);
       this.props(b, L);
-      if (this.supported(L)) {
+      if (!b.grounded) { /* jumped a safety rail: the airborne branch takes over */ } else if (this.supported(L)) {
         b.p[1] = T.surfaceY(L, L.u) + R;
         b.v[1] = clamp((b.p[1] - py) / dt, -30, 30);
         const m = L.i & T.mask;
@@ -2297,7 +2352,7 @@ class Physics {
           b.lastPad = L.i;
           // boosters also steady the ball: half of the sideways drift is removed
           const vf = b.v[0] * L.fx + b.v[2] * L.fz, vl = b.v[0] * L.rx + b.v[2] * L.rz;
-          const add = Math.max(0, CFG.VBOOST - vf);
+          const add = Math.max(0, Math.max(CFG.VBOOST, vf + 5) - vf);
           b.v[0] += L.fx * add - L.rx * vl * 0.5; b.v[2] += L.fz * add - L.rz * vl * 0.5; b.boost = 1.3;
           this.ev.boost(b);
         }
@@ -2330,18 +2385,28 @@ class Physics {
     for (let j = 0; j < 3; j++) if (!Number.isFinite(b.p[j]) || !Number.isFinite(b.v[j])) { b.v.fill(0); b.p[j] = fin(b.p[j]); b.lost = true; }
   }
 
+  // Real rails (tall, on some bends) always hold. Small safety rails (kid mode, star power)
+  // hold gentle bumps only: hit them too hard and the ball jumps over.
   rails(b, L) {
-    const T = this.T, m = L.i & T.mask, f = T.rowF[m] | (this.kid ? RF.RAIL_L | RF.RAIL_R : 0);
-    if (!(f & (RF.RAIL_L | RF.RAIL_R)) || b.p[1] > b.surfY + 1.2) return;
+    const T = this.T, m = L.i & T.mask, real = T.rowF[m] & (RF.RAIL_L | RF.RAIL_R);
+    const f = real | (this.kid || this.star ? RF.RAIL_L | RF.RAIL_R : 0);
+    if (!f || b.p[1] > b.surfY + 1.2) return;
     const hw = L.w / 2 - 0.1, R = CFG.R;
     const n = T.rowN[m]; if (!n) return;
     let side = 0, pen = 0;
     if ((f & RF.RAIL_R) && T.rowBO[m * 3 + n - 1] && L.u + R > hw) { side = 1; pen = L.u + R - hw; }
     if ((f & RF.RAIL_L) && T.rowAO[m * 3] && L.u - R < -hw) { side = -1; pen = -hw - (L.u - R); }
     if (!side || pen > 0.6) return;
+    const soft = !(real & (side > 0 ? RF.RAIL_R : RF.RAIL_L));
+    if (soft && (b.hop > 0 || !b.grounded)) return;       // already jumping over it
     const nx = -L.rx * side, nz = -L.rz * side;        // normal pointing back to the track
-    b.p[0] += nx * pen; b.p[2] += nz * pen;
     const vn = b.v[0] * nx + b.v[2] * nz;
+    if (soft && -vn > CFG.RAIL_BREAK) {
+      b.hop = 0.6; b.grounded = false; b.air = 0; b.v[1] = 2 + (-vn - CFG.RAIL_BREAK) * 0.25;
+      this.ev.railJump(b, -vn, [b.p[0] - nx * CFG.R, b.p[1], b.p[2] - nz * CFG.R]);
+      return;
+    }
+    b.p[0] += nx * pen; b.p[2] += nz * pen;
     if (vn < 0) {
       b.v[0] -= nx * vn * 1.38; b.v[2] -= nz * vn * 1.38;
       b.v[0] *= 0.97; b.v[2] *= 0.97;
@@ -2387,6 +2452,7 @@ class CameraRig {
   }
   params(aspect, speed) {
     const portrait = aspect < 0.9;
+    speed = Math.min(speed, 24);                  // past ~86 km/h, speed lines and blur carry the feeling
     return {
       dist: (portrait ? 5.7 : 5.2) + speed * 0.1,
       height: (portrait ? 3.0 : 2.5) + speed * 0.04,
@@ -2464,6 +2530,7 @@ class InputManager {
     this.lastEvt = 0;
     this.keys = new Set();
     this.ptr = null; this.enabled = false;
+    this.flick = false; this.doubleTap = false; this.lastTap = 0; this.hist = []; this.lastFlick = -1e4;
     this.joyEl = document.getElementById('joy'); this.knob = this.joyEl.firstElementChild;
     this.onOrient = this.onOrient.bind(this);
     this.angle = this.screenAngle();
@@ -2477,6 +2544,9 @@ class InputManager {
     canvas.addEventListener('pointerdown', (e) => {
       if (!this.enabled || this.ptr !== null) return;
       e.preventDefault();
+      const now = performance.now();
+      if (now - this.lastTap < 320) this.doubleTap = true;
+      this.lastTap = now;
       this.ptr = e.pointerId; this.cx = e.clientX; this.cy = e.clientY; this.joyX = this.joyY = 0;
       try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
       this.joyEl.style.left = this.cx + 'px'; this.joyEl.style.top = this.cy + 'px';
@@ -2550,6 +2620,13 @@ class InputManager {
     }
     this.raw = [sx, sy, dz];
     this.lastEvt = performance.now();
+    // quick "tilt up" (top edge raised towards you): the screen pitch grows by ~20° in a quarter second.
+    // An angle, not sy, so it still works when the phone is held almost upright.
+    const now = this.lastEvt, H = this.hist, pitch = Math.atan2(-sy, -dz);
+    H.push(now, pitch);
+    while (H.length > 2 && now - H[0] > 250) H.splice(0, 2);
+    let low = 9; for (let k = 1; k < H.length; k += 2) low = Math.min(low, H[k]);
+    if (pitch - low > 0.35 && now - this.lastFlick > 900) { this.flick = true; this.lastFlick = now; H.length = 0; }
     if (this.calib) { this.calib.acc[0] += sx; this.calib.acc[1] += sy; this.calib.acc[2] += dz; this.calib.n++; }
   }
   startCalibration() { this.calib = { acc: [0, 0, 0], n: 0 }; }
@@ -2589,7 +2666,7 @@ class AudioManager {
     this.sfxOn = Store.get('sfxOn', true) !== false;
     this.sfxVol = clamp(+Store.get('sfxVol', 0.8) || 0, 0, 1);
     this.musicVol = clamp(+Store.get('musicVol', 0.55) || 0, 0, 1);
-    this.intensity = 0.15; this.step = 0; this.nextT = 0; this.chord = -1; this.gemCombo = 0; this.lastGem = 0;
+    this.intensity = 0.15; this.tempo = 1; this.step = 0; this.nextT = 0; this.chord = -1; this.gemCombo = 0; this.lastGem = 0;
   }
   init() {
     if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); return; }
@@ -2730,6 +2807,21 @@ class AudioManager {
   }
   go() { if (!this.ok) return; const t = this.ctx.currentTime; this.tone('triangle', 880, t, 0.005, 0.2, 0.15); this.tone('triangle', 1760, t + 0.12, 0.005, 0.2, 0.4, this.verbS); }
   tick() { if (!this.ok) return; const t = this.ctx.currentTime; this.tone('sine', 1320, t, 0.002, 0.08, 0.06); }
+  setTempo(k) { this.tempo = k; }
+  starOn() {
+    if (!this.ok) return; const t = this.ctx.currentTime;
+    [60, 64, 67, 72, 76, 79, 84, 88].forEach((m, i) => { this.tone('sawtooth', this.mtof(m), t + i * 0.045, 0.01, 0.05, 0.5); this.tone('triangle', this.mtof(m + 12), t + i * 0.045, 0.01, 0.12, 0.9, this.verbS); });
+    this.burst(t, 0.9, 0.25, 'bandpass', 500, 1.2, this.verbS, 6000);
+  }
+  starOff() {
+    if (!this.ok) return; const t = this.ctx.currentTime;
+    [84, 79, 76, 72].forEach((m, i) => this.tone('triangle', this.mtof(m), t + i * 0.07, 0.01, 0.09, 0.5, this.verbS));
+  }
+  starReady() {
+    if (!this.ok) return; const t = this.ctx.currentTime;
+    [76, 83, 88].forEach((m, i) => this.tone('sine', this.mtof(m), t + i * 0.08, 0.005, 0.14, 0.5, this.verbS));
+  }
+  coinMiss() { if (!this.ok) return; const t = this.ctx.currentTime; this.tone('square', 196, t, 0.005, 0.05, 0.15, null, 150); }
   thunder() {
     if (!this.ok) return; const t = this.ctx.currentTime;
     this.burst(t, 1.8, 0.5, 'lowpass', 260, 0.9, null, 60);
@@ -2745,7 +2837,7 @@ class AudioManager {
   // ---- generative ambient music (lookahead scheduler)
   schedule() {
     const c = this.ctx; if (!c || c.state !== 'running') return;
-    const stepDur = 60 / 84 / 4;
+    const stepDur = 60 / (84 * this.tempo) / 4;
     if (!this.musicOn) { this.nextT = c.currentTime + 0.1; return; }   // no nodes created while music is off
     if (this.nextT < c.currentTime - 0.5) this.nextT = c.currentTime + 0.05;
     const CH = [
@@ -2764,6 +2856,7 @@ class AudioManager {
         g.connect(this.delay);
       }
       if (I > 0.45 && st % 4 === 2) this.burst(t, 0.04, 0.03 * I, 'highpass', 8000, 0.7, this.music);
+      if (this.tempo > 1.05 && st % 2 === 1) this.tone('triangle', this.mtof(ch.sc[(st >> 1) % ch.sc.length] + 12), t, 0.003, 0.05, 0.12, this.music);   // star power arpeggio
       if (I > 0.65 && st % 8 === 0) this.tone('sine', 120, t, 0.003, 0.28 * I, 0.22, this.music, 42);
       this.nextT += stepDur; this.step++;
     }
@@ -2863,47 +2956,58 @@ class Environment {
     this.dustN = n; this.dust = new Float32Array(n * 4);
     for (let k = 0; k < n; k++) this.dust.set([Math.random(), Math.random(), Math.random(), Math.random()], k * 4);
   }
-  frame(T, s) { T.pointAt(clamp(s, 0, Math.max(0, T.length - 1)), 0, 0, this.tmp); const t = this.tmp; return { x: t[0], y: t[1], z: t[2], th: t[3], rx: -Math.cos(t[3]), rz: Math.sin(t[3]), fx: Math.sin(t[3]), fz: Math.cos(t[3]) }; }
+  frame(T, s) {
+    const sc = clamp(s, 0, Math.max(0, T.length - 1));
+    T.pointAt(sc, 0, 0, this.tmp); const t = this.tmp;
+    return { x: t[0], y: t[1], z: t[2], th: t[3], rx: -Math.cos(t[3]), rz: Math.sin(t[3]), fx: Math.sin(t[3]), fz: Math.cos(t[3]), w: T.w[Math.floor(sc / CFG.DS) & T.mask] };
+  }
   item(list, s, mesh, x, y, z, sx, sy, sz, col, o = {}) {
     list.push({ s, mesh, x, y, z, sx, sy, sz, col, emis: o.emis === undefined ? 1 : o.emis, yaw: o.yaw || 0, spin: o.spin || 0, tilt: o.tilt || 0,
-      tumble: o.tumble || 0, bob: o.bob || 0, blink: !!o.blink, q: o.q || null, fogK: o.fogK || 1, drift: o.drift || null, r: o.r || Math.max(sx, sy, sz) });
+      tumble: o.tumble || 0, bob: o.bob || 0, blink: !!o.blink, q: o.q || null, fogK: o.fogK || 1, drift: o.drift || null, r: o.r || Math.max(sx, sy, sz),
+      // occluder shape used to hide the object when the camera gets inside it or behind it
+      occ: o.occ || 'sphere', cr: o.cr || Math.max(sx, sy, sz) * 0.9, nx: o.nx || 0, nz: o.nz || 0, R: o.R || 0 });
   }
 
   // ------------------------------------------------------------- foreground
+  // Trackside props stay clear of the track corridor (edge + 1.4 m + their own size) so the
+  // chase camera, which swings wide in tight bends, rarely meets them; draw() hides the rest.
   spawnSide(T, s, M) {
     const r = this.rng, z = zoneAt(s), Z = ZONES[z], f = this.frame(T, s), sg = r.sign();
-    const at = (lat, h) => [f.x + f.rx * lat, f.y + h, f.z + f.rz * lat];
+    const clear = f.w / 2 + 1.4;
+    const lat = (rad, extra, side = sg) => side * (clear + rad + r.range(0, extra));
+    const at = (l, h) => [f.x + f.rx * l, f.y + h, f.z + f.rz * l];
+    const plane = { occ: 'plane', nx: f.fx, nz: f.fz };
     let step;
     if (z === 0) {
-      if (r.chance(0.16)) { this.item(this.side, s, M.gate, f.x, f.y, f.z, 1.55, 1.6, 1, Z.c1, { yaw: f.th, emis: 1.2 }); step = 14; }
+      if (r.chance(0.16)) { this.item(this.side, s, M.gate, f.x, f.y, f.z, 2.0, 1.7, 1, Z.c1, { yaw: f.th, emis: 1.2, ...plane }); step = 14; }
       else {
-        const p = at(sg * r.range(3.6, 6.5), r.range(0.8, 3.6));
-        this.item(this.side, s, M.cube, p[0], p[1] - 20.2, p[2], 0.2, 40, 0.2, Z.c1);
-        this.item(this.side, s, M.glow, p[0], p[1], p[2], 0.34, 0.34, 0.34, r.chance(0.3) ? [1, 0.25, 0.3] : Z.c1, { blink: true, emis: 1.6 });
+        const p = at(lat(0.3, 3), r.range(0.8, 3.6));
+        this.item(this.side, s, M.cube, p[0], p[1] - 20.2, p[2], 0.2, 40, 0.2, Z.c1, { occ: 'cyl', cr: 0.3 });
+        this.item(this.side, s, M.glow, p[0], p[1], p[2], 0.34, 0.34, 0.34, r.chance(0.3) ? [1, 0.25, 0.3] : Z.c1, { blink: true, emis: 1.6, cr: 0.4 });
         step = r.range(8, 13);
       }
     } else if (z === 1) {
       const n = r.chance(0.3) ? 2 : 1;
       for (let k = 0; k < n; k++) {
-        const p = at(sg * r.range(3.8, 10), r.range(-3.5, 3)), sc = r.range(0.6, 2.4);
-        this.item(this.side, s, M.rocks[r.int(0, 2)], p[0], p[1], p[2], sc, sc * r.range(0.7, 1.1), sc, [0.62, 0.5, 0.44], { yaw: r.range(0, TAU), spin: r.range(-0.1, 0.1), bob: r.range(0.1, 0.35) });
+        const sc = r.range(0.6, 2.4), p = at(lat(sc * 1.3, 5), r.range(-3.5, 3));
+        this.item(this.side, s, M.rocks[r.int(0, 2)], p[0], p[1], p[2], sc, sc * r.range(0.7, 1.1), sc, [0.62, 0.5, 0.44], { yaw: r.range(0, TAU), spin: r.range(-0.1, 0.1), bob: r.range(0.1, 0.35), cr: sc * 1.5 });
       }
       step = r.range(6, 11);
     } else if (z === 2) {
       Q.yaw(this.q, f.th); Q.fromAxisAngle(this.qx, 1, 0, 0, Math.PI / 2);
-      const q = Q.mul([0, 0, 0, 1], this.q, this.qx);
-      this.item(this.side, s, M.ringGlow, f.x, f.y + 1.0, f.z, 3.7, 3.7, 3.7, (Math.floor(s / 18) & 1) ? Z.c1 : Z.c2, { q, emis: 1.4, r: 4 });
-      if (r.chance(0.5)) { const p = at(sg * r.range(4.5, 7), 0); this.item(this.side, s, M.glow, p[0], p[1] - 1, p[2], 0.1, 9, 0.1, Z.c2, { emis: 1.3 }); }
+      const q = Q.mul([0, 0, 0, 1], this.q, this.qx), RR = 4.8;
+      this.item(this.side, s, M.ringGlow, f.x, f.y + 1.2, f.z, RR, RR, RR, (Math.floor(s / 18) & 1) ? Z.c1 : Z.c2, { q, emis: 1.4, r: RR + 0.3, occ: 'ring', R: RR, nx: f.fx, nz: f.fz });
+      if (r.chance(0.5)) { const p = at(lat(0.2, 2.5), 0); this.item(this.side, s, M.glow, p[0], p[1] - 1, p[2], 0.1, 9, 0.1, Z.c2, { emis: 1.3, occ: 'cyl', cr: 0.25 }); }
       step = r.range(15, 21);
     } else if (z === 3) {
-      const p = at(sg * r.range(3.5, 8), r.range(-2.5, 3.2)), sc = r.range(0.45, 1.3), kind = r.int(0, 2);
+      const sc = r.range(0.45, 1.3), p = at(lat(sc * 1.4, 4), r.range(-2.5, 3.2)), kind = r.int(0, 2);
       const col = Z.neb[r.int(0, 3)], mesh = kind === 0 ? M.sphere : kind === 1 ? M.box16 : M.torus16;
-      this.item(this.side, s, mesh, p[0], p[1], p[2], sc, sc, sc, col, { yaw: r.range(0, TAU), spin: r.range(-0.8, 0.8), tumble: r.range(-0.6, 0.6), bob: r.range(0.1, 0.4) });
+      this.item(this.side, s, mesh, p[0], p[1], p[2], sc, sc, sc, col, { yaw: r.range(0, TAU), spin: r.range(-0.8, 0.8), tumble: r.range(-0.6, 0.6), bob: r.range(0.1, 0.4), cr: sc * 1.4 });
       step = r.range(6, 10);
     } else {
-      const p = at(sg * r.range(3.5, 7), r.range(-2, 3)), sc = r.range(0.5, 1.5);
-      this.item(this.side, s, M.shards[r.int(0, 2)], p[0], p[1], p[2], sc, sc, sc, Z.c1, { yaw: r.range(0, TAU), spin: r.range(-2, 2), tumble: r.range(-1.5, 1.5), bob: 0.3 });
-      if (r.chance(0.3)) { const b = at(-sg * r.range(4, 6), r.range(1, 3)); this.item(this.side, s, M.glow, b[0], b[1], b[2], 0.3, 0.3, 0.3, [1, 0.2, 0.1], { blink: true, emis: 1.8 }); }
+      const sc = r.range(0.5, 1.5), p = at(lat(sc * 2.2, 3), r.range(-2, 3));
+      this.item(this.side, s, M.shards[r.int(0, 2)], p[0], p[1], p[2], sc, sc, sc, Z.c1, { yaw: r.range(0, TAU), spin: r.range(-2, 2), tumble: r.range(-1.5, 1.5), bob: 0.3, cr: sc * 2.3 });
+      if (r.chance(0.3)) { const b = at(lat(0.3, 2, -sg), r.range(1, 3)); this.item(this.side, s, M.glow, b[0], b[1], b[2], 0.3, 0.3, 0.3, [1, 0.2, 0.1], { blink: true, emis: 1.8, cr: 0.4 }); }
       step = r.range(5, 9);
     }
     return step / Math.max(0.6, this.density);
@@ -2979,11 +3083,12 @@ class Environment {
       }
     }
   }
-  draw(R, time) {
+  draw(R, time, focus) {
     const cam = R.cam, F = R.camF;
-    const one = (it) => {
+    const one = (it, near) => {
       const dx = it.x - cam[0], dy = it.y - cam[1], dz = it.z - cam[2];
       if (dx * F[0] + dy * F[1] + dz * F[2] < -it.r * 1.5) return;          // behind the camera
+      if (near && focus && Environment.occludes(it, cam, focus, time)) return;
       let q = it.q;
       if (!q) {
         Q.yaw(this.q, it.yaw + time * it.spin); q = this.q;
@@ -2998,7 +3103,24 @@ class Environment {
     };
     for (const h of this.heroes) for (const it of h.items) one(it);
     for (const it of this.mid) one(it);
-    for (const it of this.side) one(it);
+    for (const it of this.side) one(it, true);
+  }
+  // True when the camera is inside the object, or the object sits between the camera and the ball.
+  static occludes(it, cam, focus, time) {
+    const y = it.y + (it.bob ? Math.sin(time * 0.7 + it.s) * it.bob : 0);
+    const dx = cam[0] - it.x, dy = cam[1] - y, dz = cam[2] - it.z;
+    if (it.occ === 'plane') return Math.abs(dx * it.nx + dz * it.nz) < 1.4;
+    if (it.occ === 'ring') {
+      const dn = dx * it.nx + dz * it.nz, rx = dx - it.nx * dn, rz = dz - it.nz * dn;
+      return Math.abs(dn) < 1.1 && Math.abs(Math.hypot(rx, dy, rz) - it.R) < 1.1;
+    }
+    // distance from the object centre to the camera→ball segment (in 3D, or top view for poles)
+    const cyl = it.occ === 'cyl';
+    const sx = focus[0] - cam[0], sy = cyl ? 0 : focus[1] - cam[1], sz = focus[2] - cam[2];
+    const px = -dx, py = cyl ? 0 : -dy, pz = -dz;
+    const t = clamp((px * sx + py * sy + pz * sz) / (sx * sx + sy * sy + sz * sz || 1), 0, 1);
+    const d = Math.hypot(px - sx * t, py - sy * t, pz - sz * t);
+    return d < it.cr + (t < 0.05 ? 0.7 : 0.25);
   }
   writeDust(out, off, cam, time, col, drift) {
     let o = off * 8; const B = 26;
@@ -3019,10 +3141,10 @@ class Environment {
 // FxBuilder — per-frame additive geometry (trail ribbon, halos, shafts).
 // =====================================================================
 class FxBuilder {
-  constructor() { this.buf = new Float32Array(1400 * 10); this.n = 0; this.trail = []; for (let k = 0; k < 30; k++) this.trail.push([0, 0, 0]); this.th = 0; this.tn = 0; }
+  constructor() { this.buf = new Float32Array(4000 * 10); this.n = 0; this.trail = []; for (let k = 0; k < 30; k++) this.trail.push([0, 0, 0]); this.th = 0; this.tn = 0; }
   begin(view) { this.n = 0; this.rx = view[0]; this.ry = view[4]; this.rz = view[8]; this.ux = view[1]; this.uy = view[5]; this.uz = view[9]; }
   v(x, y, z, u, w, sh, r, g, b, a) {
-    if (this.n >= 1400) return;
+    if (this.n >= 4000) return;
     const o = this.n++ * 10, B = this.buf;
     B[o] = x; B[o + 1] = y; B[o + 2] = z; B[o + 3] = u; B[o + 4] = w; B[o + 5] = sh; B[o + 6] = r; B[o + 7] = g; B[o + 8] = b; B[o + 9] = a;
   }
@@ -3149,6 +3271,7 @@ class UI {
       calibNum: $('calibNum'), calibTxt: $('calibTxt'), calibSub: $('calibSub'), go: $('go'), pause: $('pause'), over: $('over'),
       record: $('record'), ovDist: $('ovDist'), ovScore: $('ovScore'), ovBest: $('ovBest'), ovMode: $('ovMode'), ovRails: $('ovRails'), mBest: $('mBest'), perm: $('permMsg'),
       btnTilt: $('btnTilt'), btnTouch: $('btnTouch'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), share: $('btnShare'), recal: $('btnRecal'),
+      power: $('power'), pwCoin: $('pwCoin'), pwTxt: $('pwTxt'), pwFill: $('pwFill'),
     };
     this.cache = {};
     this.flashA = 0; this.flashCol = '#fff';
@@ -3187,11 +3310,28 @@ class UI {
     this.set('s', this.el.score, fmt(score));
     this.set('b', this.el.best, fmt(best) + ' m');
     this.set('v', this.el.speed, String(Math.round(speed * 3.6)));
-    const w = Math.round(clamp(speed / CFG.VBOOST, 0, 1) * 100) + '%';
+    const w = Math.round(clamp(speed / 40, 0, 1) * 100) + '%';
     if (this.cache.w !== w) { this.cache.w = w; this.el.bar.style.width = w; }
     this.set('m', this.el.mult, '×' + mult);
     const mo = mult > 1;
     if (this.cache.mo !== mo) { this.cache.mo = mo; this.el.mult.classList.toggle('on', mo); }
+  }
+  // Star power gauge. st: 'fill' | 'ready' | 'on'; hint = how to trigger it with the current controls.
+  updatePower(power, coinMult, st, hint) {
+    const w = (Math.round(clamp(power, 0, 1) * 200) / 2) + '%';
+    if (this.cache.pw !== w) { this.cache.pw = w; this.el.pwFill.style.width = w; }
+    this.set('pc', this.el.pwCoin, '×' + coinMult);
+    if (this.cache.pcm !== coinMult) {
+      const up = coinMult > (this.cache.pcm || 1); this.cache.pcm = coinMult;
+      if (up) { const e = this.el.pwCoin; e.classList.add('up'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('up'), 220); }
+    }
+    this.set('pt', this.el.pwTxt, st === 'ready' ? hint : st === 'on' ? tr('starActive') : tr('star'));
+    const key = st + LANG;
+    if (this.cache.pst !== key) {
+      this.cache.pst = key;
+      this.el.power.classList.toggle('ready', st === 'ready'); this.el.power.classList.toggle('on', st === 'on');
+      document.body.classList.toggle('star', st === 'on');
+    }
   }
   toast(txt, cls = '', big = false) {
     const el = document.createElement('div');
@@ -3419,7 +3559,7 @@ class Replay {
 // Game — state machine, main loop, glue between all systems.
 // States: menu → calib → play → falling → over  (+ paused)
 // =====================================================================
-const GEM_COL = hex(0xffd36b);
+const GEM_COL = hex(0xffd36b), STAR_COL = [1, 0.82, 0.4];
 class Game {
   constructor() {
     LANG = detectLang();
@@ -3453,6 +3593,8 @@ class Game {
     this.bestScore = Math.max(0, +Store.get('bestScore', 0) || 0);
     this.state = 'menu'; this.time = 0; this.timeScale = 1; this.acc = 0; this.used = false; this.mode = 'touch';
     this.model = M4.create(); this.tmp = [0, 0, 0, 0]; this.q = [0, 0, 0, 1]; this.qi = [0, 0, 0, 1];
+    this.q2 = [0, 0, 0, 1]; this.qCoin = Q.fromAxisAngle([0, 0, 0, 1], 1, 0, 0, Math.PI / 2);   // coins stand on their edge
+    this.railPts = [[0, 0, 0], [0, 0, 0]]; this.starK = 0; this.starKey = false;
     this.gemGlow = new Float32Array(96 * 3); this.gemGlowN = 0;
     this.collapseS = -1e9; this.danger = 0; this.warnT = 0; this.pruneT = 0; this.emitAcc = 0;
     this.R.setTheme(TRACK_THEMES[this.themeIdx]);
@@ -3505,6 +3647,7 @@ class Game {
     tap($('btnRetry'), () => { if (this.state === 'over') { this.audio.init(); this.startRun(this.mode); } });
     tap($('btnMenu'), () => this.goMenu());
     tap(E.share, () => this.share());
+    tap(E.power, () => this.tryStar());
     const vs = $('volSfx'), vm = $('volMusic');
     vs.value = Math.round(this.audio.sfxVol * 100); vm.value = Math.round(this.audio.musicVol * 100);
     const vol = () => this.audio.setVolumes(vs.value / 100, vm.value / 100);
@@ -3522,6 +3665,7 @@ class Game {
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
       if ((k === 'escape' || k === 'p') && (this.state === 'play' || this.state === 'calib')) this.pause();
+      else if (k === ' ' && this.state === 'play') this.starKey = true;
       else if ((k === 'escape' || k === 'p' || k === 'enter') && this.state === 'paused') this.resume(false);
       else if ((k === ' ' || k === 'enter') && this.state === 'menu' && !this.mobile) { this.audio.init(); this.input.tilt = false; this.startRun('keys'); }
       else if ((k === ' ' || k === 'enter') && this.state === 'over' && this.overT > 0.6) { this.audio.init(); this.startRun(this.mode); }
@@ -3614,6 +3758,11 @@ class Game {
     this.physics.collapseS = this.collapseS = -1e9; this.physics.kid = this.kid; this.physics.time = 0;
     this.startS = b.s; this.maxS = b.s; this.score = 0; this.dist = 0; this.mult = 1; this.recordShown = false;
     this.danger = 0; this.timeScale = 1; this.acc = 0; this.runT = 0;
+    // star power: coins fill the gauge, a streak of coins raises the coin multiplier
+    this.power = 0; this.star = false; this.physics.star = false; this.starK = 0; this.starN = 0;
+    this.coinStreak = 0; this.coinMult = 1; this.coins = 0;
+    this.input.flick = this.input.doubleTap = this.starKey = false;
+    this.audio.setTempo(1); this.ui.updatePower(0, 1, 'fill', '');
     this.parts.clear();
     this.replay.reset(); this.shareToken = (this.shareToken || 0) + 1; this.shareFile = null; this.shareInfo = null;
     this.updateChunks(99);
@@ -3721,7 +3870,7 @@ class Game {
     E.ovScore.textContent = 'SCORE ' + fmt(score);
     E.ovBest.textContent = 'BEST '; const bb = document.createElement('b'); bb.textContent = fmt(this.best) + ' m'; E.ovBest.appendChild(bb);
     this.prepareShare(record);
-    Analytics.event('game_over', { mode: this.gameMode, control: this.mode, zone: ZONES[zoneAt(CFG.START_S + dist)].id, meters: Math.floor(dist / 50) * 50, record: !!record, kid: this.kid });
+    Analytics.event('game_over', { mode: this.gameMode, control: this.mode, zone: ZONES[zoneAt(CFG.START_S + dist)].id, meters: Math.floor(dist / 50) * 50, record: !!record, kid: this.kid, stars: this.starN });
     E.ovRails.textContent = tr('kidBadge'); E.ovRails.classList.toggle('hidden', !this.kid);
     E.ovMode.textContent = this.gameMode === 'daily' ? tr('dailyTag', { date: dayLabel(this.runDay || dayKey()) }) : tr('randomTag');
     E.record.classList.add('hidden');
@@ -3753,6 +3902,12 @@ class Game {
     this.parts.burst(b.p[0], b.p[1] - CFG.R, b.p[2], Math.min(20, imp * 2) | 0, 2 + imp * 0.2, T.accent, { life: 0.5, size: 0.08, grav: 4, up: 0.8 });
     this.cam.shake = Math.min(1, this.cam.shake + imp / 25);
   }
+  railJump(b, impact, pos) {
+    this.audio.hit(impact * 1.3);
+    this.parts.burst(pos[0], pos[1], pos[2], 24, 5, [1, 0.6, 0.3], { life: 0.6, size: 0.09, grav: 12, mix: [1, 1, 1], up: 2 });
+    this.cam.shake = Math.min(1, this.cam.shake + 0.5);
+    this.ui.toast(tr('tooFast'), 'pink', true);
+  }
   boost(b) {
     this.audio.boost(); this.cam.kick = 1; this.ui.flash(0.12, 'rgb(160,240,255)');
     const T = TRACK_THEMES[this.themeIdx];
@@ -3762,6 +3917,7 @@ class Game {
   lost(b, reason) {
     if (this.state !== 'play') return;
     this.state = 'falling'; this.fallT = 0; this.timeScale = 0.3;
+    this.endStar(true);
     this.cam.mode = 'fall';
     this.audio.fall(); this.audio.setRoll(0, false);
     const T = TRACK_THEMES[this.themeIdx], sk = BALL_SKINS[this.skinIdx];
@@ -3813,7 +3969,9 @@ class Game {
       while (this.acc >= h && n < 10) { this.physics.step(b, ix, iy, this.cam.yaw, h); this.acc -= h; n++; }
       if (n >= 10) this.acc = 0;
     }
-    if (st === 'play') this.progress(dt);
+    if (st === 'play') { this.progress(dt); this.updateStar(dt); }
+    else this.input.flick = this.input.doubleTap = this.starKey = false;
+    this.starK += ((this.star ? 1 : 0) - this.starK) * damp(7, dtR);
     if (st !== 'paused') {
       this.gen.fill(b.s + CFG.AHEAD);
       this.updateChunks(1);
@@ -3836,30 +3994,33 @@ class Game {
       if (st === 'play' || st === 'falling') this.replay.capture(this.canvas, dtR, this.dist, st === 'falling');
     }
     this.ui.frame(dtR, this.danger);
-    if (st === 'play' || st === 'calib') this.ui.updateHud(this.dist, this.score, Math.max(this.best, this.dist), b.speed, this.mult, b.boost);
+    if (st === 'play' || st === 'calib') {
+      this.ui.updateHud(this.dist, this.score, Math.max(this.best, this.dist), b.speed, this.mult, b.boost);
+      this.ui.updatePower(this.power, this.coinMult, this.star ? 'on' : this.power >= 1 ? 'ready' : 'fill',
+        tr(this.mode === 'tilt' ? 'starGo' : this.mode === 'keys' ? 'starGoKeys' : 'starGoTouch'));
+    }
   }
 
   progress(dt) {
     const b = this.ball, T = this.track;
     if (!b.lost && b.s > this.maxS) {
       const ds = Math.min(b.s - this.maxS, 3);
-      this.maxS += ds; this.score += ds * 10 * this.mult;
+      this.maxS += ds; this.score += ds * 10 * this.mult * (this.star ? 2 : 1);
     }
     this.dist = this.maxS - this.startS;
-    const m = b.boost > 0 ? 4 : b.speed >= 12 ? 3 : b.speed >= 8 ? 2 : 1;
+    const sp = b.speed, m = Math.max(b.boost > 0 ? 4 : 1, sp >= 30 ? 5 : sp >= 20 ? 4 : sp >= 12 ? 3 : sp >= 8 ? 2 : 1);
     if (m !== this.mult) { if (m > this.mult && m >= 3) this.audio.tick(); this.mult = m; }
     if (!this.recordShown && this.best >= 30 && this.dist > this.best) {
       this.recordShown = true; this.ui.toast(tr('record'), 'gold', true); this.ui.flash(0.25, 'rgb(255,215,120)'); this.audio.checkpoint();
     }
-    // gems & checkpoints
+    // coins & checkpoints
     for (const o of T.objects) {
-      if (o.kind === 'gem' && !o.taken && Math.abs(o.s - b.s) < 2.5) {
-        T.pointAt(o.s, o.u, o.h, this.tmp);
-        if (Math.hypot(this.tmp[0] - b.p[0], this.tmp[1] - b.p[1], this.tmp[2] - b.p[2]) < CFG.R + 0.5) {
-          o.taken = true; this.score += 250; this.audio.gem();
-          this.parts.burst(this.tmp[0], this.tmp[1], this.tmp[2], 22, 4, GEM_COL, { life: 0.7, size: 0.1, grav: 2, mix: [1, 1, 1] });
-          this.ui.toast('+250', 'gold');
-        }
+      if (o.kind === 'gem') {
+        if (o.taken || o.missed) continue;
+        if (Math.abs(o.s - b.s) < 2.5) {
+          T.pointAt(o.s, o.u, o.h, this.tmp);
+          if (Math.hypot(this.tmp[0] - b.p[0], this.tmp[1] - b.p[1], this.tmp[2] - b.p[2]) < CFG.R + 0.5) this.coin(o);
+        } else if (b.s > o.s + 2.5 && o.s > this.startS) this.coinMissed(o);
       } else if (o.kind === 'gate' && !o.passed && this.maxS >= o.s) {
         o.passed = true; this.score += 1000; this.audio.checkpoint();
         this.ui.toast('CHECKPOINT · ' + fmt(o.cp) + ' m', 'cyan', true); this.ui.flash(0.22, 'rgb(170,245,255)');
@@ -3884,7 +4045,57 @@ class Game {
     }
   }
 
+  // ------------------------------------------------------------- coins & star power
+  // Every coin fills the star gauge; coins taken in a row raise the coin multiplier (faster gauge,
+  // more points). Missing a single coin resets it. A full gauge is fired with a quick tilt up
+  // (or double-tap / Space / tapping the gauge): safety rails appear, the ball lights up, the
+  // music speeds up and the score doubles until the gauge is empty.
+  coin(o) {
+    o.taken = true; this.coins++;
+    this.coinStreak++;
+    const cm = Math.min(4, 1 + Math.floor(this.coinStreak / CFG.COIN_STEP)), up = cm > this.coinMult;
+    this.coinMult = cm;
+    const pts = 250 * cm * (this.star ? 2 : 1); this.score += pts;
+    this.audio.gem();
+    this.parts.burst(this.tmp[0], this.tmp[1], this.tmp[2], 16 + cm * 6, 4, GEM_COL, { life: 0.7, size: 0.1, grav: 2, mix: [1, 1, 1] });
+    this.ui.toast('+' + fmt(pts), 'gold');
+    if (up) this.ui.toast(tr('combo', { n: cm }), 'gold');
+    if (!this.star && this.power < 1) {
+      this.power = Math.min(1, this.power + CFG.COIN_POWER * cm);
+      if (this.power >= 1) { this.audio.starReady(); this.ui.toast(tr('starReady'), 'gold'); }
+    }
+  }
+  coinMissed(o) {
+    o.missed = true;
+    if (this.coinStreak > 0) { this.audio.coinMiss(); if (this.coinMult > 1) this.ui.toast(tr('comboLost'), 'pink'); }
+    this.coinStreak = 0; this.coinMult = 1;
+  }
+  updateStar(dt) {
+    const I = this.input, want = I.flick || I.doubleTap || this.starKey;
+    I.flick = I.doubleTap = this.starKey = false;
+    if (want) this.tryStar();
+    if (this.star) { this.power = Math.max(0, this.power - dt / CFG.STAR_TIME); if (this.power <= 0) this.endStar(false); }
+  }
+  tryStar() {
+    if (this.state !== 'play' || this.star || this.power < 1) return false;
+    this.star = true; this.physics.star = true; this.starN++;
+    this.audio.setTempo(1.3); this.audio.starOn();
+    this.ui.flash(0.45, 'rgb(255,220,140)'); this.ui.toast(tr('starOn'), 'gold', true);
+    this.cam.kick = 1;
+    const b = this.ball;
+    this.parts.burst(b.p[0], b.p[1], b.p[2], 60, 7, STAR_COL, { life: 0.9, size: 0.12, grav: 2, mix: [1, 1, 1], up: 2 });
+    if (navigator.vibrate) try { navigator.vibrate([20, 40, 20]); } catch (e) { /* ignore */ }
+    return true;
+  }
+  endStar(quiet) {
+    if (!this.star) return;
+    this.star = false; this.physics.star = false; this.power = 0;
+    this.audio.setTempo(1); this.ui.updatePower(0, this.coinMult, 'fill', '');
+    if (!quiet) { this.audio.starOff(); this.ui.toast(tr('starEnd'), 'gold'); }
+  }
+
   // ------------------------------------------------------------- rendering
+  camCrossing(p) { const e = this.cam.eye; return Math.abs((e[0] - p[0]) * Math.sin(p[3]) + (e[2] - p[2]) * Math.cos(p[3])) < 1.4; }
   fallOffset(s) { const d = this.collapseS - s; if (d <= 0) return 0; const t = d * 0.2; return -(9 * t * t + 1.5 * t); }
   drawProps() {
     const T = this.track, R = this.R, b = this.ball, M = R.meshes, th = TRACK_THEMES[this.themeIdx], tm = this.time;
@@ -3896,10 +4107,10 @@ class Game {
       if (o.kind === 'gem') {
         if (o.taken) continue;
         T.pointAt(o.s, o.u, o.h + Math.sin(tm * 3 + o.id) * 0.08 + yo, this.tmp);
-        Q.yaw(this.q, tm * 2 + o.id);
-        M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q, 0.24, 0.32, 0.24);
-        R.addInst(M.gem, this.model, GEM_COL, 1);
-        if (this.gemGlowN < 96) { this.gemGlow.set([this.tmp[0], this.tmp[1], this.tmp[2]], this.gemGlowN * 3); this.gemGlowN++; }
+        Q.mul(this.q2, Q.yaw(this.q, tm * 3 + o.id), this.qCoin);
+        M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q2, 0.34, 0.07, 0.34);
+        R.addInst(M.coin, this.model, GEM_COL, o.missed ? 0.25 : 1);             // a missed coin goes dull
+        if (!o.missed && this.gemGlowN < 96) { this.gemGlow.set([this.tmp[0], this.tmp[1], this.tmp[2]], this.gemGlowN * 3); this.gemGlowN++; }
       } else if (o.kind === 'post') {
         T.pointAt(o.s, o.u, yo - 0.05, this.tmp);
         M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.qi, o.rad, 0.95, o.rad);
@@ -3912,6 +4123,7 @@ class Game {
         R.addInst(M.slider, this.model, th.hazard, 1);
       } else if (o.kind === 'gate') {
         T.pointAt(o.s, 0, yo, this.tmp);
+        if (this.camCrossing(this.tmp)) continue;          // the chase camera is passing through the arch
         Q.yaw(this.q, this.tmp[3]);
         M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q, 1, 1, 1);
         R.addInst(M.gate, this.model, o.passed ? GEM_COL : th.accent, 1);
@@ -3921,9 +4133,39 @@ class Game {
     const sb = CFG.START_S + this.best;
     if (this.best >= 30 && sb > s0 && sb < s1 && this.state !== 'menu') {
       T.pointAt(sb, 0, this.fallOffset(sb), this.tmp);
-      Q.yaw(this.q, this.tmp[3]);
-      M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q, 0.92, 0.8, 1);
-      R.addInst(M.gate, this.model, GEM_COL, 1.4);
+      if (!this.camCrossing(this.tmp)) {
+        Q.yaw(this.q, this.tmp[3]);
+        M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q, 0.92, 0.8, 1);
+        R.addInst(M.gate, this.model, GEM_COL, 1.4);
+      }
+    }
+  }
+  // Star power safety rails: a glowing camera-facing band on every open outer edge ahead of the
+  // ball, with light beads running along it.
+  starRails(F, k) {
+    const T = this.track, b = this.ball, M = T.mask, P = this.tmp, pts = this.railPts, eye = this.cam.eye;
+    const s0 = Math.ceil(Math.max(b.s - 6, this.collapseS + 1)), s1 = b.s + 48;
+    for (const sg of [-1, 1]) {
+      let has = false, cur = pts[0], aPrev = 0;
+      for (let s = s0; s <= s1; s += 1) {
+        const f = s / CFG.DS, i = Math.floor(f), t = f - i, m = i & M, n = T.rowN[m];
+        const open = i >= T.minIndex() && i < T.n - 1 && n > 0 && (sg < 0 ? T.rowAO[m * 3] : T.rowBO[m * 3 + n - 1]);
+        if (!open || (T.rowF[m] & (sg < 0 ? RF.RAIL_L : RF.RAIL_R))) { has = false; continue; }
+        const u = (sg < 0 ? T.edgeA(i, 0, t) : T.edgeB(i, n - 1, t)) - sg * 0.08;
+        const nxt = cur === pts[0] ? pts[1] : pts[0];
+        T.pointAt(s, u, 0.2, P); nxt[0] = P[0]; nxt[1] = P[1]; nxt[2] = P[2];
+        const d = s - b.s, fade = clamp((d + 6) / 4, 0, 1) * clamp((48 - d) / 18, 0, 1);
+        const a = fade * (0.7 + 0.3 * Math.sin(s * 0.9 - this.time * 14));
+        if (has) {
+          const dx = nxt[0] - cur[0], dy = nxt[1] - cur[1], dz = nxt[2] - cur[2], vx = eye[0] - cur[0], vy = eye[1] - cur[1], vz = eye[2] - cur[2];
+          let sx = dy * vz - dz * vy, sy = dz * vx - dx * vz, sz = dx * vy - dy * vx; const l = Math.hypot(sx, sy, sz) || 1;
+          sx = sx / l * 0.11; sy = sy / l * 0.11; sz = sz / l * 0.11;
+          F.quad([cur[0] - sx, cur[1] - sy, cur[2] - sz], [cur[0] + sx, cur[1] + sy, cur[2] + sz], [nxt[0] + sx, nxt[1] + sy, nxt[2] + sz], [nxt[0] - sx, nxt[1] - sy, nxt[2] - sz],
+            0, STAR_COL, k * 1.6, [aPrev, 0, aPrev, 1, a, 1, a, 0]);
+        }
+        if ((s & 1) === 0) F.glow(nxt[0], nxt[1], nxt[2], 0.3, STAR_COL, k * a * a * 0.9);
+        cur = nxt; aPrev = a; has = true;
+      }
     }
   }
   render() {
@@ -3932,18 +4174,19 @@ class Game {
     R.setCamera(cam.eye, cam.tgt, cam.roll, clamp(cam.fov, 0.6, 1.9), 0.08, 1400);
     R.begin(this.time);
     R.drawFloor(this.floorY, this.time);
-    const Z = R.Z, boostK = clamp(b.boost / 1.3, 0, 1), spK = clamp((b.speed - 6) / 14, 0, 1);
+    const Z = R.Z, boostK = clamp(b.boost / 1.3, 0, 1), spK = clamp((b.speed - 6) / 14, 0, 1), stK = this.starK;
+    const glowCol = stK > 0.01 ? [lerp(sk.glow[0], STAR_COL[0], stK), lerp(sk.glow[1], STAR_COL[1], stK), lerp(sk.glow[2], STAR_COL[2], stK)] : sk.glow;
     R.litSetup({
       time: this.time, fogDen: 0.0078, fogBase: cam.eye[1] - 7,
-      ball: [b.p[0], b.p[1], b.p[2], CFG.R], ballGlow: sk.glow, ballLight: 0.3 + boostK * 0.9 + (sk.type === 2 ? 0.35 : sk.type === 1 ? 0.15 : 0),
+      ball: [b.p[0], b.p[1], b.p[2], CFG.R], ballGlow: glowCol, ballLight: 0.3 + boostK * 0.9 + stK * 1.4 + (sk.type === 2 ? 0.35 : sk.type === 1 ? 0.15 : 0),
       shadow: b.lost ? 0 : 1, collapse: this.collapseS,
     });
     for (const ch of this.chunks.values()) R.drawChunk(ch);
     this.drawProps();
-    this.env.draw(R, this.time);
+    this.env.draw(R, this.time, b.p);
     R.endLit();
     M4.fromTRS(this.model, b.p[0], b.p[1], b.p[2], b.q, CFG.R, CFG.R, CFG.R);
-    R.drawBall(this.model, sk, Math.max(spK, boostK), 1);
+    R.drawBall(this.model, sk, Math.max(spK, boostK), 1, stK);
     // additive pass
     R.beginAdditive();
     const F = this.fx; F.begin(R.view);
@@ -3952,8 +4195,9 @@ class Game {
     const running = this.state === 'play' || this.state === 'falling';
     F.speedLines(this.frameDt || 0, cam.eye, R.camF, running ? b.speed : 0, Z.dust, running ? clamp((b.speed - 7) / 12, 0, 1) * 0.3 + boostK * 0.35 : 0);
     for (const bo of this.env.bolts) { const a = bo.life / 0.28; F.polyRibbon(bo.pts, cam.eye, 1.4, Z.c1, a * 0.8); F.polyRibbon(bo.pts, cam.eye, 0.35, [1, 0.95, 1], a * 1.6); }
-    F.ribbon(cam.eye, CFG.R * 0.55, sk.glow, clamp((b.speed - 8) / 8, 0, 1) * 0.55 + boostK * 0.5);
-    F.glow(b.p[0], b.p[1], b.p[2], CFG.R * 2.8, sk.glow, 0.1 + boostK * 0.35 + spK * 0.08);
+    F.ribbon(cam.eye, CFG.R * (0.55 + stK * 0.35), glowCol, clamp((b.speed - 8) / 8, 0, 1) * 0.55 + boostK * 0.5 + stK * 0.6);
+    F.glow(b.p[0], b.p[1], b.p[2], CFG.R * (2.8 + stK * 2.2), glowCol, 0.1 + boostK * 0.35 + spK * 0.08 + stK * (0.4 + 0.12 * Math.sin(this.time * 14)));
+    if (stK > 0.01 && !b.lost) this.starRails(F, stK);
     for (let k = 0; k < this.gemGlowN; k++) F.glow(this.gemGlow[k * 3], this.gemGlow[k * 3 + 1], this.gemGlow[k * 3 + 2], 0.75, GEM_COL, 0.4);
     R.drawFx(F.buf, F.n);
     let n = this.parts.write(this.parts.out, 0);

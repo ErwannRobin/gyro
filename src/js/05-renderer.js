@@ -54,7 +54,7 @@ class Renderer {
       rocks: [1, 2, 3].map((k) => this.upload(Prims.rock(k * 17))), shards: [1, 2, 3].map((k) => this.upload(Prims.shard(k * 29))),
       sphere: this.upload(Prims.withMat(Prims.sphere(22, 14), 16)), box16: this.upload(Prims.box(16)), box17: this.upload(Prims.box(17)),
       glow: this.upload(Prims.box(18)), ringGlow: this.upload(Prims.torus(1, 0.05, 56, 6, 18)), torus16: this.upload(Prims.torus(1, 0.22, 40, 12, 16)),
-      ring17: this.upload(Prims.torus(1, 0.08, 40, 6, 17)),
+      ring17: this.upload(Prims.torus(1, 0.08, 40, 6, 17)), coin: this.upload(Prims.coin()),
     };
     this.dynBuf = gl.createBuffer();
     this.ptsBuf = gl.createBuffer();
@@ -339,14 +339,14 @@ class Renderer {
     else this.gl.uniformMatrix4fv(this.pLit.u('u_model'), false, this.ident);
   }
 
-  drawBall(model, skin, speed, fade) {
+  drawBall(model, skin, speed, fade, star = 0) {
     const gl = this.gl, T = this.theme, p = this.use(this.pBall);
     gl.uniformMatrix4fv(p.u('u_vp'), false, this.vp); gl.uniformMatrix4fv(p.u('u_model'), false, model);
     const Z = this.Z;
     gl.uniform3fv(p.u('u_cam'), this.cam); gl.uniform3fv(p.u('u_sunDir'), this.sunDir); gl.uniform3fv(p.u('u_sunCol'), Z.sun);
     gl.uniform3fv(p.u('u_floor'), T.deckA); gl.uniform3fv(p.u('u_accent'), T.accent); gl.uniform3fv(p.u('u_skyMid'), Z.skyMid); gl.uniform3fv(p.u('u_abyss'), Z.abyss);
     gl.uniform3fv(p.u('u_base'), skin.base); gl.uniform3fv(p.u('u_glowCol'), skin.glow); gl.uniform1f(p.u('u_type'), skin.type);
-    gl.uniform1f(p.u('u_time'), this.time % 1000); gl.uniform1f(p.u('u_speed'), speed); gl.uniform1f(p.u('u_fade'), fade);
+    gl.uniform1f(p.u('u_time'), this.time % 1000); gl.uniform1f(p.u('u_speed'), speed); gl.uniform1f(p.u('u_fade'), fade); gl.uniform1f(p.u('u_star'), star);
     this.bindZoneTex(p, 'mid', 'u_env', 'u_env2', 0, 1); this.bindZoneTex(p, 'blur', 'u_envBlur', 'u_envBlur2', 2, 3);
     gl.uniform1f(p.u('u_envMix'), this.zMix);
     this.bindMesh(this.meshes.ball, 2);

@@ -3,7 +3,7 @@
 // Game — state machine, main loop, glue between all systems.
 // States: menu → calib → play → falling → over  (+ paused)
 // =====================================================================
-const GEM_COL = hex(0xffd36b);
+const GEM_COL = hex(0xffd36b), STAR_COL = [1, 0.82, 0.4];
 class Game {
   constructor() {
     LANG = detectLang();
@@ -37,6 +37,8 @@ class Game {
     this.bestScore = Math.max(0, +Store.get('bestScore', 0) || 0);
     this.state = 'menu'; this.time = 0; this.timeScale = 1; this.acc = 0; this.used = false; this.mode = 'touch';
     this.model = M4.create(); this.tmp = [0, 0, 0, 0]; this.q = [0, 0, 0, 1]; this.qi = [0, 0, 0, 1];
+    this.q2 = [0, 0, 0, 1]; this.qCoin = Q.fromAxisAngle([0, 0, 0, 1], 1, 0, 0, Math.PI / 2);   // coins stand on their edge
+    this.railPts = [[0, 0, 0], [0, 0, 0]]; this.starK = 0; this.starKey = false;
     this.gemGlow = new Float32Array(96 * 3); this.gemGlowN = 0;
     this.collapseS = -1e9; this.danger = 0; this.warnT = 0; this.pruneT = 0; this.emitAcc = 0;
     this.R.setTheme(TRACK_THEMES[this.themeIdx]);
@@ -89,6 +91,7 @@ class Game {
     tap($('btnRetry'), () => { if (this.state === 'over') { this.audio.init(); this.startRun(this.mode); } });
     tap($('btnMenu'), () => this.goMenu());
     tap(E.share, () => this.share());
+    tap(E.power, () => this.tryStar());
     const vs = $('volSfx'), vm = $('volMusic');
     vs.value = Math.round(this.audio.sfxVol * 100); vm.value = Math.round(this.audio.musicVol * 100);
     const vol = () => this.audio.setVolumes(vs.value / 100, vm.value / 100);
@@ -106,6 +109,7 @@ class Game {
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
       if ((k === 'escape' || k === 'p') && (this.state === 'play' || this.state === 'calib')) this.pause();
+      else if (k === ' ' && this.state === 'play') this.starKey = true;
       else if ((k === 'escape' || k === 'p' || k === 'enter') && this.state === 'paused') this.resume(false);
       else if ((k === ' ' || k === 'enter') && this.state === 'menu' && !this.mobile) { this.audio.init(); this.input.tilt = false; this.startRun('keys'); }
       else if ((k === ' ' || k === 'enter') && this.state === 'over' && this.overT > 0.6) { this.audio.init(); this.startRun(this.mode); }
@@ -198,6 +202,11 @@ class Game {
     this.physics.collapseS = this.collapseS = -1e9; this.physics.kid = this.kid; this.physics.time = 0;
     this.startS = b.s; this.maxS = b.s; this.score = 0; this.dist = 0; this.mult = 1; this.recordShown = false;
     this.danger = 0; this.timeScale = 1; this.acc = 0; this.runT = 0;
+    // star power: coins fill the gauge, a streak of coins raises the coin multiplier
+    this.power = 0; this.star = false; this.physics.star = false; this.starK = 0; this.starN = 0;
+    this.coinStreak = 0; this.coinMult = 1; this.coins = 0;
+    this.input.flick = this.input.doubleTap = this.starKey = false;
+    this.audio.setTempo(1); this.ui.updatePower(0, 1, 'fill', '');
     this.parts.clear();
     this.replay.reset(); this.shareToken = (this.shareToken || 0) + 1; this.shareFile = null; this.shareInfo = null;
     this.updateChunks(99);
@@ -305,7 +314,7 @@ class Game {
     E.ovScore.textContent = 'SCORE ' + fmt(score);
     E.ovBest.textContent = 'BEST '; const bb = document.createElement('b'); bb.textContent = fmt(this.best) + ' m'; E.ovBest.appendChild(bb);
     this.prepareShare(record);
-    Analytics.event('game_over', { mode: this.gameMode, control: this.mode, zone: ZONES[zoneAt(CFG.START_S + dist)].id, meters: Math.floor(dist / 50) * 50, record: !!record, kid: this.kid });
+    Analytics.event('game_over', { mode: this.gameMode, control: this.mode, zone: ZONES[zoneAt(CFG.START_S + dist)].id, meters: Math.floor(dist / 50) * 50, record: !!record, kid: this.kid, stars: this.starN });
     E.ovRails.textContent = tr('kidBadge'); E.ovRails.classList.toggle('hidden', !this.kid);
     E.ovMode.textContent = this.gameMode === 'daily' ? tr('dailyTag', { date: dayLabel(this.runDay || dayKey()) }) : tr('randomTag');
     E.record.classList.add('hidden');
@@ -337,6 +346,12 @@ class Game {
     this.parts.burst(b.p[0], b.p[1] - CFG.R, b.p[2], Math.min(20, imp * 2) | 0, 2 + imp * 0.2, T.accent, { life: 0.5, size: 0.08, grav: 4, up: 0.8 });
     this.cam.shake = Math.min(1, this.cam.shake + imp / 25);
   }
+  railJump(b, impact, pos) {
+    this.audio.hit(impact * 1.3);
+    this.parts.burst(pos[0], pos[1], pos[2], 24, 5, [1, 0.6, 0.3], { life: 0.6, size: 0.09, grav: 12, mix: [1, 1, 1], up: 2 });
+    this.cam.shake = Math.min(1, this.cam.shake + 0.5);
+    this.ui.toast(tr('tooFast'), 'pink', true);
+  }
   boost(b) {
     this.audio.boost(); this.cam.kick = 1; this.ui.flash(0.12, 'rgb(160,240,255)');
     const T = TRACK_THEMES[this.themeIdx];
@@ -346,6 +361,7 @@ class Game {
   lost(b, reason) {
     if (this.state !== 'play') return;
     this.state = 'falling'; this.fallT = 0; this.timeScale = 0.3;
+    this.endStar(true);
     this.cam.mode = 'fall';
     this.audio.fall(); this.audio.setRoll(0, false);
     const T = TRACK_THEMES[this.themeIdx], sk = BALL_SKINS[this.skinIdx];
@@ -397,7 +413,9 @@ class Game {
       while (this.acc >= h && n < 10) { this.physics.step(b, ix, iy, this.cam.yaw, h); this.acc -= h; n++; }
       if (n >= 10) this.acc = 0;
     }
-    if (st === 'play') this.progress(dt);
+    if (st === 'play') { this.progress(dt); this.updateStar(dt); }
+    else this.input.flick = this.input.doubleTap = this.starKey = false;
+    this.starK += ((this.star ? 1 : 0) - this.starK) * damp(7, dtR);
     if (st !== 'paused') {
       this.gen.fill(b.s + CFG.AHEAD);
       this.updateChunks(1);
@@ -420,30 +438,33 @@ class Game {
       if (st === 'play' || st === 'falling') this.replay.capture(this.canvas, dtR, this.dist, st === 'falling');
     }
     this.ui.frame(dtR, this.danger);
-    if (st === 'play' || st === 'calib') this.ui.updateHud(this.dist, this.score, Math.max(this.best, this.dist), b.speed, this.mult, b.boost);
+    if (st === 'play' || st === 'calib') {
+      this.ui.updateHud(this.dist, this.score, Math.max(this.best, this.dist), b.speed, this.mult, b.boost);
+      this.ui.updatePower(this.power, this.coinMult, this.star ? 'on' : this.power >= 1 ? 'ready' : 'fill',
+        tr(this.mode === 'tilt' ? 'starGo' : this.mode === 'keys' ? 'starGoKeys' : 'starGoTouch'));
+    }
   }
 
   progress(dt) {
     const b = this.ball, T = this.track;
     if (!b.lost && b.s > this.maxS) {
       const ds = Math.min(b.s - this.maxS, 3);
-      this.maxS += ds; this.score += ds * 10 * this.mult;
+      this.maxS += ds; this.score += ds * 10 * this.mult * (this.star ? 2 : 1);
     }
     this.dist = this.maxS - this.startS;
-    const m = b.boost > 0 ? 4 : b.speed >= 12 ? 3 : b.speed >= 8 ? 2 : 1;
+    const sp = b.speed, m = Math.max(b.boost > 0 ? 4 : 1, sp >= 30 ? 5 : sp >= 20 ? 4 : sp >= 12 ? 3 : sp >= 8 ? 2 : 1);
     if (m !== this.mult) { if (m > this.mult && m >= 3) this.audio.tick(); this.mult = m; }
     if (!this.recordShown && this.best >= 30 && this.dist > this.best) {
       this.recordShown = true; this.ui.toast(tr('record'), 'gold', true); this.ui.flash(0.25, 'rgb(255,215,120)'); this.audio.checkpoint();
     }
-    // gems & checkpoints
+    // coins & checkpoints
     for (const o of T.objects) {
-      if (o.kind === 'gem' && !o.taken && Math.abs(o.s - b.s) < 2.5) {
-        T.pointAt(o.s, o.u, o.h, this.tmp);
-        if (Math.hypot(this.tmp[0] - b.p[0], this.tmp[1] - b.p[1], this.tmp[2] - b.p[2]) < CFG.R + 0.5) {
-          o.taken = true; this.score += 250; this.audio.gem();
-          this.parts.burst(this.tmp[0], this.tmp[1], this.tmp[2], 22, 4, GEM_COL, { life: 0.7, size: 0.1, grav: 2, mix: [1, 1, 1] });
-          this.ui.toast('+250', 'gold');
-        }
+      if (o.kind === 'gem') {
+        if (o.taken || o.missed) continue;
+        if (Math.abs(o.s - b.s) < 2.5) {
+          T.pointAt(o.s, o.u, o.h, this.tmp);
+          if (Math.hypot(this.tmp[0] - b.p[0], this.tmp[1] - b.p[1], this.tmp[2] - b.p[2]) < CFG.R + 0.5) this.coin(o);
+        } else if (b.s > o.s + 2.5 && o.s > this.startS) this.coinMissed(o);
       } else if (o.kind === 'gate' && !o.passed && this.maxS >= o.s) {
         o.passed = true; this.score += 1000; this.audio.checkpoint();
         this.ui.toast('CHECKPOINT · ' + fmt(o.cp) + ' m', 'cyan', true); this.ui.flash(0.22, 'rgb(170,245,255)');
@@ -468,7 +489,57 @@ class Game {
     }
   }
 
+  // ------------------------------------------------------------- coins & star power
+  // Every coin fills the star gauge; coins taken in a row raise the coin multiplier (faster gauge,
+  // more points). Missing a single coin resets it. A full gauge is fired with a quick tilt up
+  // (or double-tap / Space / tapping the gauge): safety rails appear, the ball lights up, the
+  // music speeds up and the score doubles until the gauge is empty.
+  coin(o) {
+    o.taken = true; this.coins++;
+    this.coinStreak++;
+    const cm = Math.min(4, 1 + Math.floor(this.coinStreak / CFG.COIN_STEP)), up = cm > this.coinMult;
+    this.coinMult = cm;
+    const pts = 250 * cm * (this.star ? 2 : 1); this.score += pts;
+    this.audio.gem();
+    this.parts.burst(this.tmp[0], this.tmp[1], this.tmp[2], 16 + cm * 6, 4, GEM_COL, { life: 0.7, size: 0.1, grav: 2, mix: [1, 1, 1] });
+    this.ui.toast('+' + fmt(pts), 'gold');
+    if (up) this.ui.toast(tr('combo', { n: cm }), 'gold');
+    if (!this.star && this.power < 1) {
+      this.power = Math.min(1, this.power + CFG.COIN_POWER * cm);
+      if (this.power >= 1) { this.audio.starReady(); this.ui.toast(tr('starReady'), 'gold'); }
+    }
+  }
+  coinMissed(o) {
+    o.missed = true;
+    if (this.coinStreak > 0) { this.audio.coinMiss(); if (this.coinMult > 1) this.ui.toast(tr('comboLost'), 'pink'); }
+    this.coinStreak = 0; this.coinMult = 1;
+  }
+  updateStar(dt) {
+    const I = this.input, want = I.flick || I.doubleTap || this.starKey;
+    I.flick = I.doubleTap = this.starKey = false;
+    if (want) this.tryStar();
+    if (this.star) { this.power = Math.max(0, this.power - dt / CFG.STAR_TIME); if (this.power <= 0) this.endStar(false); }
+  }
+  tryStar() {
+    if (this.state !== 'play' || this.star || this.power < 1) return false;
+    this.star = true; this.physics.star = true; this.starN++;
+    this.audio.setTempo(1.3); this.audio.starOn();
+    this.ui.flash(0.45, 'rgb(255,220,140)'); this.ui.toast(tr('starOn'), 'gold', true);
+    this.cam.kick = 1;
+    const b = this.ball;
+    this.parts.burst(b.p[0], b.p[1], b.p[2], 60, 7, STAR_COL, { life: 0.9, size: 0.12, grav: 2, mix: [1, 1, 1], up: 2 });
+    if (navigator.vibrate) try { navigator.vibrate([20, 40, 20]); } catch (e) { /* ignore */ }
+    return true;
+  }
+  endStar(quiet) {
+    if (!this.star) return;
+    this.star = false; this.physics.star = false; this.power = 0;
+    this.audio.setTempo(1); this.ui.updatePower(0, this.coinMult, 'fill', '');
+    if (!quiet) { this.audio.starOff(); this.ui.toast(tr('starEnd'), 'gold'); }
+  }
+
   // ------------------------------------------------------------- rendering
+  camCrossing(p) { const e = this.cam.eye; return Math.abs((e[0] - p[0]) * Math.sin(p[3]) + (e[2] - p[2]) * Math.cos(p[3])) < 1.4; }
   fallOffset(s) { const d = this.collapseS - s; if (d <= 0) return 0; const t = d * 0.2; return -(9 * t * t + 1.5 * t); }
   drawProps() {
     const T = this.track, R = this.R, b = this.ball, M = R.meshes, th = TRACK_THEMES[this.themeIdx], tm = this.time;
@@ -480,10 +551,10 @@ class Game {
       if (o.kind === 'gem') {
         if (o.taken) continue;
         T.pointAt(o.s, o.u, o.h + Math.sin(tm * 3 + o.id) * 0.08 + yo, this.tmp);
-        Q.yaw(this.q, tm * 2 + o.id);
-        M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q, 0.24, 0.32, 0.24);
-        R.addInst(M.gem, this.model, GEM_COL, 1);
-        if (this.gemGlowN < 96) { this.gemGlow.set([this.tmp[0], this.tmp[1], this.tmp[2]], this.gemGlowN * 3); this.gemGlowN++; }
+        Q.mul(this.q2, Q.yaw(this.q, tm * 3 + o.id), this.qCoin);
+        M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q2, 0.34, 0.07, 0.34);
+        R.addInst(M.coin, this.model, GEM_COL, o.missed ? 0.25 : 1);             // a missed coin goes dull
+        if (!o.missed && this.gemGlowN < 96) { this.gemGlow.set([this.tmp[0], this.tmp[1], this.tmp[2]], this.gemGlowN * 3); this.gemGlowN++; }
       } else if (o.kind === 'post') {
         T.pointAt(o.s, o.u, yo - 0.05, this.tmp);
         M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.qi, o.rad, 0.95, o.rad);
@@ -496,6 +567,7 @@ class Game {
         R.addInst(M.slider, this.model, th.hazard, 1);
       } else if (o.kind === 'gate') {
         T.pointAt(o.s, 0, yo, this.tmp);
+        if (this.camCrossing(this.tmp)) continue;          // the chase camera is passing through the arch
         Q.yaw(this.q, this.tmp[3]);
         M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q, 1, 1, 1);
         R.addInst(M.gate, this.model, o.passed ? GEM_COL : th.accent, 1);
@@ -505,9 +577,39 @@ class Game {
     const sb = CFG.START_S + this.best;
     if (this.best >= 30 && sb > s0 && sb < s1 && this.state !== 'menu') {
       T.pointAt(sb, 0, this.fallOffset(sb), this.tmp);
-      Q.yaw(this.q, this.tmp[3]);
-      M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q, 0.92, 0.8, 1);
-      R.addInst(M.gate, this.model, GEM_COL, 1.4);
+      if (!this.camCrossing(this.tmp)) {
+        Q.yaw(this.q, this.tmp[3]);
+        M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q, 0.92, 0.8, 1);
+        R.addInst(M.gate, this.model, GEM_COL, 1.4);
+      }
+    }
+  }
+  // Star power safety rails: a glowing camera-facing band on every open outer edge ahead of the
+  // ball, with light beads running along it.
+  starRails(F, k) {
+    const T = this.track, b = this.ball, M = T.mask, P = this.tmp, pts = this.railPts, eye = this.cam.eye;
+    const s0 = Math.ceil(Math.max(b.s - 6, this.collapseS + 1)), s1 = b.s + 48;
+    for (const sg of [-1, 1]) {
+      let has = false, cur = pts[0], aPrev = 0;
+      for (let s = s0; s <= s1; s += 1) {
+        const f = s / CFG.DS, i = Math.floor(f), t = f - i, m = i & M, n = T.rowN[m];
+        const open = i >= T.minIndex() && i < T.n - 1 && n > 0 && (sg < 0 ? T.rowAO[m * 3] : T.rowBO[m * 3 + n - 1]);
+        if (!open || (T.rowF[m] & (sg < 0 ? RF.RAIL_L : RF.RAIL_R))) { has = false; continue; }
+        const u = (sg < 0 ? T.edgeA(i, 0, t) : T.edgeB(i, n - 1, t)) - sg * 0.08;
+        const nxt = cur === pts[0] ? pts[1] : pts[0];
+        T.pointAt(s, u, 0.2, P); nxt[0] = P[0]; nxt[1] = P[1]; nxt[2] = P[2];
+        const d = s - b.s, fade = clamp((d + 6) / 4, 0, 1) * clamp((48 - d) / 18, 0, 1);
+        const a = fade * (0.7 + 0.3 * Math.sin(s * 0.9 - this.time * 14));
+        if (has) {
+          const dx = nxt[0] - cur[0], dy = nxt[1] - cur[1], dz = nxt[2] - cur[2], vx = eye[0] - cur[0], vy = eye[1] - cur[1], vz = eye[2] - cur[2];
+          let sx = dy * vz - dz * vy, sy = dz * vx - dx * vz, sz = dx * vy - dy * vx; const l = Math.hypot(sx, sy, sz) || 1;
+          sx = sx / l * 0.11; sy = sy / l * 0.11; sz = sz / l * 0.11;
+          F.quad([cur[0] - sx, cur[1] - sy, cur[2] - sz], [cur[0] + sx, cur[1] + sy, cur[2] + sz], [nxt[0] + sx, nxt[1] + sy, nxt[2] + sz], [nxt[0] - sx, nxt[1] - sy, nxt[2] - sz],
+            0, STAR_COL, k * 1.6, [aPrev, 0, aPrev, 1, a, 1, a, 0]);
+        }
+        if ((s & 1) === 0) F.glow(nxt[0], nxt[1], nxt[2], 0.3, STAR_COL, k * a * a * 0.9);
+        cur = nxt; aPrev = a; has = true;
+      }
     }
   }
   render() {
@@ -516,18 +618,19 @@ class Game {
     R.setCamera(cam.eye, cam.tgt, cam.roll, clamp(cam.fov, 0.6, 1.9), 0.08, 1400);
     R.begin(this.time);
     R.drawFloor(this.floorY, this.time);
-    const Z = R.Z, boostK = clamp(b.boost / 1.3, 0, 1), spK = clamp((b.speed - 6) / 14, 0, 1);
+    const Z = R.Z, boostK = clamp(b.boost / 1.3, 0, 1), spK = clamp((b.speed - 6) / 14, 0, 1), stK = this.starK;
+    const glowCol = stK > 0.01 ? [lerp(sk.glow[0], STAR_COL[0], stK), lerp(sk.glow[1], STAR_COL[1], stK), lerp(sk.glow[2], STAR_COL[2], stK)] : sk.glow;
     R.litSetup({
       time: this.time, fogDen: 0.0078, fogBase: cam.eye[1] - 7,
-      ball: [b.p[0], b.p[1], b.p[2], CFG.R], ballGlow: sk.glow, ballLight: 0.3 + boostK * 0.9 + (sk.type === 2 ? 0.35 : sk.type === 1 ? 0.15 : 0),
+      ball: [b.p[0], b.p[1], b.p[2], CFG.R], ballGlow: glowCol, ballLight: 0.3 + boostK * 0.9 + stK * 1.4 + (sk.type === 2 ? 0.35 : sk.type === 1 ? 0.15 : 0),
       shadow: b.lost ? 0 : 1, collapse: this.collapseS,
     });
     for (const ch of this.chunks.values()) R.drawChunk(ch);
     this.drawProps();
-    this.env.draw(R, this.time);
+    this.env.draw(R, this.time, b.p);
     R.endLit();
     M4.fromTRS(this.model, b.p[0], b.p[1], b.p[2], b.q, CFG.R, CFG.R, CFG.R);
-    R.drawBall(this.model, sk, Math.max(spK, boostK), 1);
+    R.drawBall(this.model, sk, Math.max(spK, boostK), 1, stK);
     // additive pass
     R.beginAdditive();
     const F = this.fx; F.begin(R.view);
@@ -536,8 +639,9 @@ class Game {
     const running = this.state === 'play' || this.state === 'falling';
     F.speedLines(this.frameDt || 0, cam.eye, R.camF, running ? b.speed : 0, Z.dust, running ? clamp((b.speed - 7) / 12, 0, 1) * 0.3 + boostK * 0.35 : 0);
     for (const bo of this.env.bolts) { const a = bo.life / 0.28; F.polyRibbon(bo.pts, cam.eye, 1.4, Z.c1, a * 0.8); F.polyRibbon(bo.pts, cam.eye, 0.35, [1, 0.95, 1], a * 1.6); }
-    F.ribbon(cam.eye, CFG.R * 0.55, sk.glow, clamp((b.speed - 8) / 8, 0, 1) * 0.55 + boostK * 0.5);
-    F.glow(b.p[0], b.p[1], b.p[2], CFG.R * 2.8, sk.glow, 0.1 + boostK * 0.35 + spK * 0.08);
+    F.ribbon(cam.eye, CFG.R * (0.55 + stK * 0.35), glowCol, clamp((b.speed - 8) / 8, 0, 1) * 0.55 + boostK * 0.5 + stK * 0.6);
+    F.glow(b.p[0], b.p[1], b.p[2], CFG.R * (2.8 + stK * 2.2), glowCol, 0.1 + boostK * 0.35 + spK * 0.08 + stK * (0.4 + 0.12 * Math.sin(this.time * 14)));
+    if (stK > 0.01 && !b.lost) this.starRails(F, stK);
     for (let k = 0; k < this.gemGlowN; k++) F.glow(this.gemGlow[k * 3], this.gemGlow[k * 3 + 1], this.gemGlow[k * 3 + 2], 0.75, GEM_COL, 0.4);
     R.drawFx(F.buf, F.n);
     let n = this.parts.write(this.parts.out, 0);

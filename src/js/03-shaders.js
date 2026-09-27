@@ -276,7 +276,7 @@ void main(){ vec4 wp = u_model * vec4(a_pos, 1.0); v_wp = wp.xyz; v_n = normaliz
 const FS_BALL = GLSL_COMMON + `
 varying vec3 v_wp; varying vec3 v_n; varying vec3 v_on;
 uniform vec3 u_cam; uniform vec3 u_sunDir; uniform vec3 u_sunCol; uniform vec3 u_floor; uniform vec3 u_accent; uniform vec3 u_skyMid; uniform vec3 u_abyss;
-uniform vec3 u_base; uniform vec3 u_glowCol; uniform float u_type; uniform float u_time; uniform float u_speed; uniform float u_fade;
+uniform vec3 u_base; uniform vec3 u_glowCol; uniform float u_type; uniform float u_time; uniform float u_speed; uniform float u_fade; uniform float u_star;
 uniform sampler2D u_env; uniform sampler2D u_envBlur; uniform sampler2D u_env2; uniform sampler2D u_envBlur2; uniform float u_envMix;
 vec3 env(vec3 d){ vec2 q = equirect(d); return mix(texture2D(u_env, q).rgb, texture2D(u_env2, q).rgb, u_envMix); }
 vec3 envB(vec3 d){ vec2 q = equirect(d); return mix(texture2D(u_envBlur, q).rgb, texture2D(u_envBlur2, q).rgb, u_envMix); }
@@ -329,6 +329,12 @@ void main(){
   }
   col += u_sunCol * spec;
   col += u_glowCol * fres * (0.25 + u_speed * 0.6);
+  if (u_star > 0.0) {                          // star power: the ball lights up from inside
+    float pulse = 0.75 + 0.25 * sin(u_time * 14.0);
+    vec3 starCol = mix(vec3(1.0, 0.82, 0.35), vec3(1.0), 0.35 + 0.35 * fres);
+    col = mix(col, col * 0.4 + starCol * (0.9 + fres * 1.5) * pulse, u_star);
+    glow = max(glow, u_star);
+  }
   gl_FragColor = vec4(col * u_fade, clamp(glow + spec * 0.15 + u_speed * fres * 0.5, 0.0, 1.0));
 }`;
 

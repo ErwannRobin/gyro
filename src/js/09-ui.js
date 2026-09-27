@@ -45,6 +45,7 @@ class UI {
       calibNum: $('calibNum'), calibTxt: $('calibTxt'), calibSub: $('calibSub'), go: $('go'), pause: $('pause'), over: $('over'),
       record: $('record'), ovDist: $('ovDist'), ovScore: $('ovScore'), ovBest: $('ovBest'), ovMode: $('ovMode'), ovRails: $('ovRails'), mBest: $('mBest'), perm: $('permMsg'),
       btnTilt: $('btnTilt'), btnTouch: $('btnTouch'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), share: $('btnShare'), recal: $('btnRecal'),
+      power: $('power'), pwCoin: $('pwCoin'), pwTxt: $('pwTxt'), pwFill: $('pwFill'),
     };
     this.cache = {};
     this.flashA = 0; this.flashCol = '#fff';
@@ -83,11 +84,28 @@ class UI {
     this.set('s', this.el.score, fmt(score));
     this.set('b', this.el.best, fmt(best) + ' m');
     this.set('v', this.el.speed, String(Math.round(speed * 3.6)));
-    const w = Math.round(clamp(speed / CFG.VBOOST, 0, 1) * 100) + '%';
+    const w = Math.round(clamp(speed / 40, 0, 1) * 100) + '%';
     if (this.cache.w !== w) { this.cache.w = w; this.el.bar.style.width = w; }
     this.set('m', this.el.mult, '×' + mult);
     const mo = mult > 1;
     if (this.cache.mo !== mo) { this.cache.mo = mo; this.el.mult.classList.toggle('on', mo); }
+  }
+  // Star power gauge. st: 'fill' | 'ready' | 'on'; hint = how to trigger it with the current controls.
+  updatePower(power, coinMult, st, hint) {
+    const w = (Math.round(clamp(power, 0, 1) * 200) / 2) + '%';
+    if (this.cache.pw !== w) { this.cache.pw = w; this.el.pwFill.style.width = w; }
+    this.set('pc', this.el.pwCoin, '×' + coinMult);
+    if (this.cache.pcm !== coinMult) {
+      const up = coinMult > (this.cache.pcm || 1); this.cache.pcm = coinMult;
+      if (up) { const e = this.el.pwCoin; e.classList.add('up'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('up'), 220); }
+    }
+    this.set('pt', this.el.pwTxt, st === 'ready' ? hint : st === 'on' ? tr('starActive') : tr('star'));
+    const key = st + LANG;
+    if (this.cache.pst !== key) {
+      this.cache.pst = key;
+      this.el.power.classList.toggle('ready', st === 'ready'); this.el.power.classList.toggle('on', st === 'on');
+      document.body.classList.toggle('star', st === 'on');
+    }
   }
   toast(txt, cls = '', big = false) {
     const el = document.createElement('div');

@@ -13,6 +13,7 @@ class InputManager {
     this.lastEvt = 0;
     this.keys = new Set();
     this.ptr = null; this.enabled = false;
+    this.flick = false; this.doubleTap = false; this.lastTap = 0; this.hist = []; this.lastFlick = -1e4;
     this.joyEl = document.getElementById('joy'); this.knob = this.joyEl.firstElementChild;
     this.onOrient = this.onOrient.bind(this);
     this.angle = this.screenAngle();
@@ -26,6 +27,9 @@ class InputManager {
     canvas.addEventListener('pointerdown', (e) => {
       if (!this.enabled || this.ptr !== null) return;
       e.preventDefault();
+      const now = performance.now();
+      if (now - this.lastTap < 320) this.doubleTap = true;
+      this.lastTap = now;
       this.ptr = e.pointerId; this.cx = e.clientX; this.cy = e.clientY; this.joyX = this.joyY = 0;
       try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
       this.joyEl.style.left = this.cx + 'px'; this.joyEl.style.top = this.cy + 'px';
@@ -99,6 +103,13 @@ class InputManager {
     }
     this.raw = [sx, sy, dz];
     this.lastEvt = performance.now();
+    // quick "tilt up" (top edge raised towards you): the screen pitch grows by ~20° in a quarter second.
+    // An angle, not sy, so it still works when the phone is held almost upright.
+    const now = this.lastEvt, H = this.hist, pitch = Math.atan2(-sy, -dz);
+    H.push(now, pitch);
+    while (H.length > 2 && now - H[0] > 250) H.splice(0, 2);
+    let low = 9; for (let k = 1; k < H.length; k += 2) low = Math.min(low, H[k]);
+    if (pitch - low > 0.35 && now - this.lastFlick > 900) { this.flick = true; this.lastFlick = now; H.length = 0; }
     if (this.calib) { this.calib.acc[0] += sx; this.calib.acc[1] += sy; this.calib.acc[2] += dz; this.calib.n++; }
   }
   startCalibration() { this.calib = { acc: [0, 0, 0], n: 0 }; }
@@ -138,7 +149,7 @@ class AudioManager {
     this.sfxOn = Store.get('sfxOn', true) !== false;
     this.sfxVol = clamp(+Store.get('sfxVol', 0.8) || 0, 0, 1);
     this.musicVol = clamp(+Store.get('musicVol', 0.55) || 0, 0, 1);
-    this.intensity = 0.15; this.step = 0; this.nextT = 0; this.chord = -1; this.gemCombo = 0; this.lastGem = 0;
+    this.intensity = 0.15; this.tempo = 1; this.step = 0; this.nextT = 0; this.chord = -1; this.gemCombo = 0; this.lastGem = 0;
   }
   init() {
     if (this.ctx) { if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); return; }
@@ -279,6 +290,21 @@ class AudioManager {
   }
   go() { if (!this.ok) return; const t = this.ctx.currentTime; this.tone('triangle', 880, t, 0.005, 0.2, 0.15); this.tone('triangle', 1760, t + 0.12, 0.005, 0.2, 0.4, this.verbS); }
   tick() { if (!this.ok) return; const t = this.ctx.currentTime; this.tone('sine', 1320, t, 0.002, 0.08, 0.06); }
+  setTempo(k) { this.tempo = k; }
+  starOn() {
+    if (!this.ok) return; const t = this.ctx.currentTime;
+    [60, 64, 67, 72, 76, 79, 84, 88].forEach((m, i) => { this.tone('sawtooth', this.mtof(m), t + i * 0.045, 0.01, 0.05, 0.5); this.tone('triangle', this.mtof(m + 12), t + i * 0.045, 0.01, 0.12, 0.9, this.verbS); });
+    this.burst(t, 0.9, 0.25, 'bandpass', 500, 1.2, this.verbS, 6000);
+  }
+  starOff() {
+    if (!this.ok) return; const t = this.ctx.currentTime;
+    [84, 79, 76, 72].forEach((m, i) => this.tone('triangle', this.mtof(m), t + i * 0.07, 0.01, 0.09, 0.5, this.verbS));
+  }
+  starReady() {
+    if (!this.ok) return; const t = this.ctx.currentTime;
+    [76, 83, 88].forEach((m, i) => this.tone('sine', this.mtof(m), t + i * 0.08, 0.005, 0.14, 0.5, this.verbS));
+  }
+  coinMiss() { if (!this.ok) return; const t = this.ctx.currentTime; this.tone('square', 196, t, 0.005, 0.05, 0.15, null, 150); }
   thunder() {
     if (!this.ok) return; const t = this.ctx.currentTime;
     this.burst(t, 1.8, 0.5, 'lowpass', 260, 0.9, null, 60);
@@ -294,7 +320,7 @@ class AudioManager {
   // ---- generative ambient music (lookahead scheduler)
   schedule() {
     const c = this.ctx; if (!c || c.state !== 'running') return;
-    const stepDur = 60 / 84 / 4;
+    const stepDur = 60 / (84 * this.tempo) / 4;
     if (!this.musicOn) { this.nextT = c.currentTime + 0.1; return; }   // no nodes created while music is off
     if (this.nextT < c.currentTime - 0.5) this.nextT = c.currentTime + 0.05;
     const CH = [
@@ -313,6 +339,7 @@ class AudioManager {
         g.connect(this.delay);
       }
       if (I > 0.45 && st % 4 === 2) this.burst(t, 0.04, 0.03 * I, 'highpass', 8000, 0.7, this.music);
+      if (this.tempo > 1.05 && st % 2 === 1) this.tone('triangle', this.mtof(ch.sc[(st >> 1) % ch.sc.length] + 12), t, 0.003, 0.05, 0.12, this.music);   // star power arpeggio
       if (I > 0.65 && st % 8 === 0) this.tone('sine', 120, t, 0.003, 0.28 * I, 0.22, this.music, 42);
       this.nextT += stepDur; this.step++;
     }

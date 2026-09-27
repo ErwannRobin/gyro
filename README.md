@@ -24,12 +24,13 @@ The whole game is **one self-contained `index.html` file** (about 230 KB): HTML,
 - **Endless procedural track** that gets harder with distance:
   - straights, big curves, zigzags, hairpins and narrow passages
   - banked platforms, holes, gaps with jumps, boosters, posts and moving sliders
-  - checkpoints every 250 m and gems to collect
+  - checkpoints every 250 m and coins to collect
   - The generator always leaves a safe line, so no section is impossible.
 - **Two game modes:**
   - **Random**: a new track every run.
   - **Daily run**: everyone gets the same track on the same day. The seed comes from the UTC date, and the daily best is saved separately. The link `?mode=daily` opens the daily run directly.
-- **Kid mode (side rails).** A menu toggle adds small glowing rails along both edges of the track, so the ball bounces back instead of falling off the side. Holes and gaps still count. Kid-mode runs keep their own best scores, and the game over screen, the share text and the share video all say "with side rails".
+- **Star power.** Coins fill a gauge at the bottom of the screen. Coins taken in a row raise the coin multiplier (×2 after 4, ×3 after 8, ×4 after 12), so the gauge fills faster; missing a single coin resets it. When the gauge is full, flick the phone up quickly (or double-tap, press Space, or tap the gauge): glowing side rails appear, the ball lights up, the music speeds up and the score is doubled. The gauge then drains in about 6 seconds and the rails go away.
+- **Kid mode (side rails).** A menu toggle adds small glowing rails along both edges of the track, so the ball bounces back instead of falling off the side. A hit that is too hard still jumps the rail, and holes and gaps still count. Kid-mode runs keep their own best scores, and the game over screen, the share text and the share video all say "with side rails".
 - **Five worlds** that change every 500 m and blend smoothly into each other:
   - **Tech** (0–500 m): towers with lit windows, beacons, a glowing grid below
   - **Landscape** (500–1000 m): sunset, floating rock islands, mountains, a sea of clouds
@@ -37,14 +38,14 @@ The whole game is **one self-contained `index.html` file** (about 230 KB): HTML,
   - **Abstract** (1500–2000 m): floating pastel primitives
   - **Chaos** (2000 m and beyond): red storm, lava cracks, spinning shards, lightning
 - **Parallax depth.** Objects in the foreground pass close to the track, structures sit in the midground, and slow-moving giant objects, the sky and a floor far below form the background. Fog, dust, light shafts and speed lines add to the sense of speed.
-- **Real rolling physics:** acceleration, inertia, friction, gravity on slopes and banks, top speed, rail bounces, jumps and falls.
+- **Real rolling physics:** acceleration, inertia, friction, gravity on slopes and banks, rail bounces, jumps and falls. There is no hard speed limit: the push gets weaker as you go faster, but it never stops.
 - **Premium effects:**
   - a reflective marble with dynamic highlights and a contact shadow
   - a speed trail and particles
   - bloom, radial speed blur and chromatic aberration when boosting
   - slow motion when you fall
 - **4 track skins and 5 marble skins** (chrome, glass, gold, plasma, candy). You can change them from the menu or the pause screen.
-- **Sound.** Every sound is synthesized with the Web Audio API, including the rolling sound, impacts, gems, checkpoints, boosts, falls, thunder and generative ambient music. Music and sound effects have separate toggles and volume sliders.
+- **Sound.** Every sound is synthesized with the Web Audio API, including the rolling sound, impacts, coins, checkpoints, boosts, falls, thunder and generative ambient music. Music and sound effects have separate toggles and volume sliders.
 - **Share my score.** During the run the game records a light timelapse. At game over it builds a short accelerated video (intro, run, fall, score card) with `MediaRecorder`. On phones it is shared through the Web Share API; elsewhere it is downloaded. If video is not supported, a score-card image is used instead.
 - **English and French**, detected from the browser language. You can switch on the menu.
 - **Built for phones:**
@@ -74,14 +75,16 @@ The whole game is **one self-contained `index.html` file** (about 230 KB): HTML,
 | Touch and drag (fallback) | Virtual joystick |
 | Arrows · WASD · ZQSD | Keyboard control (desktop) |
 | Mouse drag | Joystick (desktop) |
+| Quick tilt up · double-tap · `Space` · tap the gauge | Start star power (when the gauge is full) |
 | `P` / `Esc` | Pause / resume |
 | `Space` / `Enter` | Start / play again |
 
 ## Scoring
 
 - **Distance** is the furthest point you have reached (meters).
-- **Score:** each meter is worth 10 points × a speed multiplier. The multiplier is ×2 above ~29 km/h, ×3 above ~43 km/h and ×4 while boosting.
-- **Gem:** +250. **Checkpoint:** +1000.
+- **Score:** each meter is worth 10 points × a speed multiplier. The multiplier is ×2 above ~29 km/h, ×3 above ~43 km/h, ×4 above ~72 km/h or while boosting, and ×5 above ~108 km/h.
+- **Coin:** 250 × the coin multiplier. **Checkpoint:** +1000.
+- **Star power** doubles every point while it lasts.
 - The track collapses behind you, so you can't stand still forever.
 
 ## Run it locally
@@ -132,6 +135,9 @@ The tests drive the game loop step by step instead of waiting for real frames, s
 - the share link and the share video
 - all five worlds rendering
 - the installable app, including offline play
+- kid mode, safety rails that give way to hard hits, and speed past 50 km/h
+- coins, streak multiplier, star gauge, the tilt-up flick and star power
+- the chase camera never ending up inside roadside scenery
 
 ## Deploy
 
@@ -681,6 +687,19 @@ What else can we improve ?
 Let’s apply : 
 * Sharing and growth
 * Open-source quality
+````
+
+</details>
+
+<details>
+<summary><strong>Gameplay prompts</strong> (kid mode, speed, star power)</summary>
+
+````markdown
+Let’s do a kid mode with small lateral side rails, that allow for some lateral mistakes. It should be clear in the success screen that it was achieved with side rail on if relevant
+````
+
+````markdown
+The kid mode should not block all errors. The ball should still be able to fail if the hit to side rails is too high. Also, the mode made me realized that the max speed is limited to 50km/h. When tilting the phone heavily, we should keep accelerating up to very high speed. Let’s slow down the acceleration with speed but not block it. And I noticed a few collisions with surrounding objects. I was entering the object and could see the road anymore. Also, let’s use the new kid mode for a special game bonus : collecting coins fills a power bar gauge to trigger a star power mode, like in guitar hero. When ready, the player would need to tilt its phone up very quickly and the side rails would be activated. The ball become enlightened and the music speed up. The power bar would then drain quickly and remove the side rails. Collecting all coins increase their multipliers, which trigger the star power mode quicker. Missing 1 coin reset the multiplier
 ````
 
 </details>

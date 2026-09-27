@@ -7,7 +7,7 @@ class Ball {
   reset() {
     this.p.fill(0); this.v.fill(0); this.q[0] = this.q[1] = this.q[2] = 0; this.q[3] = 1; this.w.fill(0);
     this.grounded = true; this.lost = false; this.s = 0; this.u = 0; this.hint = 0; this.air = 0;
-    this.boost = 0; this.lastPad = -99; this.speed = 0; this.surfY = 0; this.support = true;
+    this.boost = 0; this.hop = 0; this.lastPad = -99; this.speed = 0; this.surfY = 0; this.support = true;
   }
 }
 
@@ -34,25 +34,31 @@ class Physics {
     let L = T.locate(b.p[0], b.p[2], b.hint);
     b.hint = L.i;
     b.boost = Math.max(0, b.boost - dt);
+    b.hop = Math.max(0, b.hop - dt);
 
     if (b.grounded) {
       const k = G * 0.714, tb = Math.tan(L.bank);
       const gA = -k * L.slope, gL = -k * tb;
-      b.v[0] += (ax + L.fx * gA + L.rx * gL) * dt;
-      b.v[2] += (az + L.fz * gA + L.rz * gL) * dt;
-      // rolling resistance + soft top speed
-      let sp = Math.hypot(b.v[0], b.v[2]);
-      const damp = 1 - (0.26 + (Math.abs(ix) + Math.abs(iy) < 0.05 && sp < 1.2 ? 1.4 : 0)) * dt;
+      // No speed cap: the forward push fades with speed (halved at VFADE) but never stops.
+      // Braking and steering keep their full strength.
+      let iax = ax, iaz = az;
+      const sp0 = Math.hypot(b.v[0], b.v[2]);
+      if (sp0 > 0.5) {
+        const ux = b.v[0] / sp0, uz = b.v[2] / sp0, along = iax * ux + iaz * uz;
+        if (along > 0) { const cut = along * sp0 * sp0 / (CFG.VFADE * CFG.VFADE + sp0 * sp0); iax -= ux * cut; iaz -= uz * cut; }
+      }
+      b.v[0] += (iax + L.fx * gA + L.rx * gL) * dt;
+      b.v[2] += (iaz + L.fz * gA + L.rz * gL) * dt;
+      // rolling resistance: stronger when slow (so the ball settles), light at speed
+      const sp = Math.hypot(b.v[0], b.v[2]);
+      const damp = 1 - (0.05 + 0.2 * Math.exp(-sp / 6) + (Math.abs(ix) + Math.abs(iy) < 0.05 && sp < 1.2 ? 1.4 : 0)) * dt;
       b.v[0] *= damp; b.v[2] *= damp;
-      sp *= damp;
-      const vmax = CFG.VMAX + (CFG.VBOOST - CFG.VMAX) * clamp(b.boost / 0.9, 0, 1);
-      if (sp > vmax) { const f = Math.max(vmax / sp, 1 - 1.3 * dt); b.v[0] *= f; b.v[2] *= f; }
       const py = b.p[1];
       b.p[0] += b.v[0] * dt; b.p[2] += b.v[2] * dt;
       L = T.locate(b.p[0], b.p[2], b.hint); b.hint = L.i;
       this.rails(b, L);
       this.props(b, L);
-      if (this.supported(L)) {
+      if (!b.grounded) { /* jumped a safety rail: the airborne branch takes over */ } else if (this.supported(L)) {
         b.p[1] = T.surfaceY(L, L.u) + R;
         b.v[1] = clamp((b.p[1] - py) / dt, -30, 30);
         const m = L.i & T.mask;
@@ -60,7 +66,7 @@ class Physics {
           b.lastPad = L.i;
           // boosters also steady the ball: half of the sideways drift is removed
           const vf = b.v[0] * L.fx + b.v[2] * L.fz, vl = b.v[0] * L.rx + b.v[2] * L.rz;
-          const add = Math.max(0, CFG.VBOOST - vf);
+          const add = Math.max(0, Math.max(CFG.VBOOST, vf + 5) - vf);
           b.v[0] += L.fx * add - L.rx * vl * 0.5; b.v[2] += L.fz * add - L.rz * vl * 0.5; b.boost = 1.3;
           this.ev.boost(b);
         }
@@ -93,18 +99,28 @@ class Physics {
     for (let j = 0; j < 3; j++) if (!Number.isFinite(b.p[j]) || !Number.isFinite(b.v[j])) { b.v.fill(0); b.p[j] = fin(b.p[j]); b.lost = true; }
   }
 
+  // Real rails (tall, on some bends) always hold. Small safety rails (kid mode, star power)
+  // hold gentle bumps only: hit them too hard and the ball jumps over.
   rails(b, L) {
-    const T = this.T, m = L.i & T.mask, f = T.rowF[m] | (this.kid ? RF.RAIL_L | RF.RAIL_R : 0);
-    if (!(f & (RF.RAIL_L | RF.RAIL_R)) || b.p[1] > b.surfY + 1.2) return;
+    const T = this.T, m = L.i & T.mask, real = T.rowF[m] & (RF.RAIL_L | RF.RAIL_R);
+    const f = real | (this.kid || this.star ? RF.RAIL_L | RF.RAIL_R : 0);
+    if (!f || b.p[1] > b.surfY + 1.2) return;
     const hw = L.w / 2 - 0.1, R = CFG.R;
     const n = T.rowN[m]; if (!n) return;
     let side = 0, pen = 0;
     if ((f & RF.RAIL_R) && T.rowBO[m * 3 + n - 1] && L.u + R > hw) { side = 1; pen = L.u + R - hw; }
     if ((f & RF.RAIL_L) && T.rowAO[m * 3] && L.u - R < -hw) { side = -1; pen = -hw - (L.u - R); }
     if (!side || pen > 0.6) return;
+    const soft = !(real & (side > 0 ? RF.RAIL_R : RF.RAIL_L));
+    if (soft && (b.hop > 0 || !b.grounded)) return;       // already jumping over it
     const nx = -L.rx * side, nz = -L.rz * side;        // normal pointing back to the track
-    b.p[0] += nx * pen; b.p[2] += nz * pen;
     const vn = b.v[0] * nx + b.v[2] * nz;
+    if (soft && -vn > CFG.RAIL_BREAK) {
+      b.hop = 0.6; b.grounded = false; b.air = 0; b.v[1] = 2 + (-vn - CFG.RAIL_BREAK) * 0.25;
+      this.ev.railJump(b, -vn, [b.p[0] - nx * CFG.R, b.p[1], b.p[2] - nz * CFG.R]);
+      return;
+    }
+    b.p[0] += nx * pen; b.p[2] += nz * pen;
     if (vn < 0) {
       b.v[0] -= nx * vn * 1.38; b.v[2] -= nz * vn * 1.38;
       b.v[0] *= 0.97; b.v[2] *= 0.97;
@@ -150,6 +166,7 @@ class CameraRig {
   }
   params(aspect, speed) {
     const portrait = aspect < 0.9;
+    speed = Math.min(speed, 24);                  // past ~86 km/h, speed lines and blur carry the feeling
     return {
       dist: (portrait ? 5.7 : 5.2) + speed * 0.1,
       height: (portrait ? 3.0 : 2.5) + speed * 0.04,

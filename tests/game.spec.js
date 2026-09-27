@@ -20,8 +20,10 @@ test('full run with the keyboard: play, pause, resume, fall, game over, retry, m
 
   const speed = await page.evaluate(() => {
     const g = window.__game; g.input.keys.add('arrowup');
-    for (let k = 0; k < 90; k++) g.tick(1 / 30, false);
-    g.input.keys.clear(); return g.ball.speed;
+    for (let k = 0; k < 60; k++) g.tick(1 / 30, false);
+    g.input.keys.clear();
+    const v = g.ball.speed; g.ball.v[0] *= 0.2; g.ball.v[2] *= 0.2;   // slow down: there is no speed cap and bends are ahead
+    return v;
   });
   expect(speed).toBeGreaterThan(5);
   expect(await page.evaluate(() => window.__game.dist)).toBeGreaterThan(10);

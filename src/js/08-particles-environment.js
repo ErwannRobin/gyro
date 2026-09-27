@@ -82,47 +82,58 @@ class Environment {
     this.dustN = n; this.dust = new Float32Array(n * 4);
     for (let k = 0; k < n; k++) this.dust.set([Math.random(), Math.random(), Math.random(), Math.random()], k * 4);
   }
-  frame(T, s) { T.pointAt(clamp(s, 0, Math.max(0, T.length - 1)), 0, 0, this.tmp); const t = this.tmp; return { x: t[0], y: t[1], z: t[2], th: t[3], rx: -Math.cos(t[3]), rz: Math.sin(t[3]), fx: Math.sin(t[3]), fz: Math.cos(t[3]) }; }
+  frame(T, s) {
+    const sc = clamp(s, 0, Math.max(0, T.length - 1));
+    T.pointAt(sc, 0, 0, this.tmp); const t = this.tmp;
+    return { x: t[0], y: t[1], z: t[2], th: t[3], rx: -Math.cos(t[3]), rz: Math.sin(t[3]), fx: Math.sin(t[3]), fz: Math.cos(t[3]), w: T.w[Math.floor(sc / CFG.DS) & T.mask] };
+  }
   item(list, s, mesh, x, y, z, sx, sy, sz, col, o = {}) {
     list.push({ s, mesh, x, y, z, sx, sy, sz, col, emis: o.emis === undefined ? 1 : o.emis, yaw: o.yaw || 0, spin: o.spin || 0, tilt: o.tilt || 0,
-      tumble: o.tumble || 0, bob: o.bob || 0, blink: !!o.blink, q: o.q || null, fogK: o.fogK || 1, drift: o.drift || null, r: o.r || Math.max(sx, sy, sz) });
+      tumble: o.tumble || 0, bob: o.bob || 0, blink: !!o.blink, q: o.q || null, fogK: o.fogK || 1, drift: o.drift || null, r: o.r || Math.max(sx, sy, sz),
+      // occluder shape used to hide the object when the camera gets inside it or behind it
+      occ: o.occ || 'sphere', cr: o.cr || Math.max(sx, sy, sz) * 0.9, nx: o.nx || 0, nz: o.nz || 0, R: o.R || 0 });
   }
 
   // ------------------------------------------------------------- foreground
+  // Trackside props stay clear of the track corridor (edge + 1.4 m + their own size) so the
+  // chase camera, which swings wide in tight bends, rarely meets them; draw() hides the rest.
   spawnSide(T, s, M) {
     const r = this.rng, z = zoneAt(s), Z = ZONES[z], f = this.frame(T, s), sg = r.sign();
-    const at = (lat, h) => [f.x + f.rx * lat, f.y + h, f.z + f.rz * lat];
+    const clear = f.w / 2 + 1.4;
+    const lat = (rad, extra, side = sg) => side * (clear + rad + r.range(0, extra));
+    const at = (l, h) => [f.x + f.rx * l, f.y + h, f.z + f.rz * l];
+    const plane = { occ: 'plane', nx: f.fx, nz: f.fz };
     let step;
     if (z === 0) {
-      if (r.chance(0.16)) { this.item(this.side, s, M.gate, f.x, f.y, f.z, 1.55, 1.6, 1, Z.c1, { yaw: f.th, emis: 1.2 }); step = 14; }
+      if (r.chance(0.16)) { this.item(this.side, s, M.gate, f.x, f.y, f.z, 2.0, 1.7, 1, Z.c1, { yaw: f.th, emis: 1.2, ...plane }); step = 14; }
       else {
-        const p = at(sg * r.range(3.6, 6.5), r.range(0.8, 3.6));
-        this.item(this.side, s, M.cube, p[0], p[1] - 20.2, p[2], 0.2, 40, 0.2, Z.c1);
-        this.item(this.side, s, M.glow, p[0], p[1], p[2], 0.34, 0.34, 0.34, r.chance(0.3) ? [1, 0.25, 0.3] : Z.c1, { blink: true, emis: 1.6 });
+        const p = at(lat(0.3, 3), r.range(0.8, 3.6));
+        this.item(this.side, s, M.cube, p[0], p[1] - 20.2, p[2], 0.2, 40, 0.2, Z.c1, { occ: 'cyl', cr: 0.3 });
+        this.item(this.side, s, M.glow, p[0], p[1], p[2], 0.34, 0.34, 0.34, r.chance(0.3) ? [1, 0.25, 0.3] : Z.c1, { blink: true, emis: 1.6, cr: 0.4 });
         step = r.range(8, 13);
       }
     } else if (z === 1) {
       const n = r.chance(0.3) ? 2 : 1;
       for (let k = 0; k < n; k++) {
-        const p = at(sg * r.range(3.8, 10), r.range(-3.5, 3)), sc = r.range(0.6, 2.4);
-        this.item(this.side, s, M.rocks[r.int(0, 2)], p[0], p[1], p[2], sc, sc * r.range(0.7, 1.1), sc, [0.62, 0.5, 0.44], { yaw: r.range(0, TAU), spin: r.range(-0.1, 0.1), bob: r.range(0.1, 0.35) });
+        const sc = r.range(0.6, 2.4), p = at(lat(sc * 1.3, 5), r.range(-3.5, 3));
+        this.item(this.side, s, M.rocks[r.int(0, 2)], p[0], p[1], p[2], sc, sc * r.range(0.7, 1.1), sc, [0.62, 0.5, 0.44], { yaw: r.range(0, TAU), spin: r.range(-0.1, 0.1), bob: r.range(0.1, 0.35), cr: sc * 1.5 });
       }
       step = r.range(6, 11);
     } else if (z === 2) {
       Q.yaw(this.q, f.th); Q.fromAxisAngle(this.qx, 1, 0, 0, Math.PI / 2);
-      const q = Q.mul([0, 0, 0, 1], this.q, this.qx);
-      this.item(this.side, s, M.ringGlow, f.x, f.y + 1.0, f.z, 3.7, 3.7, 3.7, (Math.floor(s / 18) & 1) ? Z.c1 : Z.c2, { q, emis: 1.4, r: 4 });
-      if (r.chance(0.5)) { const p = at(sg * r.range(4.5, 7), 0); this.item(this.side, s, M.glow, p[0], p[1] - 1, p[2], 0.1, 9, 0.1, Z.c2, { emis: 1.3 }); }
+      const q = Q.mul([0, 0, 0, 1], this.q, this.qx), RR = 4.8;
+      this.item(this.side, s, M.ringGlow, f.x, f.y + 1.2, f.z, RR, RR, RR, (Math.floor(s / 18) & 1) ? Z.c1 : Z.c2, { q, emis: 1.4, r: RR + 0.3, occ: 'ring', R: RR, nx: f.fx, nz: f.fz });
+      if (r.chance(0.5)) { const p = at(lat(0.2, 2.5), 0); this.item(this.side, s, M.glow, p[0], p[1] - 1, p[2], 0.1, 9, 0.1, Z.c2, { emis: 1.3, occ: 'cyl', cr: 0.25 }); }
       step = r.range(15, 21);
     } else if (z === 3) {
-      const p = at(sg * r.range(3.5, 8), r.range(-2.5, 3.2)), sc = r.range(0.45, 1.3), kind = r.int(0, 2);
+      const sc = r.range(0.45, 1.3), p = at(lat(sc * 1.4, 4), r.range(-2.5, 3.2)), kind = r.int(0, 2);
       const col = Z.neb[r.int(0, 3)], mesh = kind === 0 ? M.sphere : kind === 1 ? M.box16 : M.torus16;
-      this.item(this.side, s, mesh, p[0], p[1], p[2], sc, sc, sc, col, { yaw: r.range(0, TAU), spin: r.range(-0.8, 0.8), tumble: r.range(-0.6, 0.6), bob: r.range(0.1, 0.4) });
+      this.item(this.side, s, mesh, p[0], p[1], p[2], sc, sc, sc, col, { yaw: r.range(0, TAU), spin: r.range(-0.8, 0.8), tumble: r.range(-0.6, 0.6), bob: r.range(0.1, 0.4), cr: sc * 1.4 });
       step = r.range(6, 10);
     } else {
-      const p = at(sg * r.range(3.5, 7), r.range(-2, 3)), sc = r.range(0.5, 1.5);
-      this.item(this.side, s, M.shards[r.int(0, 2)], p[0], p[1], p[2], sc, sc, sc, Z.c1, { yaw: r.range(0, TAU), spin: r.range(-2, 2), tumble: r.range(-1.5, 1.5), bob: 0.3 });
-      if (r.chance(0.3)) { const b = at(-sg * r.range(4, 6), r.range(1, 3)); this.item(this.side, s, M.glow, b[0], b[1], b[2], 0.3, 0.3, 0.3, [1, 0.2, 0.1], { blink: true, emis: 1.8 }); }
+      const sc = r.range(0.5, 1.5), p = at(lat(sc * 2.2, 3), r.range(-2, 3));
+      this.item(this.side, s, M.shards[r.int(0, 2)], p[0], p[1], p[2], sc, sc, sc, Z.c1, { yaw: r.range(0, TAU), spin: r.range(-2, 2), tumble: r.range(-1.5, 1.5), bob: 0.3, cr: sc * 2.3 });
+      if (r.chance(0.3)) { const b = at(lat(0.3, 2, -sg), r.range(1, 3)); this.item(this.side, s, M.glow, b[0], b[1], b[2], 0.3, 0.3, 0.3, [1, 0.2, 0.1], { blink: true, emis: 1.8, cr: 0.4 }); }
       step = r.range(5, 9);
     }
     return step / Math.max(0.6, this.density);
@@ -198,11 +209,12 @@ class Environment {
       }
     }
   }
-  draw(R, time) {
+  draw(R, time, focus) {
     const cam = R.cam, F = R.camF;
-    const one = (it) => {
+    const one = (it, near) => {
       const dx = it.x - cam[0], dy = it.y - cam[1], dz = it.z - cam[2];
       if (dx * F[0] + dy * F[1] + dz * F[2] < -it.r * 1.5) return;          // behind the camera
+      if (near && focus && Environment.occludes(it, cam, focus, time)) return;
       let q = it.q;
       if (!q) {
         Q.yaw(this.q, it.yaw + time * it.spin); q = this.q;
@@ -217,7 +229,24 @@ class Environment {
     };
     for (const h of this.heroes) for (const it of h.items) one(it);
     for (const it of this.mid) one(it);
-    for (const it of this.side) one(it);
+    for (const it of this.side) one(it, true);
+  }
+  // True when the camera is inside the object, or the object sits between the camera and the ball.
+  static occludes(it, cam, focus, time) {
+    const y = it.y + (it.bob ? Math.sin(time * 0.7 + it.s) * it.bob : 0);
+    const dx = cam[0] - it.x, dy = cam[1] - y, dz = cam[2] - it.z;
+    if (it.occ === 'plane') return Math.abs(dx * it.nx + dz * it.nz) < 1.4;
+    if (it.occ === 'ring') {
+      const dn = dx * it.nx + dz * it.nz, rx = dx - it.nx * dn, rz = dz - it.nz * dn;
+      return Math.abs(dn) < 1.1 && Math.abs(Math.hypot(rx, dy, rz) - it.R) < 1.1;
+    }
+    // distance from the object centre to the camera→ball segment (in 3D, or top view for poles)
+    const cyl = it.occ === 'cyl';
+    const sx = focus[0] - cam[0], sy = cyl ? 0 : focus[1] - cam[1], sz = focus[2] - cam[2];
+    const px = -dx, py = cyl ? 0 : -dy, pz = -dz;
+    const t = clamp((px * sx + py * sy + pz * sz) / (sx * sx + sy * sy + sz * sz || 1), 0, 1);
+    const d = Math.hypot(px - sx * t, py - sy * t, pz - sz * t);
+    return d < it.cr + (t < 0.05 ? 0.7 : 0.25);
   }
   writeDust(out, off, cam, time, col, drift) {
     let o = off * 8; const B = 26;
@@ -238,10 +267,10 @@ class Environment {
 // FxBuilder — per-frame additive geometry (trail ribbon, halos, shafts).
 // =====================================================================
 class FxBuilder {
-  constructor() { this.buf = new Float32Array(1400 * 10); this.n = 0; this.trail = []; for (let k = 0; k < 30; k++) this.trail.push([0, 0, 0]); this.th = 0; this.tn = 0; }
+  constructor() { this.buf = new Float32Array(4000 * 10); this.n = 0; this.trail = []; for (let k = 0; k < 30; k++) this.trail.push([0, 0, 0]); this.th = 0; this.tn = 0; }
   begin(view) { this.n = 0; this.rx = view[0]; this.ry = view[4]; this.rz = view[8]; this.ux = view[1]; this.uy = view[5]; this.uz = view[9]; }
   v(x, y, z, u, w, sh, r, g, b, a) {
-    if (this.n >= 1400) return;
+    if (this.n >= 4000) return;
     const o = this.n++ * 10, B = this.buf;
     B[o] = x; B[o + 1] = y; B[o + 2] = z; B[o + 3] = u; B[o + 4] = w; B[o + 5] = sh; B[o + 6] = r; B[o + 7] = g; B[o + 8] = b; B[o + 9] = a;
   }

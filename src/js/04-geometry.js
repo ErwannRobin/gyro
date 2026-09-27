@@ -165,6 +165,20 @@ Prims.rock = (seed) => {
   for (const [a, b, c] of F2) mb.face(V[a], V[b], V[c], V[a], [0, 0.1, 0]);
   return mb;
 };
+// Coin: short cylinder (axis Y, height 1, radius 1) with both caps, gem material.
+Prims.coin = (seg = 22) => {
+  const mb = new MeshBuilder(seg * 12); mb.M = [10, 0, 0, 1];
+  for (let k = 0; k < seg; k++) {
+    const a0 = k / seg * TAU, a1 = (k + 1) / seg * TAU, c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
+    mb.quad([c0, -0.5, s0], [c1, -0.5, s1], [c1, 0.5, s1], [c0, 0.5, s0], [c0, 0, s0], [0, 0, 1, 0, 1, 1, 0, 1], [c1, 0, s1]);
+    mb.grow(6, 6);
+    for (const y of [0.5, -0.5]) {
+      const n = Math.sign(y), c = mb.V(0, y, 0, 0, n, 0, 0.5, 0.5), p = mb.V(c0 * 0.999, y, s0 * 0.999, 0, n, 0, 0, 0), q = mb.V(c1 * 0.999, y, s1 * 0.999, 0, n, 0, 1, 0);
+      mb.tri(c, p, q);
+    }
+  }
+  return mb;
+};
 Prims.pyramid = () => {
   const mb = new MeshBuilder(40); mb.M = [15, 0, 0, 1];
   const ap = [0, 1.5, 0], B = [[-1, 0, -1], [1, 0, -1], [1, 0, 1], [-1, 0, 1]];
