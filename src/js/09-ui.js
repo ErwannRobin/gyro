@@ -148,6 +148,10 @@ class UI {
     set.name = document.createElement('div'); set.name.className = 'skinName'; box.appendChild(set.name);
     this.skinSets.push(set);
   }
+  // A rendered thumbnail (data URL) replaces the CSS swatch. kind: 'track' | 'ball'.
+  setPreview(kind, i, url) {
+    for (const set of this.skinSets) { const b = set[kind][i]; if (b && url) b.style.background = `#070a14 url(${url}) center / cover no-repeat`; }
+  }
   selectSkins(ti, bi) {
     this.ti = ti; this.bi = bi;
     for (const set of this.skinSets) {

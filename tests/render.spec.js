@@ -1,10 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { openGame, teleport } from './helpers.js';
 
-test('all five worlds render without WebGL errors and with few draw calls', async ({ page }) => {
+const ZONES_N = 9;
+
+test('all nine worlds render without WebGL errors and with few draw calls', async ({ page }) => {
   const errors = await openGame(page);
   await page.evaluate(() => { const g = window.__game; g.halt = true; for (let i = 0; i < ZONES.length; i++) g.R.ensureZone(i); g.startRun('keys'); });
-  for (const d of [120, 640, 1140, 1640, 2140]) {
+  for (let z = 0; z < ZONES_N; z++) {
+    const d = 120 + z * 500;
     await page.evaluate(teleport, d);
     const r = await page.evaluate(() => {
       const g = window.__game, gl = g.R.gl; let calls = 0, probeCalls = 0;
@@ -19,10 +22,13 @@ test('all five worlds render without WebGL errors and with few draw calls', asyn
       return { err: gl.getError(), calls: calls - probeCalls, probeCalls, faces: g.quality.cur.faces, ready: g.R.probeReady, zone: g.zoneIdx, inst: !!g.R.inst };
     });
     expect(r.err).toBe(0);
-    expect(r.zone).toBe(Math.floor(d / 500));
+    expect(r.zone).toBe(z);
     expect(r.ready).toBe(true);
     if (r.inst) { expect(r.calls).toBeLessThan(60); expect(r.probeCalls / r.faces).toBeLessThan(30); }
   }
+  // after the last world the list starts again
+  await page.evaluate(teleport, 120 + ZONES_N * 500);
+  expect(await page.evaluate(() => { const g = window.__game; for (let k = 0; k < 5; k++) g.tick(1 / 60, false); return [ZONES.length, g.zoneIdx, zoneAt(g.ball.s)]; })).toEqual([ZONES_N, 0, 0]);
   expect(errors).toEqual([]);
 });
 
@@ -30,6 +36,7 @@ test('share builds a video (or an image) of the run', async ({ page }) => {
   await openGame(page);
   const r = await page.evaluate(async () => {
     const g = window.__game, R = g.replay;
+    g.halt = true;                                              // the test drives the frames; keep the live loop out of the timing
     for (let k = 0; k < 10; k++) { g.tick(1 / 30, true); R.capture(g.canvas, 1, 10 * k, false); await new Promise((res) => setTimeout(res, 80)); }
     const f = await R.make({ dist: 123, score: 4567, best: 200, record: true, recordTxt: 'NEW RECORD', tag: '', accent: '#4ef2ff', accent2: '#ff4fd8', portrait: true }, () => {});
     return f && { type: f.type, size: f.size, name: f.name };

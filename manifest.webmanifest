@@ -1,7 +1,7 @@
 {
   "name": "GYROLL — How far can you go?",
   "short_name": "GYROLL",
-  "description": "Tilt your phone to roll a marble along an endless floating track. Daily run, 5 worlds, share your best run.",
+  "description": "Tilt your phone to roll a marble along an endless floating track. Daily run, 9 worlds, share your best run.",
   "id": "./",
   "start_url": "./?source=pwa",
   "scope": "./",

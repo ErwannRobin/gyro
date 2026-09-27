@@ -158,19 +158,35 @@ const BALL_SKINS = [
 ];
 
 // ---------------------------------------------------------------- world zones
-// The world changes every 500 m. Each zone owns its sky, fog, floor far below,
-// structures, trackside props and a slow "hero" object. Names are never shown.
+// The world changes every 500 m and the list loops. Each zone owns its sky, fog (haze: its density,
+// 1 by default), floor far below, structures, trackside props and a slow "hero" object. Names are never shown.
 const ZONE_LEN = 500;
 const ZONES = [
   { id: 'tech', skyTop: hex(0x02040c), skyMid: hex(0x0a1a30), horizon: hex(0x1e4a6a), abyss: hex(0x1a6a8a), fog: hex(0x0c2033),
     neb: [hex(0x1a4a8a), hex(0x0e6a8a), hex(0x2a3a7a), hex(0x3aa0c0)], sun: hex(0xcfeeff), sunDir: [-0.35, 0.5, 0.8], stars: 1.0,
     c1: hex(0x4ef2ff), c2: hex(0x2a8aff), dust: hex(0x9fe8ff), drift: [0.3, 0.05], floor: 0, floorA: hex(0x07121c), floorB: hex(0x3ad8ff), shafts: 0.9 },
+  // countryside: a sunny patchwork of fields, cypress rows, wind turbines and hot-air balloons
+  { id: 'farm', skyTop: hex(0x1a56b0), skyMid: hex(0x5a98dc), horizon: hex(0xbfdcf0), abyss: hex(0x6a8a58), fog: hex(0x9dbdd0), haze: 0.55,
+    neb: [hex(0xffffff), hex(0xfff2dc), hex(0xdfe8f5), hex(0xffe8c8)], sun: hex(0xfff2d8), sunDir: [-0.55, 0.62, -0.55], stars: 0,
+    c1: hex(0xffd36b), c2: hex(0xff5a48), dust: hex(0xfffbe0), drift: [0.5, 0.12], floor: 5, floorA: hex(0x5a8a36), floorB: hex(0xd9b85a), shafts: 0.45 },
   { id: 'land', skyTop: hex(0x1a1a40), skyMid: hex(0x5a3a6a), horizon: hex(0xf09a6a), abyss: hex(0xffc8a0), fog: hex(0x7a5a78),
     neb: [hex(0xf0a070), hex(0xd070a0), hex(0x7a6ab0), hex(0xffd0a0)], sun: hex(0xffe2b8), sunDir: [0.45, 0.2, 0.87], stars: 0.25,
     c1: hex(0xffc070), c2: hex(0xff7aa8), dust: hex(0xfff0c0), drift: [0.6, 0.15], floor: 1, floorA: hex(0xe8b8b0), floorB: hex(0xfff0e0), shafts: 1.2 },
+  // forest: giant conifers in the morning mist, light shafts and fireflies
+  { id: 'forest', skyTop: hex(0x1d4866), skyMid: hex(0x6898ae), horizon: hex(0xe6d4a4), abyss: hex(0x2c4a38), fog: hex(0x6e867e), haze: 0.95,
+    neb: [hex(0xf0e4c4), hex(0xc8d8d0), hex(0xa8c0b4), hex(0xfff0d0)], sun: hex(0xffe4b0), sunDir: [-0.4, 0.28, 0.87], stars: 0,
+    c1: hex(0xffe98a), c2: hex(0x9dff8a), dust: hex(0xfff2b0), drift: [0.15, 0.08], floor: 6, floorA: hex(0x1d3d22), floorB: hex(0x5f8f3a), shafts: 1.7 },
   { id: 'neon', skyTop: hex(0x05010f), skyMid: hex(0x1a0530), horizon: hex(0xff2a8a), abyss: hex(0x3a0a5a), fog: hex(0x1c0833),
     neb: [hex(0xff2aa0), hex(0x2a4aff), hex(0x8a2aff), hex(0x00e0ff)], sun: hex(0xffc0e8), sunDir: [0.0, 0.14, 1.0], stars: 0.8,
     c1: hex(0xff2ad0), c2: hex(0x2af0ff), dust: hex(0xff8af0), drift: [0.2, 0.1], floor: 2, floorA: hex(0x0a0218), floorB: hex(0xff2ad0), shafts: 0.5 },
+  // sea: open water far below, sea stacks, channel beacons, sailboats and lighthouses
+  { id: 'sea', skyTop: hex(0x1052a2), skyMid: hex(0x4f9ce2), horizon: hex(0xcbe5f7), abyss: hex(0x1d5d88), fog: hex(0x92bfde), haze: 0.6,
+    neb: [hex(0xffffff), hex(0xeef6ff), hex(0xdcebf8), hex(0xfff8ee)], sun: hex(0xfff6e0), sunDir: [0.72, 0.3, 0.62], stars: 0,
+    c1: hex(0xff4a3a), c2: hex(0x3aff9a), dust: hex(0xf4fbff), drift: [0.9, 0.06], floor: 7, floorA: hex(0x0c4a78), floorB: hex(0xb8e2fa), shafts: 0.35 },
+  // desert: golden dunes, mesas, pyramids, hoodoos and cacti
+  { id: 'desert', skyTop: hex(0x28589c), skyMid: hex(0x7ea8d8), horizon: hex(0xeecb94), abyss: hex(0xc88a4c), fog: hex(0xdcb884), haze: 0.7,
+    neb: [hex(0xffe8c0), hex(0xffd0a0), hex(0xf8c090), hex(0xffffff)], sun: hex(0xfff0d0), sunDir: [-0.62, 0.32, 0.72], stars: 0,
+    c1: hex(0xffb347), c2: hex(0x3ad6c8), dust: hex(0xffe2ae), drift: [1.5, 0.06], floor: 8, floorA: hex(0xc4843f), floorB: hex(0xf4cc8c), shafts: 0.6 },
   { id: 'abstract', skyTop: hex(0x1e1e3c), skyMid: hex(0x6a6aa0), horizon: hex(0xd8c8e8), abyss: hex(0xe8e0ff), fog: hex(0x8a84b0),
     neb: [hex(0xffc0e0), hex(0xc0e0ff), hex(0xe0ffe0), hex(0xfff0c0)], sun: hex(0xffffff), sunDir: [-0.4, 0.6, 0.6], stars: 0.15,
     c1: hex(0xffffff), c2: hex(0xffa0d0), dust: hex(0xffffff), drift: [0.1, 0.2], floor: 3, floorA: hex(0xb8b0d8), floorB: hex(0xffffff), shafts: 1.0 },

@@ -63,7 +63,7 @@ class ParticleSystem {
 //   background: one slow "hero" giant per zone + sky panorama + floor
 // plus dust motes, light shafts and (in CHAOS) lightning.
 // =====================================================================
-const zoneAt = (s) => clamp(Math.floor((s - CFG.START_S) / ZONE_LEN), 0, ZONES.length - 1);
+const zoneAt = (s) => Math.max(0, Math.floor((s - CFG.START_S) / ZONE_LEN)) % ZONES.length;   // the worlds loop
 class Environment {
   constructor() {
     this.rng = RNG(99); this.tmp = [0, 0, 0, 0]; this.model = M4.create(); this.q = [0, 0, 0, 1]; this.qx = [0, 0, 0, 1];
@@ -94,7 +94,10 @@ class Environment {
     if (this.extFor !== M) {
       const E = this.ext = new Map(), set = (list, e) => { for (const m of list) E.set(m, e); };
       set([M.cube, M.tower, M.mono, M.box16, M.box17, M.glow, M.slider], [0.71, 0.5, 0.5]); set([M.sphere], [1, 1, 1]); set(M.rocks, [1.25, 1.25, 1.25]);
-      set([M.pyramid], [1.42, 1.5, 0.05]); set(M.shards, [0.6, 2.2, 1.4]); set([M.ring, M.ringGlow, M.torus16, M.ring17], [1.25, 0.3, 0.3]);
+      set([M.pyramid, M.pyramidS], [1.42, 1.5, 0.05]); set(M.shards, [0.6, 2.2, 1.4]); set([M.ring, M.ringGlow, M.torus16, M.ring17], [1.25, 0.3, 0.3]);
+      set([M.sequoia, M.fir, M.cypress, M.pole], [1, 1, 0.05]); set(M.oaks, [0.55, 1, 0.02]); set([M.turbine], [0.06, 1.03, 0.03]); set([M.blades], [1, 1, 1]);
+      set([M.balloon], [1, 1.12, 1.65]); set([M.boat], [0.55, 1.2, 0.05]); set([M.lighthouse], [0.14, 1.03, 0.02]); set(M.cacti, [0.36, 1, 0.03]);
+      set(M.mesas, [1.2, 1, 0.05]); set(M.rocksD, [1.25, 1.25, 1.25]);
       this.extFor = M;
     }
     return this.ext.get(mesh) || [1.3, 1.3, 1.3];
@@ -102,6 +105,18 @@ class Environment {
   // Adds an object unless it would sit in the track's keep-out zone. Each object is also given a
   // bounding cylinder (hr, up, down) used to hide it whenever it gets between the camera and the ball.
   item(list, s, mesh, x, y, z, sx, sy, sz, col, o = {}) {
+    const it = this.make(list, s, mesh, x, y, z, sx, sy, sz, col, o);
+    if (it) list.push(it);
+    return !!it;
+  }
+  // Several parts that form one object (a tree on an island, a turbine and its blades): all or nothing.
+  group(list, s, parts) {
+    const its = [];
+    for (const p of parts) { const it = this.make(list, s, ...p); if (!it) return false; its.push(it); }
+    for (const it of its) list.push(it);
+    return true;
+  }
+  make(list, s, mesh, x, y, z, sx, sy, sz, col, o = {}) {
     const e = this.extOf(mesh), bob = o.bob || 0, rot = !!(o.q || o.tilt || o.tumble);
     let hr = e[0] * Math.max(sx, sz), up = e[1] * sy + bob, down = e[2] * sy + bob;
     if (rot) { hr = Math.max(e[0], e[1], e[2]) * Math.max(sx, sy, sz); up = down = hr + bob; }
@@ -109,10 +124,16 @@ class Environment {
       tumble: o.tumble || 0, bob, blink: !!o.blink, q: o.q || null, fogK: o.fogK || 1, drift: o.drift || null, r: o.r || Math.max(sx, sy, sz),
       occ: o.occ || 'box', hr, up, down, nx: o.nx || 0, nz: o.nz || 0, R: o.R || 0, dying: 0 };
     const T = this.T;
-    if (T && Environment.near(T, it, Math.floor((this.ballS - 80) / CFG.DS), T.n - 1, this.padOf(list))) return false;
-    list.push(it); return true;
+    if (T && Environment.near(T, it, Math.floor((this.ballS - 80) / CFG.DS), T.n - 1, this.padOf(list))) return null;
+    return it;
   }
   padOf(list) { return list === this.side ? 1 : list === this.mid ? 7 : 12; }
+  // Wind turbine: tower from the floor, blades turning at the hub, rotor facing the track.
+  turbine(list, s, x, floor, z, H, f, o = {}) {
+    const M = this.M, a = Math.atan2(-(f.z - z), f.x - x), c = [0.93, 0.94, 0.95];
+    return this.group(list, s, [[M.turbine, x, floor, z, H, H, H, c, { yaw: a, ...o }],
+      [M.blades, x + Math.cos(a) * 0.035 * H, floor + 1.005 * H, z - Math.sin(a) * 0.035 * H, H * 0.42, H * 0.42, H * 0.42, c, { yaw: a, tumble: this.rng.range(0.5, 0.9), ...o }]]);
+  }
   // Keep-out test against track rows [i0, i1): true when the object reaches within `pad` of the
   // track corridor, in a height band the chase camera can see through (2 m below to 8 m above).
   // Arches the track runs through ('plane', 'ring') ignore the rows around their own position.
@@ -133,13 +154,13 @@ class Environment {
   // Trackside props stay clear of the track corridor (edge + 1.4 m + their own size) so the
   // chase camera, which swings wide in tight bends, rarely meets them; draw() hides the rest.
   spawnSide(T, s, M) {
-    const r = this.rng, z = zoneAt(s), Z = ZONES[z], f = this.frame(T, s), sg = r.sign();
+    const r = this.rng, Z = ZONES[zoneAt(s)], id = Z.id, f = this.frame(T, s), sg = r.sign();
     const clear = f.w / 2 + 1.4;
     const lat = (rad, extra, side = sg) => side * (clear + rad + r.range(0, extra));
     const at = (l, h) => [f.x + f.rx * l, f.y + h, f.z + f.rz * l];
-    const plane = { occ: 'plane', nx: f.fx, nz: f.fz };
+    const plane = { occ: 'plane', nx: f.fx, nz: f.fz }, floor = f.y - 66;
     let step;
-    if (z === 0) {
+    if (id === 'tech') {
       if (r.chance(0.16)) { this.item(this.side, s, M.gate, f.x, f.y, f.z, 2.0, 1.7, 1, Z.c1, { yaw: f.th, emis: 1.2, ...plane }); step = 14; }
       else {
         const p = at(lat(0.3, 3), r.range(0.8, 3.6));
@@ -147,24 +168,66 @@ class Environment {
         this.item(this.side, s, M.glow, p[0], p[1], p[2], 0.34, 0.34, 0.34, r.chance(0.3) ? [1, 0.25, 0.3] : Z.c1, { blink: true, emis: 1.6 });
         step = r.range(8, 13);
       }
-    } else if (z === 1) {
+    } else if (id === 'land') {
       const n = r.chance(0.3) ? 2 : 1;
       for (let k = 0; k < n; k++) {
         const sc = r.range(0.6, 2.4), p = at(lat(sc * 1.3, 5), r.range(-3.5, 3));
         this.item(this.side, s, M.rocks[r.int(0, 2)], p[0], p[1], p[2], sc, sc * r.range(0.7, 1.1), sc, [0.62, 0.5, 0.44], { yaw: r.range(0, TAU), spin: r.range(-0.1, 0.1), bob: r.range(0.1, 0.35) });
       }
       step = r.range(6, 11);
-    } else if (z === 2) {
+    } else if (id === 'neon') {
       Q.yaw(this.q, f.th); Q.fromAxisAngle(this.qx, 1, 0, 0, Math.PI / 2);
       const q = Q.mul([0, 0, 0, 1], this.q, this.qx), RR = 4.8;
       this.item(this.side, s, M.ringGlow, f.x, f.y + 1.2, f.z, RR, RR, RR, (Math.floor(s / 18) & 1) ? Z.c1 : Z.c2, { q, emis: 1.4, r: RR + 0.3, occ: 'ring', R: RR, nx: f.fx, nz: f.fz });
       if (r.chance(0.5)) { const p = at(lat(0.2, 2.5), 0); this.item(this.side, s, M.glow, p[0], p[1] - 1, p[2], 0.1, 9, 0.1, Z.c2, { emis: 1.3 }); }
       step = r.range(15, 21);
-    } else if (z === 3) {
+    } else if (id === 'abstract') {
       const sc = r.range(0.45, 1.3), p = at(lat(sc * 1.4, 4), r.range(-2.5, 3.2)), kind = r.int(0, 2);
       const col = Z.neb[r.int(0, 3)], mesh = kind === 0 ? M.sphere : kind === 1 ? M.box16 : M.torus16;
       this.item(this.side, s, mesh, p[0], p[1], p[2], sc, sc, sc, col, { yaw: r.range(0, TAU), spin: r.range(-0.8, 0.8), tumble: r.range(-0.6, 0.6), bob: r.range(0.1, 0.4) });
       step = r.range(6, 10);
+    } else if (id === 'farm') {
+      if (r.chance(0.68)) {                              // a row of tall cypresses rising from the fields far below
+        const rad = r.range(1.6, 2.4), p = at(lat(rad, 3), 0), top = f.y + r.range(1, 9);
+        this.item(this.side, s, M.cypress, p[0], floor, p[2], rad, top - floor, rad, [0.15, 0.3, 0.13], { yaw: r.range(0, TAU) });
+        step = r.range(7, 10);
+      } else {                                           // a small floating meadow with its tree
+        const sc = r.range(1.6, 2.6), p = at(lat(sc * 1.3, 4), r.range(-3, 0.5)), h = sc * r.range(2.4, 3.4), bob = r.range(0.1, 0.3);
+        this.group(this.side, s, [[M.rocks[r.int(0, 2)], p[0], p[1], p[2], sc, sc * 0.8, sc, [0.5, 0.4, 0.3], { yaw: r.range(0, TAU), bob }],
+          [M.oaks[r.int(0, 1)], p[0], p[1] + sc * 0.2, p[2], h, h, h, [0.3, 0.5, 0.18], { yaw: r.range(0, TAU), bob }]]);
+        step = r.range(9, 14);
+      }
+    } else if (id === 'forest') {                        // giant conifers: the track runs through their crowns
+      const rad = r.range(2.4, 3.6), p = at(lat(rad, 4), 0), top = f.y + r.range(4, 22);
+      this.item(this.side, s, M.sequoia, p[0], floor, p[2], rad, top - floor, rad, r.chance(0.5) ? [0.12, 0.27, 0.14] : [0.1, 0.23, 0.12], { yaw: r.range(0, TAU) });
+      if (r.chance(0.45)) {                              // fireflies
+        const q2 = at(lat(0.2, 3, -sg), r.range(-1.5, 2.5));
+        this.item(this.side, s, M.glow, q2[0], q2[1], q2[2], 0.09, 0.09, 0.09, Z.c1, { blink: true, emis: 1.8, bob: 0.4 });
+      }
+      step = r.range(6, 10);
+    } else if (id === 'sea') {
+      if (r.chance(0.55)) {                              // channel beacon: red to port, green to starboard
+        const p = at(lat(0.25, 3), 0), top = f.y + r.range(1.5, 3.5), col = sg < 0 ? Z.c1 : Z.c2;
+        this.group(this.side, s, [[M.pole, p[0], floor, p[2], 0.22, top - floor, 0.22, [0.2, 0.22, 0.25], {}],
+          [M.glow, p[0], top + 0.25, p[2], 0.34, 0.34, 0.34, col, { blink: true, emis: 1.8 }]]);
+        step = r.range(8, 12);
+      } else {                                           // sea stack with a grassy top
+        const sc = r.range(2, 3.4), p = at(lat(sc * 1.3, 5), 0), top = f.y + r.range(-2.5, 1.5), sy = (top - floor) / 1.9;
+        this.item(this.side, s, M.rocks[r.int(0, 2)], p[0], top - 0.28 * sy, p[2], sc, sy, sc, [0.62, 0.58, 0.52], { yaw: r.range(0, TAU) });
+        step = r.range(8, 13);
+      }
+    } else if (id === 'desert') {
+      if (r.chance(0.6)) {                               // sandstone hoodoo, sometimes crowned by a cactus
+        const sc = r.range(1.6, 2.8), p = at(lat(sc * 1.3, 4), 0), top = f.y + r.range(-3, 1), sy = (top - floor) / 1.9;
+        const parts = [[M.rocksD[r.int(0, 2)], p[0], top - 0.28 * sy, p[2], sc, sy, sc, [0.78, 0.46, 0.28], { yaw: r.range(0, TAU) }]];
+        if (r.chance(0.5)) { const h = r.range(3.5, 6); parts.push([M.cacti[r.int(0, 1)], p[0], top, p[2], h, h, h, [0.3, 0.5, 0.26], { yaw: r.range(0, TAU) }]); }
+        this.group(this.side, s, parts);
+      } else {                                           // floating sand islet with a cactus
+        const sc = r.range(1.3, 2.2), p = at(lat(sc * 1.3, 4), r.range(-3, 0)), h = r.range(3, 5), bob = r.range(0.1, 0.3);
+        this.group(this.side, s, [[M.rocksD[r.int(0, 2)], p[0], p[1], p[2], sc, sc * 0.7, sc, [0.82, 0.55, 0.32], { yaw: r.range(0, TAU), bob }],
+          [M.cacti[r.int(0, 1)], p[0], p[1] + sc * 0.18, p[2], h, h, h, [0.3, 0.52, 0.26], { yaw: r.range(0, TAU), bob }]]);
+      }
+      step = r.range(8, 13);
     } else {
       const sc = r.range(0.5, 1.5), p = at(lat(sc * 2.2, 3), r.range(-2, 3));
       this.item(this.side, s, M.shards[r.int(0, 2)], p[0], p[1], p[2], sc, sc, sc, Z.c1, { yaw: r.range(0, TAU), spin: r.range(-2, 2), tumble: r.range(-1.5, 1.5), bob: 0.3 });
@@ -179,22 +242,53 @@ class Environment {
     return this.rng.range(9, 16) / this.density;
   }
   midOne(T, s, M) {
-    const r = this.rng, z = zoneAt(s), Z = ZONES[z], f = this.frame(T, s), sg = r.sign(), n0 = this.mid.length;
+    const r = this.rng, Z = ZONES[zoneAt(s)], id = Z.id, f = this.frame(T, s), sg = r.sign(), n0 = this.mid.length;
     const lat = sg * r.range(30, 150), fo = r.range(-15, 15);
     const x = f.x + f.rx * lat + f.fx * fo, zz = f.z + f.rz * lat + f.fz * fo, floor = f.y - 62;
-    if (z === 0) {
+    if (id === 'tech') {
       if (r.chance(0.8)) { const H = r.range(35, 100), w = r.range(6, 14); this.item(this.mid, s, M.tower, x, floor + H / 2, zz, w, H, w, r.chance(0.7) ? Z.c1 : Z.c2, { yaw: r.range(0, TAU) }); }
       else { const R = r.range(8, 20); this.item(this.mid, s, M.ring, x, f.y + r.range(-10, 25), zz, R, R, R, Z.c1, { yaw: r.range(0, TAU), tilt: r.range(0.6, 1.4), spin: r.range(-0.15, 0.15) }); }
-    } else if (z === 1) {
+    } else if (id === 'land') {
       const sc = r.range(6, 22);
       this.item(this.mid, s, M.rocks[r.int(0, 2)], x, f.y + r.range(-38, 10), zz, sc, sc * r.range(0.6, 0.9), sc, [0.6, 0.5, 0.46], { yaw: r.range(0, TAU), bob: r.range(0.5, 1.5), spin: r.range(-0.02, 0.02) });
-    } else if (z === 2) {
+    } else if (id === 'neon') {
       if (r.chance(0.55)) { const H = r.range(20, 60); this.item(this.mid, s, M.mono, x, floor + H / 2, zz, 3, H, 3, r.chance(0.5) ? Z.c1 : Z.c2, { emis: 1.3 }); }
       else { const sc = r.range(10, 26); this.item(this.mid, s, M.pyramid, x, f.y - r.range(15, 45), zz, sc, sc, sc, r.chance(0.5) ? Z.c1 : Z.c2, { yaw: r.range(0, TAU), spin: r.range(-0.08, 0.08), emis: 1.2 }); }
-    } else if (z === 3) {
+    } else if (id === 'abstract') {
       const kind = r.int(0, 2), sc = r.range(4, 14), col = Z.neb[r.int(0, 3)];
       const mesh = kind === 0 ? M.sphere : kind === 1 ? M.box16 : M.torus16;
       this.item(this.mid, s, mesh, x, f.y + r.range(-30, 22), zz, sc, sc, sc, col, { yaw: r.range(0, TAU), spin: r.range(-0.2, 0.2), tumble: r.range(-0.15, 0.15), bob: r.range(0.5, 2) });
+    } else if (id === 'farm') {
+      const k = r.next();
+      if (k < 0.35) this.turbine(this.mid, s, x, floor - 3, zz, r.range(70, 100), f);
+      else if (k < 0.7) {                                // a clump of cypresses
+        for (let j = 0, n = r.int(2, 4); j < n; j++) { const rad = r.range(2, 3.5), h = f.y + r.range(-12, 12) - floor; this.item(this.mid, s, M.cypress, x + r.range(-9, 9), floor - 3, zz + r.range(-9, 9), rad, h, rad, [0.14, 0.28, 0.12], { yaw: r.range(0, TAU) }); }
+      } else {                                           // floating meadow with a big tree
+        const sc = r.range(5, 11), y = f.y + r.range(-25, 6), h = sc * r.range(2, 3), bob = r.range(0.4, 1.2);
+        this.group(this.mid, s, [[M.rocks[r.int(0, 2)], x, y, zz, sc, sc * 0.75, sc, [0.5, 0.4, 0.3], { yaw: r.range(0, TAU), bob }],
+          [M.oaks[r.int(0, 1)], x, y + sc * 0.2, zz, h, h, h, [0.32, 0.52, 0.2], { yaw: r.range(0, TAU), bob }]]);
+      }
+    } else if (id === 'forest') {
+      for (let j = 0, n = r.int(1, 3); j < n; j++) {
+        const rad = r.range(4, 8), top = f.y + r.range(-15, 35), fir = r.chance(0.35);
+        this.item(this.mid, s, fir ? M.fir : M.sequoia, x + r.range(-12, 12), floor - 4, zz + r.range(-12, 12), rad, top - floor + 4, rad,
+          fir ? [0.09, 0.21, 0.13] : [0.12, 0.26, 0.13], { yaw: r.range(0, TAU) });
+      }
+    } else if (id === 'sea') {
+      const k = r.next();
+      if (k < 0.4) { const L = r.range(8, 16); this.item(this.mid, s, M.boat, x, floor + 0.3, zz, L, L, L, r.chance(0.5) ? [0.95, 0.95, 0.93] : r.chance(0.5) ? [0.12, 0.25, 0.5] : [0.75, 0.2, 0.16], { yaw: r.range(0, TAU), bob: 0.3 }); }
+      else if (k < 0.65) {                               // lighthouse on a sea stack
+        const sc = r.range(6, 10), top = f.y + r.range(-30, -8), sy = (top - floor) / 1.9, H = r.range(18, 26);
+        this.group(this.mid, s, [[M.rocks[r.int(0, 2)], x, top - 0.28 * sy, zz, sc, sy, sc, [0.6, 0.56, 0.5], { yaw: r.range(0, TAU) }],
+          [M.lighthouse, x, top, zz, H, H, H, [0.82, 0.16, 0.12], {}],
+          [M.glow, x, top + H * 0.88, zz, H * 0.07, H * 0.06, H * 0.07, [1, 0.92, 0.7], { emis: 2.2, blink: true }]]);
+      } else {                                           // sea stacks
+        const sc = r.range(5, 13), top = f.y + r.range(-35, 4), sy = (top - floor) / 1.9;
+        this.item(this.mid, s, M.rocks[r.int(0, 2)], x, top - 0.28 * sy, zz, sc, sy, sc, [0.64, 0.6, 0.54], { yaw: r.range(0, TAU) });
+      }
+    } else if (id === 'desert') {
+      if (r.chance(0.6)) { const R = r.range(14, 34), H = f.y + r.range(-30, 5) - floor; this.item(this.mid, s, M.mesas[r.int(0, 1)], x, floor - 3, zz, R, H + 3, R, [0.72, 0.4, 0.24], { yaw: r.range(0, TAU) }); }
+      else { const sc = r.range(14, 30); this.item(this.mid, s, M.pyramidS, x, floor - 1, zz, sc, sc, sc, [0.86, 0.66, 0.42], { yaw: r.range(0, TAU) }); }
     } else {
       if (r.chance(0.5)) { const H = r.range(25, 60); this.item(this.mid, s, M.box17, x, floor + H / 2 + r.range(0, 20), zz, r.range(2.5, 5), H, r.range(2.5, 5), Z.c1, { yaw: r.range(0, TAU), tilt: r.range(-0.45, 0.45) }); }
       else { const sc = r.range(3, 9); this.item(this.mid, s, M.shards[r.int(0, 2)], x, f.y + r.range(-20, 20), zz, sc, sc, sc, Z.c2, { yaw: r.range(0, TAU), spin: r.range(-0.5, 0.5), tumble: r.range(-0.4, 0.4) }); }
@@ -207,14 +301,25 @@ class Environment {
     this.heroes.push({ z, s, items: [] });                             // nowhere clear: skip this zone's giant
   }
   heroOne(T, z, s, M, k) {
-    const r = this.rng, Z = ZONES[z], f = this.frame(T, s), sg = r.sign(), lat = sg * (r.range(170, 240) + k * 60);
-    const x = f.x + f.rx * lat, y = f.y + r.range(15, 55), zz = f.z + f.rz * lat;
+    const r = this.rng, Z = ZONES[z], id = Z.id, f = this.frame(T, s), sg = r.sign(), lat = sg * (r.range(170, 240) + k * 60);
+    const x = f.x + f.rx * lat, y = f.y + r.range(15, 55), zz = f.z + f.rz * lat, floor = f.y - 62;
     const drift = [f.fx * r.range(1.5, 3), 0, f.fz * r.range(1.5, 3)], o = { drift, fogK: 0.5 };
     const list = [];
-    if (z === 0) { this.item(list, s, M.ring, x, y, zz, 70, 70, 70, Z.c1, { ...o, tilt: 1.1, spin: 0.05, emis: 1.4 }); this.item(list, s, M.glow, x, y, zz, 7, 7, 7, Z.c1, { ...o, emis: 1.2 }); }
-    else if (z === 1) this.item(list, s, M.rocks[0], x, y - 20, zz, 65, 45, 65, [0.62, 0.52, 0.5], { ...o, spin: 0.01 });
-    else if (z === 2) this.item(list, s, M.pyramid, x, y - 50, zz, 85, 85, 85, Z.c1, { ...o, spin: 0.04, emis: 1.5 });
-    else if (z === 3) { this.item(list, s, M.sphere, x, y, zz, 42, 42, 42, [0.95, 0.95, 1], o); this.item(list, s, M.torus16, x, y, zz, 72, 72, 72, Z.c2, { ...o, tilt: 1.2, spin: 0.12 }); }
+    if (id === 'tech') { this.item(list, s, M.ring, x, y, zz, 70, 70, 70, Z.c1, { ...o, tilt: 1.1, spin: 0.05, emis: 1.4 }); this.item(list, s, M.glow, x, y, zz, 7, 7, 7, Z.c1, { ...o, emis: 1.2 }); }
+    else if (id === 'land') this.item(list, s, M.rocks[0], x, y - 20, zz, 65, 45, 65, [0.62, 0.52, 0.5], { ...o, spin: 0.01 });
+    else if (id === 'neon') this.item(list, s, M.pyramid, x, y - 50, zz, 85, 85, 85, Z.c1, { ...o, spin: 0.04, emis: 1.5 });
+    else if (id === 'abstract') { this.item(list, s, M.sphere, x, y, zz, 42, 42, 42, [0.95, 0.95, 1], o); this.item(list, s, M.torus16, x, y, zz, 72, 72, 72, Z.c2, { ...o, tilt: 1.2, spin: 0.12 }); }
+    else if (id === 'farm') {                            // hot-air balloons drifting over the fields
+      const cols = [[0.9, 0.2, 0.18], [0.16, 0.42, 0.85], [0.98, 0.72, 0.15], [0.2, 0.62, 0.35]];
+      this.group(list, s, [[M.balloon, x, y, zz, 16, 18, 16, cols[r.int(0, 3)], { ...o, bob: 2, spin: 0.03 }],
+        [M.balloon, x + f.fx * 45 + f.rx * sg * 30, y - 18, zz + f.fz * 45 + f.rz * sg * 30, 11, 12.5, 11, cols[r.int(0, 3)], { ...o, bob: 1.5, spin: -0.04 }]]);
+    } else if (id === 'forest') this.item(list, s, M.sequoia, x, floor - 10, zz, 30, f.y + 110 - floor, 30, [0.11, 0.25, 0.13], { fogK: 0.5 });
+    else if (id === 'sea') {
+      const top = f.y - 20, sy = (top - floor) / 1.9, H = 42;
+      this.group(list, s, [[M.rocks[1], x, top - 0.28 * sy, zz, 34, sy, 34, [0.6, 0.56, 0.5], { fogK: 0.5 }],
+        [M.lighthouse, x, top, zz, H, H, H, [0.82, 0.16, 0.12], { fogK: 0.5 }],
+        [M.glow, x, top + H * 0.88, zz, 3, 2.6, 3, [1, 0.92, 0.7], { fogK: 0.5, emis: 2.4 }]]);
+    } else if (id === 'desert') this.item(list, s, M.pyramidS, x, floor - 2, zz, 80, 80, 80, [0.9, 0.7, 0.45], { fogK: 0.5 });
     else this.item(list, s, M.ring17, x, y, zz, 90, 90, 90, Z.c1, { ...o, tilt: 1.3, spin: 0.09, emis: 1.5 });
     if (!list.length) return false;
     this.heroes.push({ z, s, items: list }); return true;
@@ -253,13 +358,13 @@ class Environment {
     // one hero for the current zone and one for the next, spawned far ahead
     const zc = zoneAt(ballS), zn = zoneAt(ballS + 260);
     for (const z of zc === zn ? [zc] : [zc, zn]) if (!this.heroes.some((h) => h.z === z)) this.spawnHero(T, z, Math.min(lim, z === zc ? ballS + 120 : ballS + 260), M);
-    this.heroes = this.heroes.filter((h) => h.z >= zc - 0 || h.s > ballS - 150);
+    this.heroes = this.heroes.filter((h) => h.z === zc || h.z === zn || h.s > ballS - 150);   // the worlds loop: compare ids, not order
     if (this.heroes.length > 3) this.heroes.shift();
     for (const h of this.heroes) for (const it of h.items) if (it.drift) { it.x += it.drift[0] * dt; it.z += it.drift[2] * dt; }
     // lightning in CHAOS
     for (const b of this.bolts) b.life -= dt;
     this.bolts = this.bolts.filter((b) => b.life > 0);
-    if (zc === 4 && dt > 0) {
+    if (ZONES[zc].id === 'chaos' && dt > 0) {
       this.boltT -= dt;
       if (this.boltT <= 0) {
         const r = this.rng; this.boltT = r.range(2.2, 6);

@@ -8,9 +8,9 @@ GYROLL is an endless 3D marble game for your phone. Tilt the phone to roll a hea
 
 [![CI](https://github.com/ErwannRobin/gyro/actions/workflows/ci.yml/badge.svg)](https://github.com/ErwannRobin/gyro/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-![The five worlds of GYROLL](docs/worlds.jpg)
+![The nine worlds of GYROLL](docs/worlds.jpg)
 
-The whole game is **one self-contained `index.html` file** (about 275 KB): HTML, CSS, JavaScript, GLSL shaders and synthesized audio.
+The whole game is **one self-contained `index.html` file** (about 320 KB): HTML, CSS, JavaScript, GLSL shaders and synthesized audio.
 - It uses no libraries and no external assets, and it needs no network to play.
 - It is assembled from readable source files in [`src/`](src) by a tiny build script that has no dependencies.
 - A few optional files next to it make it installable and nice to share: icons, a manifest, a service worker and a preview image.
@@ -31,12 +31,16 @@ The whole game is **one self-contained `index.html` file** (about 275 KB): HTML,
   - **Daily run**: everyone gets the same track on the same day, and every run starts from the beginning. The seed comes from the UTC date, and the daily best is saved separately. The link `?mode=daily` opens the daily run directly.
 - **Star power.** Coins fill a gauge at the bottom of the screen. Coins taken in a row raise the coin multiplier (×2 after 4, ×3 after 8, ×4 after 12), so the gauge fills faster; missing a single coin resets it. When the gauge is full, flick the phone up quickly (or double-tap, press Space, or tap the gauge): glowing side rails appear, the ball lights up, the music speeds up and the score is doubled. The gauge then drains in about 6 seconds and the rails go away.
 - **Kid mode (side rails).** A menu toggle adds small glowing rails along both edges of the track, so the ball bounces back instead of falling off the side. A hit that is too hard still jumps the rail, and holes and gaps still count. Kid-mode runs keep their own best scores, and the game over screen, the share text and the share video all say "with side rails".
-- **Five worlds** that change every 500 m of track and blend smoothly into each other:
+- **Nine worlds** that change every 500 m of track and blend smoothly into each other. After the last one, the list starts again:
   - **Tech** (0–500 m): towers with lit windows, beacons, a glowing grid below
-  - **Landscape** (500–1000 m): sunset, floating rock islands, mountains, a sea of clouds
-  - **Neon** (1000–1500 m): synthwave sun, neon grid, neon rings to roll through
-  - **Abstract** (1500–2000 m): floating pastel primitives
-  - **Chaos** (2000 m and beyond): red storm, lava cracks, spinning shards, lightning
+  - **Countryside** (500–1000 m): a sunny patchwork of fields and hedges far below, rows of tall cypresses, floating meadows with trees, wind turbines, hot-air balloons, rolling hills and white clouds
+  - **Landscape** (1000–1500 m): sunset, floating rock islands, mountains, a sea of clouds
+  - **Forest** (1500–2000 m): giant conifers in the morning mist (the track runs through their crowns), a canopy of round treetops far below, light shafts, fireflies
+  - **Neon** (2000–2500 m): synthwave sun, neon grid, neon rings to roll through
+  - **Sea** (2500–3000 m): open sea far below with swell, sun glitter and foam, sea stacks, red and green channel beacons, sailboats and lighthouses
+  - **Desert** (3000–3500 m): golden dunes shaped by the wind, mesas, sandstone hoodoos, cacti and pyramids
+  - **Abstract** (3500–4000 m): floating pastel primitives
+  - **Chaos** (4000–4500 m): red storm, lava cracks, spinning shards, lightning
 - **Parallax depth.** Objects in the foreground pass close to the track, structures sit in the midground, and slow-moving giant objects, the sky and a floor far below form the background. Fog, dust, light shafts and speed lines add to the sense of speed.
 - **Real rolling physics:** acceleration, inertia, friction, gravity on slopes and banks, rail bounces, jumps and falls. There is no hard speed limit: the push gets weaker as you go faster, but it never stops.
 - **Premium effects:**
@@ -49,7 +53,9 @@ The whole game is **one self-contained `index.html` file** (about 275 KB): HTML,
   - a speed trail and particles
   - bloom, radial speed blur and chromatic aberration when boosting
   - slow motion when you fall
-- **4 track skins and 5 marble skins** (chrome, glass, gold, plasma, candy). You can change them from the menu or the pause screen.
+- **4 track skins and 5 marble skins** (chrome, glass, gold, plasma, candy). You can change them from the menu or the pause screen. The pickers show real pictures drawn with the game's own shaders: each marble as it looks in the current world, and each track skin on a short bend under the current sky. They are redrawn when the world or the track skin changes, one picture per frame.
+- **Clean menu view.** Tap the menu background to hide everything except the two play buttons and enjoy the world (or look around with the phone). Tap again to bring the rest back. Nothing moves on the screen when you do it.
+- **A still menu camera.** Changing the mode, kid mode, the track or a skin on the menu never moves the camera: the camera keeps its place next to the ball, and the new world appears with a short cross-fade. Kid mode only adds the rails to the same track.
 - **Sound.** Every sound is synthesized with the Web Audio API, including the rolling sound, impacts, coins, checkpoints, boosts, falls, thunder and generative ambient music. Music and sound effects have separate toggles (white icons) and volume sliders.
 - **Share my score.** During the run the game records a light timelapse. When you press **Share my score** at game over, it builds a short accelerated video (intro, run, fall, score card) with `MediaRecorder`; press **Share the video** when it is ready. On phones it is shared through the Web Share API; elsewhere it is downloaded. If video is not supported, a score-card image is used instead.
 - **English and French**, detected from the browser language. You can switch on the menu; the menu layout never moves when you change the language or an option.
@@ -64,13 +70,13 @@ The whole game is **one self-contained `index.html` file** (about 275 KB): HTML,
 
 ## Screenshots
 
-| Menu | Tech | Landscape |
-|---|---|---|
-| ![Menu](docs/menu.jpg) | ![Tech world](docs/world-tech.jpg) | ![Landscape world](docs/world-landscape.jpg) |
+| Menu | Tech | Countryside | Landscape | Forest |
+|---|---|---|---|---|
+| ![Menu](docs/menu.jpg) | ![Tech world](docs/world-tech.jpg) | ![Countryside world](docs/world-countryside.jpg) | ![Landscape world](docs/world-landscape.jpg) | ![Forest world](docs/world-forest.jpg) |
 
-| Neon | Abstract | Chaos |
-|---|---|---|
-| ![Neon world](docs/world-neon.jpg) | ![Abstract world](docs/world-abstract.jpg) | ![Chaos world](docs/world-chaos.jpg) |
+| Neon | Sea | Desert | Abstract | Chaos |
+|---|---|---|---|---|
+| ![Neon world](docs/world-neon.jpg) | ![Sea world](docs/world-sea.jpg) | ![Desert world](docs/world-desert.jpg) | ![Abstract world](docs/world-abstract.jpg) | ![Chaos world](docs/world-chaos.jpg) |
 
 ## Controls
 
@@ -140,7 +146,7 @@ The tests drive the game loop step by step instead of waiting for real frames, s
 - language switching, sound toggles and skins
 - a menu layout that never moves when the language, mode, kid mode, sound or skin changes
 - the share link and the share video
-- all five worlds rendering
+- all nine worlds rendering, and the loop back to the first one
 - the installable app, including offline play
 - kid mode, safety rails that give way to hard hits, and speed past 50 km/h
 - coins, streak multiplier, star gauge, the tilt-up flick and star power
@@ -150,6 +156,9 @@ The tests drive the game loop step by step instead of waiting for real frames, s
 - the ball's reflection cube map facing the right way
 - the share video only being made on request
 - the menu camera following the phone
+- the clean menu view (a tap on the background), with play buttons that stay in place
+- a menu camera that stays still when options change, and kid mode keeping the same world
+- picker pictures drawn by the game, redrawn for a new world
 
 ## Deploy
 
@@ -185,7 +194,7 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
 | `InputManager` | DeviceOrientation (with the iOS permission), calibration, low-pass filtering, joystick and keyboard. |
 | `AudioManager` | Web Audio synthesis and a generative music scheduler, with separate music and SFX buses. |
 | `ParticleSystem`, `FxBuilder` | Pooled particles, trail ribbon, glows, light shafts, speed lines and lightning. |
-| `Environment` | Zone-driven scenery in three parallax layers. Nothing may enter a keep-out zone around the track; objects that newer track bends towards shrink away, and anything between the camera and the ball is hidden. |
+| `Environment` | Zone-driven scenery in three parallax layers (trees, turbines, balloons, boats, lighthouses, cacti, mesas… are built from a few procedural shapes and drawn with instancing). Nothing may enter a keep-out zone around the track; objects that newer track bends towards shrink away, and anything between the camera and the ball is hidden. |
 | `Replay` | Timelapse capture and share-video composition. |
 | `QualityManager`, `UI`, `Game` | Adaptive quality, DOM overlay with FR/EN strings, and the state machine / main loop. |
 | `Analytics`, `sw.js` | Opt-out-friendly stats on the official site, and the offline cache for the installable app. |
@@ -205,6 +214,7 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
   - Landscape tilt directions have not been checked on a real phone. Portrait tilt was checked with simulated sensor events.
   - Development and automated tests ran in headless Chromium (software rendering). Reports from real phones are very welcome.
   - The cost of the ball's reflection probe on real phones is not measured yet. If the frame rate drops, adaptive quality lowers it and then turns it off.
+  - The four nature worlds (countryside, forest, sea, desert) and the picker pictures were only checked in headless Chromium. Their cost on real phones is not measured yet.
 - **Analytics events.** Page views work whenever Web Analytics is on. Custom events (`run_start`, `game_over`…) may need a Vercel plan that supports them; if not, they are simply ignored.
 
 ## Contributing
@@ -746,6 +756,22 @@ The menu Ui should not change when switching lang or options. And could we remov
 Also, the respawns should occur at Check points. 
 
 And could we improve the reflection on the ball to really feel the material? It should be exceptionally high quality and stunning
+````
+
+</details>
+
+<details>
+<summary><strong>Menu and worlds prompt</strong></summary>
+
+````markdown
+Quelques petites améliorations : 
+On the menu screen, touching the background toggle all the options parameters and most texts and keep visible only the main CTAs (only the 2 play buttons)
+
+Also, changing the options should not make the camera to jump. 
+
+And the balls and track texture selection in the menu is not as nice as in game. Could we improve it?
+
+And could we have more landscape backgrounds, such as forest, campaigns, see, or desert ?
 ````
 
 </details>

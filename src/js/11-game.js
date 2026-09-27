@@ -63,6 +63,8 @@ class Game {
     const U = this.ui, E = U.el, $ = U.$;
     const tap = (el, fn) => el.addEventListener('click', (e) => { e.preventDefault(); fn(e); });
     for (const b of document.querySelectorAll('#langSeg button')) tap(b, () => { LANG = b.dataset.lang; Store.set('lang', LANG); this.refreshTexts(); this.audio.tick(); });
+    // a tap on the menu background shows only the play buttons (and the world); another tap brings the rest back
+    E.menu.addEventListener('click', (e) => { if (this.state === 'menu' && !e.target.closest('button,input,a,.seg,.skinRow,.tgRow')) E.menu.classList.toggle('clean'); });
     tap($('tgKid'), () => { if (this.state === 'menu') { this.setKid(!this.kid); this.audio.tick(); } });
     tap(E.newTrack, () => { if (this.state === 'menu') { this.newTrack(); this.audio.tick(); } });
     for (const b of document.querySelectorAll('#modeSeg button')) tap(b, () => { if (this.state === 'menu' && b.dataset.mode !== this.gameMode) { this.setGameMode(b.dataset.mode); this.audio.tick(); } });
@@ -134,13 +136,15 @@ class Game {
   setGameMode(m) {
     this.gameMode = m === 'daily' ? 'daily' : 'random'; Store.set('mode', this.gameMode);
     this.best = this.modeBest(); this.refreshTexts();
-    this.newWorld(); this.used = false;
+    this.swapWorld(() => this.newWorld()); this.used = false;
   }
   // Kid mode (side rails) keeps its own records so they never mix with real ones.
+  // On the menu the track stays the same: only its mesh is rebuilt, with or without rails.
   setKid(on) {
     this.kid = !!on; Store.set('kid', this.kid);
     this.best = this.modeBest(); this.refreshTexts();
-    this.newWorld(); this.used = false;
+    if (this.state === 'menu' && !this.used) this.swapWorld(() => { this.physics.kid = this.kid; this.rebuildChunks(); });
+    else { this.newWorld(); this.used = false; }
   }
   modeBest() {
     const k = this.kid ? '_kid' : '';
@@ -159,7 +163,42 @@ class Game {
   newSeed() { const s = ((Math.random() * 1e9) | 0) || 1; Store.set('rseed', s); return s; }
   newTrack() {
     this.rSeed = this.newSeed(); this.contS = CFG.START_S; Store.set('rpos', this.contS);
-    this.refreshTexts(); this.newWorld(); this.used = false;
+    this.refreshTexts(); this.swapWorld(() => this.newWorld()); this.used = false;
+  }
+  // Changes the world under the menu camera without moving the view: the old picture fades out
+  // over the new world, and the camera keeps its place relative to the ball and the track direction.
+  swapWorld(fn) {
+    const c = this.cam, b = this.ball, T = this.track, bp = b.p;
+    this.crossfade();
+    T.pointAt(b.s + 2, 0, 0, this.tmp); const th0 = this.tmp[3];
+    const rel = (p) => [p[0] - bp[0], p[1] - bp[1], p[2] - bp[2]];
+    const pos = rel(c.pos), look = rel(c.look), orbA = c.orbA, orbH = c.orbH, roll = c.roll, fov = c.fov;
+    fn();
+    T.pointAt(b.s + 2, 0, 0, this.tmp);
+    const d = wrapAngle(this.tmp[3] - th0), cs = Math.cos(d), sn = Math.sin(d);
+    const put = (o, v) => { o[0] = bp[0] + v[0] * cs + v[2] * sn; o[1] = bp[1] + v[1]; o[2] = bp[2] + v[2] * cs - v[0] * sn; };
+    put(c.pos, pos); put(c.look, look);
+    if (orbA !== null) c.orbA = orbA + d;
+    c.orbH = orbH; c.roll = roll; c.fov = fov;
+  }
+  // Freezes the current picture on a canvas above the game and fades it out.
+  crossfade() {
+    const cv = document.getElementById('xfade');
+    if (!cv || this.glLost || !this.R.w) return;
+    try {
+      this.render();                                        // the drawing buffer is only readable right after drawing
+      const w = Math.max(2, this.R.w >> 1), h = Math.max(2, this.R.h >> 1);
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+      cv.getContext('2d').drawImage(this.canvas, 0, 0, w, h);
+      cv.style.transition = 'none'; cv.style.opacity = '1'; void cv.offsetWidth;
+      cv.style.transition = 'opacity .5s ease-out'; cv.style.opacity = '0';
+    } catch (e) { cv.style.opacity = '0'; }
+  }
+  rebuildChunks() {
+    for (const ch of this.chunks.values()) this.R.free(ch.mesh);
+    this.chunks.clear();
+    this.nextChunk = Math.max(0, Math.floor((this.ball.s - CFG.BEHIND) / (CFG.CHUNK_ROWS * CFG.DS)) - 1);
+    this.updateChunks(99);
   }
   bindWindow() {
     const onResize = () => { clearTimeout(this.rt); this.rt = setTimeout(() => this.resize(), 80); };
@@ -178,7 +217,7 @@ class Game {
       this.glLost = false;
       try {
         this.R.initGL(); this.R.fbo = null; this.R.w = 0; this.resize(true);
-        this.chunks.clear();
+        this.chunks.clear(); this.pvMesh = null; this.pvKey = null;
         this.nextChunk = Math.max(0, Math.floor((this.ball.s - CFG.BEHIND) / (CFG.CHUNK_ROWS * CFG.DS)));
         this.updateChunks(99);
       } catch (err) { console.error(err); }
@@ -220,7 +259,7 @@ class Game {
     b.p[0] = this.tmp[0]; b.p[1] = this.tmp[1]; b.p[2] = this.tmp[2]; b.hint = Math.floor(s0 / CFG.DS);
     const L = this.track.locate(b.p[0], b.p[2], b.hint); b.s = L.s; b.u = L.u; b.surfY = this.tmp[1] - CFG.R;
     this.physics.collapseS = this.collapseS = -1e9; this.physics.kid = this.kid; this.physics.time = 0;
-    this.lastCP = b.s; this.lookRef = null;
+    this.lastCP = b.s;
     this.startS = b.s; this.maxS = b.s; this.score = 0; this.dist = 0; this.mult = 1; this.recordShown = false;
     this.danger = 0; this.timeScale = 1; this.acc = 0; this.runT = 0;
     // star power: coins fill the gauge, a streak of coins raises the coin multiplier
@@ -258,7 +297,7 @@ class Game {
     const U = this.ui, E = U.el;
     if (this.gameMode === 'daily' && this.runDay !== dayKey()) this.newWorld();   // the day changed
     this.best = this.modeBest();
-    U.show('menu', false); U.show('over', false); U.show('pause', false);
+    U.show('menu', false); U.show('over', false); U.show('pause', false); E.menu.classList.remove('clean');
     U.hud(true);
     U.el.ctrl.textContent = tr(mode === 'tilt' ? 'ctrlTilt' : mode === 'keys' ? 'ctrlKeys' : 'ctrlTouch') + (this.kid ? ' · 🛡 ' + tr('kidTag') : '');
     E.recal.classList.toggle('hidden', mode !== 'tilt');
@@ -316,7 +355,7 @@ class Game {
   goMenu() {
     this.state = 'menu'; this.input.enabled = false; this.input.release();
     const U = this.ui;
-    U.show('pause', false); U.show('over', false); U.show('calib', false); U.show('menu', true); U.hud(false);
+    U.show('pause', false); U.show('over', false); U.show('calib', false); U.el.menu.classList.remove('clean'); U.show('menu', true); U.hud(false);
     U.el.touchHint.classList.add('hidden');
     this.best = this.modeBest(); this.refreshTexts();
     this.audio.resume();
@@ -457,6 +496,7 @@ class Game {
     }
     // while the replay video is being encoded, draw the backdrop at half rate
     if (draw && st === 'over' && this.shareSt === 'busy' && (this.halfTick = !this.halfTick)) draw = false;
+    if (draw && (st === 'menu' || st === 'paused')) this.previews(dtR);
     if (draw) {
       this.render();
       if (st === 'play' || st === 'falling') this.replay.capture(this.canvas, dtR, this.dist, st === 'falling');
@@ -673,6 +713,46 @@ class Game {
     R.clearBatches(); R.cullFar = 330;
     R.endProbe(n);
   }
+  // Picker thumbnails drawn with the game's own shaders: every ball as it looks right here (it
+  // mirrors the same world), every track theme on a short bend. Redrawn when the world or the theme changes.
+  previews(dt) {
+    const key = this.themeIdx + ':' + this.zoneIdx + ':' + (this.R.probeReady ? 1 : 0);
+    if (key !== this.pvKey) {
+      this.pvWait = (this.pvWait || 0) + dt;
+      if (this.pvWait < 0.3) return;
+      this.pvWait = 0; this.pvKey = key; this.pvNext = 0;
+    }
+    if (this.pvNext < BALL_SKINS.length + TRACK_THEMES.length) this.renderPreview(this.pvNext++);   // one picture per frame
+  }
+  renderPreviews() { for (let i = 0; i < BALL_SKINS.length + TRACK_THEMES.length; i++) this.renderPreview(i); }
+  renderPreview(i) {
+    const R = this.R, S = clamp(Math.round(46 * (window.devicePixelRatio || 1)), 48, 144), b = this.ball;   // the button's size in device pixels
+    if (this.glLost) return;
+    if (i < BALL_SKINS.length) {
+      // a ball, seen from the camera's side and a little from above, rolled to show its pattern
+      const e = this.cam.eye, dx = e[0] - b.p[0], dy = e[1] - b.p[1] + 2, dz = e[2] - b.p[2], l = Math.hypot(dx, dy, dz) || 1, D = CFG.R * 3.2;
+      const eye = [b.p[0] + dx / l * D, b.p[1] + dy / l * D, b.p[2] + dz / l * D], fov = 2 * Math.asin(1 / 3.2) * 0.97;
+      const q = this.pvQ || (this.pvQ = Q.fromAxisAngle([0, 0, 0, 1], 0.8, 0.49, 0.35, 0.7));
+      const pl = this.ballPlane();
+      M4.fromTRS(this.model, b.p[0], b.p[1], b.p[2], q, CFG.R, CFG.R, CFG.R);
+      if (!R.beginPreview(S, eye, b.p, fov)) return;
+      R.drawBall(this.model, BALL_SKINS[i], 0, 1, 0, { c: b.p, q, gN: pl.gN, gD: pl.gD });
+      this.ui.setPreview('ball', i, R.endPreview());
+      return;
+    }
+    // a track theme on a short bend, under this world's sky
+    const k = i - BALL_SKINS.length, T = this.pvTrack || (this.pvTrack = TrackMesher.preview());
+    if (!this.pvMesh) { const r = TrackMesher.build(T, 0, false); this.pvMesh = { mesh: R.upload(r.mb), cx: r.cx, cy: r.cy, cz: r.cz, rad: r.rad }; }
+    const a = T.pointAt(1.6, 0.35, 2.1, [0, 0, 0, 0]), t = T.pointAt(8.5, -0.2, 0, [0, 0, 0, 0]);
+    const lit = { time: 0.35, fogDen: 0.0078, fogBase: a[1] - 7, ball: [0, -1e4, 0, CFG.R], ballGlow: [0, 0, 0], ballLight: 0, shadow: 0, collapse: -1e9 };
+    R.setTheme(TRACK_THEMES[k]);
+    if (R.beginPreview(S, [a[0], a[1], a[2]], [t[0], t[1], t[2]], 1.05)) {
+      R.drawSky(lit.time, false); R.drawFloor(a[1] - 64, lit.time);
+      R.litSetup(lit); R.drawChunk(this.pvMesh); R.endLit();
+      this.ui.setPreview('track', k, R.endPreview());
+    }
+    R.setTheme(TRACK_THEMES[this.themeIdx]);
+  }
   // The deck plane under the ball (for the reflection of the track at the contact point).
   ballPlane() {
     const b = this.ball, T = this.track, o = this.bplane || (this.bplane = { c: b.p, q: b.q, gN: [0, 1, 0], gD: -1e5, a: [0, 0, 0, 0], b: [0, 0, 0, 0], d: [0, 0, 0, 0] });
@@ -691,7 +771,7 @@ class Game {
     const Z = R.Z, boostK = clamp(b.boost / 1.3, 0, 1), spK = clamp((b.speed - 6) / 14, 0, 1), stK = this.starK;
     const glowCol = stK > 0.01 ? [lerp(sk.glow[0], STAR_COL[0], stK), lerp(sk.glow[1], STAR_COL[1], stK), lerp(sk.glow[2], STAR_COL[2], stK)] : sk.glow;
     const lit = {
-      time: this.time, fogDen: 0.0078, fogBase: cam.eye[1] - 7,
+      time: this.time, fogDen: 0.0078 * Z.haze, fogBase: cam.eye[1] - 7,
       ball: [b.p[0], b.p[1], b.p[2], CFG.R], ballGlow: glowCol, ballLight: 0.3 + boostK * 0.9 + stK * 1.4 + (sk.type === 2 ? 0.35 : sk.type === 1 ? 0.15 : 0),
       shadow: b.lost ? 0 : 1, collapse: this.collapseS,
     };
@@ -728,16 +808,18 @@ class Game {
   }
 
   // ------------------------------------------------------------- world zones
-  // Zone follows distance; the last 14 % of each zone cross-fades into the next.
+  // Zone follows distance (and loops); the last 14 % of each zone cross-fades into the next.
   updateZones(dt) {
-    const R = this.R;
+    const R = this.R, N = ZONES.length;
     const pos = Math.max(0, this.maxS - CFG.START_S);                    // worlds follow the position on the track
-    for (let i = 0; i < ZONES.length; i++) if (!R.zoneTex[i]) { if (this.state === 'menu' || this.state === 'calib' || pos > (i - 1) * ZONE_LEN + 300) R.ensureZone(i); break; }
-    const zf = clamp(pos / ZONE_LEN, 0, ZONES.length - 1), zA = Math.min(ZONES.length - 1, Math.floor(zf));
-    const fr = zf - zA, k = zA < ZONES.length - 1 ? clamp((fr - 0.86) / 0.14, 0, 1) : 0, kk = k * k * (3 - 2 * k);
-    R.setZones(zA, Math.min(ZONES.length - 1, zA + 1), kk);
-    const cur = kk > 0.5 ? zA + 1 : zA;
-    if (cur !== this.zoneIdx) { if (cur > this.zoneIdx && this.state === 'play') this.audio.whoosh(); this.zoneIdx = cur; }
+    const zf = pos / ZONE_LEN, zA = Math.floor(zf) % N, zB = (zA + 1) % N;
+    // skies are painted lazily: all of them while on the menu (one per frame), else the next one ahead of time
+    if (this.state === 'menu' || this.state === 'calib') { for (let i = 0; i < N; i++) if (R.ensureZone((zA + i) % N)) break; }
+    else if (zf - Math.floor(zf) > 0.5) R.ensureZone(zB);
+    const k = clamp((zf - Math.floor(zf) - 0.86) / 0.14, 0, 1), kk = k * k * (3 - 2 * k);
+    R.setZones(zA, zB, kk);
+    const cur = kk > 0.5 ? zB : zA;
+    if (cur !== this.zoneIdx) { if (this.state === 'play') this.audio.whoosh(); this.zoneIdx = cur; }
     R.flash = Math.max(0, R.flash - dt * 3.5);
   }
   bolt() {

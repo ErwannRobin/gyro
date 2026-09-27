@@ -157,8 +157,8 @@ test('scenery never enters the track corridor nor hides the ball', async ({ page
   await openGame(page);
   await startRun(page);
   let bad = 0, count = 0;
-  for (const d of [60, 560, 1060, 1560, 2060]) {
-    await page.evaluate(teleport, d);
+  for (let z = 0; z < 9; z++) {                                  // every world
+    await page.evaluate(teleport, 60 + z * 500);
     const r = await page.evaluate(() => {
       const g = window.__game, b = g.ball, T = g.track, E = g.env;
       let n = 0, seen = 0;

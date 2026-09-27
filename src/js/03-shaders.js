@@ -223,9 +223,36 @@ void main(){
     float c = abs(noise(v_wp.xz * 1.7 + v_wp.y * 1.3) * 2.0 - 1.0);
     float crack = smoothstep(0.1, 0.0, c) * (0.7 + 0.3 * sin(u_time * 6.0 + v_wp.y));
     emis = v_ic.rgb * crack * 2.0 * v_ic.a; glow = crack;
-  } else {                                            // solid glow
+  } else if (mat < 18.5) {                            // solid glow
     base = vec3(0.0); gloss = 0.0; spec = 0.0;
     emis = v_ic.rgb * v_ic.a; glow = clamp(v_ic.a * 0.8, 0.0, 1.0);
+  } else if (mat < 19.5) {                            // foliage: leafy clumps, sunlight through the edges
+    float n = noise(v_wp.xz * 0.7 + v_wp.y * 0.9) * 0.6 + noise(v_wp.xy * 2.1 + v_wp.z * 1.3) * 0.4;
+    base = v_ic.rgb * (0.62 + 0.6 * n); gloss = 0.12; spec = 0.1; metal = 0.0;
+    float back = pow(max(dot(-V, u_sunDir), 0.0), 3.0) * (1.0 - max(dot(N, u_sunDir), 0.0));
+    emis = v_ic.rgb * u_sunCol * (back * 0.22 + 0.03);
+  } else if (mat < 20.5) {                            // bark / wood
+    float g = noise(vec2(v_uv.x * 22.0, v_wp.y * 0.35)) * 0.7 + noise(vec2(v_uv.x * 60.0, v_wp.y * 1.7)) * 0.3;
+    base = vec3(0.34, 0.21, 0.13) * (0.55 + 0.6 * g); gloss = 0.1; spec = 0.1; metal = 0.0;
+  } else if (mat < 21.5) {                            // hot-air balloon: coloured gores and a crown band
+    float gore = step(0.5, fract(v_uv.x * 6.0)), band = step(v_uv.y, 0.2) + step(0.86, v_uv.y);
+    base = mix(mix(vec3(0.97, 0.93, 0.84), v_ic.rgb, gore), v_ic.rgb * 0.55, clamp(band, 0.0, 1.0)); gloss = 0.35; spec = 0.35; metal = 0.0;
+  } else if (mat < 22.5) {                            // lighthouse: painted bands
+    float band = step(0.5, fract(v_uv.y * 3.0 + 0.25));
+    base = mix(vec3(0.95, 0.95, 0.93), v_ic.rgb, band); gloss = 0.45; spec = 0.5; metal = 0.0;
+  } else if (mat < 23.5) {                            // sandstone: strata, eroded grain, sandy tops
+    float y = v_wp.y * 0.32 + noise(v_wp.xz * 0.05) * 2.5;
+    float strata = sin(y * 3.1) * 0.5 + 0.5, n = noise(v_wp.xz * 0.45 + v_wp.y * 0.25);
+    base = v_ic.rgb * (0.68 + 0.22 * strata + 0.2 * n);
+    base = mix(base, vec3(0.94, 0.76, 0.5), smoothstep(0.72, 0.92, N.y) * 0.85); gloss = 0.08; spec = 0.1; metal = 0.0;
+  } else if (mat < 24.5) {                            // cactus: ribs and spines
+    float rib = abs(sin(v_uv.x * 62.83));
+    float sp = step(0.9, hash(floor(v_uv * vec2(60.0, 90.0) + floor(v_wp.xz))));
+    base = v_ic.rgb * (0.62 + 0.38 * rib) + sp * 0.25; gloss = 0.3; spec = 0.3; metal = 0.0;
+  } else if (mat < 25.5) {                            // painted surface
+    base = v_ic.rgb; gloss = 0.45; spec = 0.5; metal = 0.05;
+  } else {                                            // sail cloth
+    base = vec3(0.96, 0.95, 0.92); gloss = 0.2; spec = 0.2; metal = 0.0;
   }
 
   // collapse warning tint
@@ -335,7 +362,8 @@ void main(){
     vec3 R2 = reflect(-V, N2);
     // + a broad soft reflection of the sun (a studio "softbox"), so metal stays bright in dark worlds
     vec3 e = scene(look(v_wp, R2), rough);
-    e = mix(e, vec3(dot(e, vec3(0.3, 0.55, 0.15))), 0.45);     // less colour cast: gold stays gold in a cyan world
+    float sat = max(u_base.r, max(u_base.g, u_base.b)) - min(u_base.r, min(u_base.g, u_base.b));
+    e = mix(e, vec3(dot(e, vec3(0.3, 0.55, 0.15))), 0.35 + 0.5 * sat);   // less colour cast: gold stays gold in a cyan world
     e += u_sunCol * (pow(max(dot(R2, L), 0.0), 6.0) * 0.8 + smoothstep(-0.1, 0.8, R2.y) * 0.14);
     col = e * F * mix(1.0, 0.3, groove) * mix(0.75, 1.0, ao);
     float strip = smoothstep(0.011, 0.0, gy) + smoothstep(0.007, 0.0, gx);
@@ -439,7 +467,13 @@ attribute vec2 a_pos; uniform mat4 u_vp; uniform vec3 u_cam; uniform float u_y; 
 void main(){ v_wp = vec3(u_cam.x + a_pos.x * 950.0, u_y, u_cam.z + a_pos.y * 950.0); gl_Position = u_vp * vec4(v_wp, 1.0); }`;
 const FS_FLOOR = GLSL_COMMON + `
 varying vec3 v_wp; uniform vec3 u_cam; uniform float u_time; uniform float u_stA; uniform float u_stB; uniform float u_mix;
-uniform vec3 u_aA; uniform vec3 u_bA; uniform vec3 u_aB; uniform vec3 u_bB; uniform vec3 u_fogCol;
+uniform vec3 u_aA; uniform vec3 u_bA; uniform vec3 u_aB; uniform vec3 u_bB; uniform vec3 u_fogCol; uniform vec3 u_sunDir; uniform vec3 u_sunCol;
+vec3 gV; float gFw;                                  // view direction, pixel footprint in meters
+float dune(vec2 p){                                  // desert height (m): gentle windward slope, steep lee side
+  float x = dot(p, vec2(0.8, 0.6)) * 0.017 + noise(p * 0.0035) * 3.0, t = fract(x);
+  float h = t < 0.72 ? t / 0.72 : (1.0 - t) / 0.28;
+  return h * h * (3.0 - 2.0 * h) * (7.0 + 7.0 * noise(p * 0.004 + 3.0)) + noise(p * 0.03) * 1.5;
+}
 vec3 styleCol(float st, vec2 p, vec3 A, vec3 B, float aa, out float glow){
   glow = 0.0;
   if (st < 0.5) {                                   // tech: panels, light seams, blinking beacons
@@ -466,19 +500,77 @@ vec3 styleCol(float st, vec2 p, vec3 A, vec3 B, float aa, out float glow){
     float n = noise(p * 0.004);
     glow = ring * 0.3;
     return mix(A, B, 0.25 + 0.35 * n) + B * ring * 0.35;
-  } else {                                          // chaos: lava cracks
+  } else if (st < 4.5) {                            // chaos: lava cracks
     float n = abs(noise(p * 0.035) * 2.0 - 1.0);
     float n2 = abs(noise(p * 0.11 + 7.0) * 2.0 - 1.0);
     float crack = smoothstep(0.09, 0.0, n) + smoothstep(0.05, 0.0, n2) * 0.6;
     float pulse = 0.65 + 0.35 * sin(u_time * 2.0 + p.x * 0.01);
     glow = crack * pulse;
     return A + B * crack * 1.4 * pulse;
+  } else if (st < 5.5) {                            // countryside: patchwork of fields, hedges, tree clumps
+    vec2 q = p + vec2(noise(p * 0.006), noise(p * 0.006 + 17.3)) * 70.0;
+    vec2 sz = vec2(66.0, 44.0), cc = floor(q / sz), f = fract(q / sz);
+    float h = hash(cc), h2 = hash(cc + 5.7);
+    vec3 crop = h < 0.28 ? A : h < 0.48 ? B : h < 0.6 ? vec3(0.4, 0.28, 0.17) : h < 0.76 ? A * vec3(1.3, 1.22, 0.8)
+      : h < 0.88 ? vec3(0.66, 0.66, 0.3) : vec3(0.56, 0.47, 0.7);
+    float ang = floor(h2 * 4.0) * 0.785;
+    float rows = sin(dot(q, vec2(cos(ang), sin(ang))) * 2.6);
+    crop *= 1.0 + rows * 0.14 * (1.0 - smoothstep(0.12, 0.4, gFw));
+    crop *= 0.88 + 0.24 * noise(q * 0.03 + h * 9.0);
+    vec2 e = min(f, 1.0 - f) * sz; float ed = min(e.x, e.y);
+    float hedge = (1.0 - smoothstep(1.0, 2.2 + gFw, ed)) * step(0.3, noise(q * 0.3));
+    vec3 col = mix(crop, vec3(0.1, 0.2, 0.08) * (0.8 + 0.5 * noise(q * 0.9)), hedge * 0.95);
+    float trees = smoothstep(0.64, 0.7, noise(q * 0.04 + 3.3));
+    col = mix(col, vec3(0.09, 0.19, 0.07) * (0.7 + 0.6 * noise(q * 0.7)), trees);
+    float lane = smoothstep(2.4 + gFw, 1.2, abs(q.x - 400.0 * floor(q.x / 400.0 + 0.5) + sin(q.y * 0.012) * 40.0));
+    return mix(col, vec3(0.72, 0.64, 0.5), lane * 0.85);
+  } else if (st < 6.5) {                            // forest seen from above: round crowns lit by the sun
+    vec2 g = p / 7.5, i = floor(g), f = fract(g);
+    float top = -1.0, id = 0.0; vec3 n = vec3(0.0, 1.0, 0.0);
+    for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) {
+      vec2 o = vec2(float(x), float(y)), cc = i + o;
+      vec2 c = o + 0.15 + 0.7 * vec2(hash(cc), hash(cc + 3.7));
+      float r = 0.5 + 0.35 * hash(cc + 9.1), hz = hash(cc + 1.3) * 0.4;
+      vec2 d = f - c; float dd = dot(d, d);
+      if (dd < r * r) { float z = sqrt(r * r - dd); if (z + hz > top) { top = z + hz; n = vec3(d.x, z, d.y) / r; id = hash(cc + 4.4); } }
+    }
+    vec3 leaf = id > 0.975 ? vec3(0.6, 0.38, 0.14) : mix(A * 1.1, B, id * id);
+    float tex = noise(p * 1.1) * 0.5 + noise(p * 2.9) * 0.5;
+    vec3 c = top < 0.0 ? A * 0.12 : leaf * (0.3 + 0.95 * max(dot(n, u_sunDir), 0.0)) * (0.72 + 0.45 * tex) * (0.55 + 0.45 * n.y);
+    return mix(c, mix(A, B, 0.35) * 0.62, smoothstep(0.6, 2.4, gFw));
+  } else if (st < 7.5) {                            // open sea: swell, ripples, sky reflection, sun glitter, foam
+    vec2 gr = vec2(0.0); float h = 0.0;
+    vec2 d1 = vec2(0.8, 0.6), d2 = vec2(-0.45, 0.89), d3 = vec2(0.96, -0.28), d4 = vec2(0.2, 0.98);
+    float p1 = dot(p, d1) * 0.26 + u_time * 1.6, p2 = dot(p, d2) * 0.48 + u_time * 2.2, p3 = dot(p, d3) * 0.9 + u_time * 3.0, p4 = dot(p, d4) * 1.6 + u_time * 3.9;
+    float far = 1.0 - smoothstep(0.25, 1.6, gFw), far2 = 1.0 - smoothstep(1.0, 6.0, gFw);
+    h = 0.45 * sin(p1) + 0.22 * sin(p2) + (0.1 * sin(p3) + 0.05 * sin(p4)) * far;
+    gr = d1 * 0.117 * cos(p1) * far2 + d2 * 0.106 * cos(p2) * far2 + (d3 * 0.09 * cos(p3) + d4 * 0.08 * cos(p4)) * far;
+    vec2 rp = p * 0.8 + u_time * vec2(0.35, 0.22);
+    float n0 = noise(rp), nx = noise(rp + vec2(0.5, 0.0)), nz = noise(rp + vec2(0.0, 0.5));
+    gr += vec2(nx - n0, nz - n0) * 0.5 * far;
+    vec3 n = normalize(vec3(-gr.x, 1.0, -gr.y)), R = reflect(-gV, n);
+    float fres = 0.02 + 0.98 * pow(1.0 - max(dot(n, gV), 0.0), 5.0);
+    vec3 c = mix(A * (0.8 + 0.25 * h), B * (0.85 + 0.15 * R.y), fres);
+    float sd = max(dot(R, u_sunDir), 0.0), glit = pow(sd, 500.0) * 9.0 * far2 + pow(sd, 50.0) * 0.35;
+    c += u_sunCol * glit;
+    float foam = smoothstep(0.62, 0.85, h * 0.55 + noise(p * 0.07 + u_time * 0.04) * 0.7) * 0.4 * far;
+    glow = clamp(glit * 0.12, 0.0, 1.0);
+    return mix(c, vec3(0.93, 0.97, 1.0), foam);
+  } else {                                          // desert: wind-shaped dunes lit by the low sun, ripples
+    float e = 1.5, h0 = dune(p), hx = dune(p + vec2(e, 0.0)), hz = dune(p + vec2(0.0, e));
+    vec3 n = normalize(vec3(-(hx - h0) / e, 1.0, -(hz - h0) / e));
+    float ndl = max(dot(n, u_sunDir), 0.0);
+    vec3 sand = mix(A, B, clamp(0.3 + h0 * 0.045, 0.0, 1.0));
+    float rip = sin(dot(p, vec2(-0.6, 0.8)) * 2.8 + noise(p * 0.25) * 6.0);
+    sand *= 1.0 + rip * 0.07 * (1.0 - smoothstep(0.12, 0.45, gFw));
+    return sand * (0.42 + 0.8 * ndl);
   }
 }
 void main(){
   vec2 p = v_wp.xz;
   float dist = length(v_wp - u_cam);
   float aa = clamp(dist * 0.0018, 0.012, 0.3);
+  gV = (u_cam - v_wp) / dist; gFw = dist * 0.0022 / max(gV.y, 0.08);
   float gA, gB = 0.0;
   vec3 col = styleCol(u_stA, p, u_aA, u_bA, aa, gA);
   if (u_mix > 0.002) { vec3 c2 = styleCol(u_stB, p, u_aB, u_bB, aa, gB); col = mix(col, c2, u_mix); gA = mix(gA, gB, u_mix); }

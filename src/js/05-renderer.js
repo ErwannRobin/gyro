@@ -19,7 +19,7 @@ class Renderer {
     this.cam = [0, 0, 0]; this.camF = [0, 0, 1];
     this.theme = null;
     this.zA = 0; this.zB = 0; this.zMix = 0; this.flash = 0;
-    this.Z = { fog: [0, 0, 0], abyss: [0, 0, 0], skyMid: [0, 0, 0], sun: [1, 1, 1], stars: 1, dust: [1, 1, 1], c1: [1, 1, 1], c2: [1, 1, 1],
+    this.Z = { fog: [0, 0, 0], abyss: [0, 0, 0], skyMid: [0, 0, 0], sun: [1, 1, 1], stars: 1, haze: 1, dust: [1, 1, 1], c1: [1, 1, 1], c2: [1, 1, 1],
       floorA: [0, 0, 0], floorB: [1, 1, 1], shafts: 1, drift: [0, 0] };
     this.sunDir = new Float32Array([0, 1, 0]);
     this.initGL();
@@ -38,7 +38,7 @@ class Renderer {
     // exact mip level control for the reflection probe when the device has it
     this.lodExt = gl.getExtension('EXT_shader_texture_lod');
     this.pBall = this.program(VS_BALL, (this.lodExt ? '#extension GL_EXT_shader_texture_lod : enable\n#define LOD 1\n' : '') + FS_BALL, ['a_pos', 'a_nrm']);
-    this.probe = null; this.farList = null; this.cullFar = 330;
+    this.probe = null; this.pv = null; this.farList = null; this.cullFar = 330;
     this.rot = new Float32Array(9); this.irot = new Float32Array(9);
     this.pSky = this.program(VS_SKY, FS_SKY, ['a_pos']);
     this.pPts = this.program(VS_PTS, FS_PTS, ['a_pos', 'a_col', 'a_size']);
@@ -62,6 +62,13 @@ class Renderer {
       sphere: this.upload(Prims.withMat(Prims.sphere(22, 14), 16)), box16: this.upload(Prims.box(16)), box17: this.upload(Prims.box(17)),
       glow: this.upload(Prims.box(18)), ringGlow: this.upload(Prims.torus(1, 0.05, 56, 6, 18)), torus16: this.upload(Prims.torus(1, 0.22, 40, 12, 16)),
       ring17: this.upload(Prims.torus(1, 0.08, 40, 6, 17)), coin: this.upload(Prims.coin()),
+      // nature & country worlds
+      sequoia: this.upload(Prims.pine(71, 0.55)), fir: this.upload(Prims.pine(83, 0.2)), cypress: this.upload(Prims.cypress(5)),
+      oaks: [3, 9].map((k) => this.upload(Prims.oak(k))), turbine: this.upload(Prims.turbine()), blades: this.upload(Prims.blades()),
+      balloon: this.upload(Prims.balloon()), boat: this.upload(Prims.boat()), lighthouse: this.upload(Prims.lighthouse()),
+      cacti: [4, 8].map((k) => this.upload(Prims.cactus(k))), mesas: [2, 6].map((k) => this.upload(Prims.mesa(k))),
+      rocksD: [1, 2, 3].map((k) => this.upload(Prims.withMat(Prims.rock(k * 17), 23))), pyramidS: this.upload(Prims.withMat(Prims.pyramid(), 23)),
+      pole: this.upload(Prims.cylinder(10, 25)),
     };
     this.dynBuf = gl.createBuffer();
     this.ptsBuf = gl.createBuffer();
@@ -156,7 +163,7 @@ class Renderer {
     const A = ZONES[a], B = ZONES[this.zB], Z = this.Z, m = this.zMix;
     const mixv = (o, x, y) => { o[0] = lerp(x[0], y[0], m); o[1] = lerp(x[1], y[1], m); o[2] = lerp(x[2], y[2], m); };
     for (const key of ['fog', 'abyss', 'skyMid', 'sun', 'dust', 'c1', 'c2', 'floorA', 'floorB']) mixv(Z[key], A[key], B[key]);
-    Z.stars = lerp(A.stars, B.stars, m); Z.shafts = lerp(A.shafts, B.shafts, m);
+    Z.stars = lerp(A.stars, B.stars, m); Z.shafts = lerp(A.shafts, B.shafts, m); Z.haze = lerp(A.haze || 1, B.haze || 1, m);
     Z.drift[0] = lerp(A.drift[0], B.drift[0], m); Z.drift[1] = lerp(A.drift[1], B.drift[1], m);
     const na = Math.hypot(...A.sunDir), nb = Math.hypot(...B.sunDir);
     const x = lerp(A.sunDir[0] / na, B.sunDir[0] / nb, m), y = lerp(A.sunDir[1] / na, B.sunDir[1] / nb, m), z = lerp(A.sunDir[2] / na, B.sunDir[2] / nb, m);
@@ -210,8 +217,7 @@ class Renderer {
   }
 
   // ------------------------------------------------------------- frame
-  setCamera(eye, target, roll, fovY, near, far) {
-    const aspect = this.w / this.h;
+  setCamera(eye, target, roll, fovY, near, far, aspect = this.w / this.h) {
     M4.perspective(this.proj, fovY, aspect, near, far);
     M4.lookAt(this.view, eye, target, [0, 1, 0], roll);
     M4.mul(this.vp, this.proj, this.view);
@@ -307,12 +313,54 @@ class Renderer {
     P.done = Math.min(6, P.done + faces);
   }
   get probeReady() { return !!this.probe && this.probe.done >= 6; }
+
+  // ------------------------------------------------------------- picker previews
+  // Still pictures of the ball skins and track themes, drawn with the game's own shaders into a
+  // small square target, then read back as an image (with a light bloom, like the game's).
+  beginPreview(size, eye, target, fov) {
+    const gl = this.gl;
+    if (this.pv && this.pv.w !== size) { this.freeFB(this.pv); this.pv = null; }
+    if (!this.pv) { this.pv = this.makeFB(size, size, true); if (!this.pv.ok) { this.freeFB(this.pv); this.pv = null; return false; } }
+    this.setCamera(eye, target, 0, fov, 0.02, 1400, 1);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.pv.fb); gl.viewport(0, 0, size, size);
+    gl.disable(gl.CULL_FACE); gl.disable(gl.BLEND); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL); gl.depthMask(true);
+    gl.clearColor(0.03, 0.04, 0.08, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    this.cur = null;
+    return true;
+  }
+  endPreview() {
+    const gl = this.gl, S = this.pv.w, px = new Uint8Array(S * S * 4);
+    gl.readPixels(0, 0, S, S, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.clearColor(0, 0, 0, 0);
+    const mk = (n) => { const c = document.createElement('canvas'); c.width = c.height = n; return c; };
+    const cv = mk(S), glw = mk(S), g = cv.getContext('2d'), gg = glw.getContext('2d');
+    const img = g.createImageData(S, S), gi = gg.createImageData(S, S), d = img.data, e = gi.data;
+    for (let y = 0; y < S; y++) {
+      for (let x = 0; x < S; x++) {
+        const i = ((S - 1 - y) * S + x) * 4, o = (y * S + x) * 4;         // GL rows start at the bottom
+        const r = px[i], gr = px[i + 1], b = px[i + 2], a = px[i + 3] / 255;
+        const l = (r * 0.3 + gr * 0.55 + b * 0.15) / 255, k = a * 0.9 + clamp((l - 0.75) / 0.25, 0, 1) * 0.5;
+        d[o] = r; d[o + 1] = gr; d[o + 2] = b; d[o + 3] = 255;
+        e[o] = r * k; e[o + 1] = gr * k; e[o + 2] = b * k; e[o + 3] = 255;
+      }
+    }
+    g.putImageData(img, 0, 0); gg.putImageData(gi, 0, 0);
+    // bloom: the glow layer shrunk and stretched back (a blur that works on every browser), added on top
+    g.globalCompositeOperation = 'lighter'; g.imageSmoothingEnabled = true;
+    for (const [n, a] of [[S >> 3, 0.55], [S >> 4, 0.45]]) {
+      const sm = mk(Math.max(2, n)); sm.getContext('2d').drawImage(glw, 0, 0, sm.width, sm.height);
+      g.globalAlpha = a; g.drawImage(sm, 0, 0, S, S);
+    }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    return cv.toDataURL('image/png');
+  }
+  freeFB(f) { const gl = this.gl; gl.deleteFramebuffer(f.fb); gl.deleteTexture(f.tex); if (f.rb) gl.deleteRenderbuffer(f.rb); }
   drawFloor(y, time) {
     const gl = this.gl, Z = this.Z, A = ZONES[this.zA], B = ZONES[this.zB], p = this.use(this.pFloor);
     gl.uniformMatrix4fv(p.u('u_vp'), false, this.vp); gl.uniform3fv(p.u('u_cam'), this.cam); gl.uniform1f(p.u('u_y'), y);
     gl.uniform1f(p.u('u_time'), time % 1000); gl.uniform1f(p.u('u_stA'), A.floor); gl.uniform1f(p.u('u_stB'), B.floor); gl.uniform1f(p.u('u_mix'), this.zMix);
     gl.uniform3fv(p.u('u_aA'), A.floorA); gl.uniform3fv(p.u('u_bA'), A.floorB); gl.uniform3fv(p.u('u_aB'), B.floorA); gl.uniform3fv(p.u('u_bB'), B.floorB);
-    gl.uniform3fv(p.u('u_fogCol'), Z.fog);
+    gl.uniform3fv(p.u('u_fogCol'), Z.fog); gl.uniform3fv(p.u('u_sunDir'), this.sunDir); gl.uniform3fv(p.u('u_sunCol'), Z.sun);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.quadBuf); this.attribs(1);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
