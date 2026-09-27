@@ -129,8 +129,8 @@ body.star #starGlow{opacity:1}
   filter:drop-shadow(0 6px 30px rgba(78,242,255,.35)) drop-shadow(0 2px 2px rgba(0,0,0,.6))}
 @keyframes shine{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
 #tagline{margin-top:10px;font-size:clamp(17px,4.6vw,22px);font-style:italic;font-weight:500;letter-spacing:.04em;color:rgba(235,245,255,.85);text-shadow:0 2px 8px #000}
-.bigBtn{margin-top:30px;min-height:64px;padding:18px 26px;border-radius:20px;font-size:16px;font-weight:900;letter-spacing:.08em;line-height:1.25;
-  max-width:420px;width:100%;color:#051018;
+.bigBtn{margin-top:30px;height:64px;padding:0 20px;border-radius:20px;font-size:16px;font-weight:900;letter-spacing:.08em;line-height:1.2;
+  max-width:420px;width:100%;color:#051018;display:flex;align-items:center;justify-content:center;
   background:linear-gradient(135deg,#8ff8ff 0%,var(--accent) 45%,#35b7ff 100%);
   box-shadow:0 10px 40px rgba(78,242,255,.35),inset 0 1px 0 rgba(255,255,255,.7),inset 0 -3px 0 rgba(0,40,80,.25);
   position:relative;overflow:hidden}
@@ -155,21 +155,28 @@ body.star #starGlow{opacity:1}
 .seg button{min-height:38px;padding:6px 12px;border-radius:11px;font-size:12px;font-weight:900;letter-spacing:.12em;color:var(--dim);transition:background .2s,color .2s}
 .seg button.on{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
 #modeSeg{margin-top:20px}
-#modeSeg button{min-width:128px;min-height:44px;font-size:13px}
-#tgKid{margin-top:10px}
-.linkBtn{background:none;border:0;padding:6px 4px;margin-left:4px;font:inherit;font-weight:900;letter-spacing:.08em;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+#modeSeg button{width:142px;min-height:44px;padding:6px 4px;font-size:13px;white-space:nowrap}
+#tgKid{margin-top:10px;width:290px;max-width:100%;justify-content:center;white-space:nowrap}
+.linkBtn{background:none;border:0;padding:2px 6px;font:inherit;font-weight:900;letter-spacing:.08em;line-height:16px;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 #tgKid:not(.off){color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold));border-color:transparent}
 #ovRails{margin-top:10px;padding:6px 14px;border-radius:12px;font-size:13px;font-weight:800;letter-spacing:.06em;color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold))}
-#modeInfo{margin-top:8px;font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.04em;min-height:16px;text-shadow:0 2px 6px #000}
+#modeInfo{margin-top:6px;height:40px;width:100%;max-width:380px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:12px;line-height:16px;font-weight:700;color:var(--dim);letter-spacing:.04em;text-shadow:0 2px 6px #000}
 .tgRow{display:flex;gap:8px}
 .tg{min-height:44px;padding:0 13px;border-radius:14px;background:var(--glass);border:1px solid var(--glass-brd);display:inline-flex;align-items:center;gap:7px;
   font-size:11px;font-weight:900;letter-spacing:.12em;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:color .2s,opacity .2s}
-.tg .ic{font-size:17px;letter-spacing:0;position:relative;line-height:1}
+.tg.icon{width:44px;padding:0;justify-content:center;color:#fff}
+.ic{width:22px;height:22px;flex:none;fill:currentColor;overflow:visible}
+.ic .stk{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ic .cut{fill:none;stroke:#0c1122;stroke-width:5.5;stroke-linecap:round}
+.ic .mute,.ic .cut,.ic .slash{display:none}
 .tg.off{color:rgba(255,255,255,.42)}
-.tg.off .ic::after{content:"";position:absolute;left:-3px;right:-3px;top:50%;height:2px;background:#ff6a8a;transform:rotate(-40deg);border-radius:1px}
+.tg.icon.off{color:rgba(255,255,255,.55)}
+.tg.off .ic .wave{display:none}
+.tg.off .ic .mute,.tg.off .ic .cut,.tg.off .ic .slash{display:inline}
 .tg:active{transform:scale(.95)}
 .skins{margin-top:20px;display:flex;flex-direction:column;gap:10px;align-items:center;width:100%;max-width:420px}
-.skinName{font-size:12px;font-weight:700;letter-spacing:.14em;color:rgba(255,255,255,.75);min-height:16px}
+.skinName{font-size:12px;font-weight:700;letter-spacing:.14em;color:rgba(255,255,255,.75);height:16px;line-height:16px;white-space:nowrap}
 .ghostBtn.small{min-height:42px;margin-top:14px;padding:8px 18px;width:auto;font-size:12px}
 .shareBtn{position:relative;overflow:hidden}
 .shareBtn .prog{position:absolute;left:0;bottom:0;height:3px;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .2s}
@@ -178,7 +185,6 @@ body.star #starGlow{opacity:1}
 @keyframes shReady{from{box-shadow:0 0 0 1px var(--accent),0 0 8px rgba(78,242,255,.25)}to{box-shadow:0 0 0 2px var(--accent),0 0 24px rgba(78,242,255,.6)}}
 #ovMode{margin-top:6px;font-size:12px;font-weight:800;letter-spacing:.2em;color:var(--accent)}
 #pause .skins{margin-top:16px}
-#pause .volRow .tg{width:130px;justify-content:center}
 #permMsg{margin-top:14px;font-size:13px;font-weight:700;color:#ffb3c7;max-width:380px;text-shadow:0 2px 6px #000}
 
 #calib{background:rgba(5,6,13,.25)}
@@ -197,7 +203,6 @@ body.star #starGlow{opacity:1}
 #pause h2,#over h2{font-size:clamp(40px,12vw,64px);font-weight:900;letter-spacing:.1em;margin-right:-.1em;text-shadow:0 4px 20px rgba(0,0,0,.8)}
 #pause{background:rgba(5,6,13,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .volRow{margin-top:14px;display:flex;align-items:center;gap:12px;width:100%;max-width:360px}
-.volRow span{font-size:11px;font-weight:800;letter-spacing:.2em;color:var(--dim);width:64px;text-align:left}
 input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:rgba(255,255,255,.18);outline:none}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px rgba(78,242,255,.35)}
 input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:#fff;border:0}
@@ -226,12 +231,12 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 .mcol{display:flex;flex-direction:column;align-items:center;width:100%}
 #mLeft #menuBest{order:3}
 @media (orientation:portrait){ #menuBest{margin-top:12px} #mRight{margin-top:0} #menu .bigBtn{margin-top:22px} }
-@media (orientation:portrait) and (max-height:700px){ #tagline{margin-top:4px} #modeSeg{margin-top:12px} #menu .bigBtn{margin-top:14px;min-height:56px} .skins{margin-top:12px} .sw{width:40px;height:40px} #menuBest{margin-top:8px} }
+@media (orientation:portrait) and (max-height:700px){ #tagline{margin-top:4px} #modeSeg{margin-top:12px} #menu .bigBtn{margin-top:14px;height:56px} .skins{margin-top:12px} .sw{width:40px;height:40px} #menuBest{margin-top:8px} }
 @media (orientation:landscape) and (max-height:560px){
   #menu{flex-direction:row;gap:4vw}
   .mcol{flex:1;max-width:440px}
   #title{font-size:clamp(52px,18vh,110px)}
-  .bigBtn{margin-top:0;min-height:52px;padding:12px 20px;font-size:14px}
+  .bigBtn{margin-top:0;height:52px;font-size:14px}
   .ghostBtn{min-height:44px;margin-top:10px;padding:8px 18px}
   .hint{margin-top:8px;font-size:12px}
   .skins{margin-top:10px;gap:6px}
@@ -281,14 +286,14 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 <div class="screen" id="menu">
   <div id="menuTop">
     <div class="seg" id="langSeg"><button data-lang="fr">FR</button><button data-lang="en">EN</button></div>
-    <div class="tgRow"><button class="tg tgMusic"><span class="ic">♫</span><span data-i18n="music"></span></button><button class="tg tgSfx"><span class="ic">🔊</span><span data-i18n="sfx"></span></button></div>
+    <div class="tgRow"><button class="tg icon tgMusic" data-i18n-aria="music"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M8.6 17.4V6.2l11.2-2.7v11.4M8.6 9.6l11.2-2.7"/><ellipse cx="6" cy="17.6" rx="2.9" ry="2.3" transform="rotate(-18 6 17.6)"/><ellipse cx="17.2" cy="15" rx="2.9" ry="2.3" transform="rotate(-18 17.2 15)"/><path class="cut" d="M3.5 3.5l17 17"/><path class="stk slash" d="M3.5 3.5l17 17"/></svg></button><button class="tg icon tgSfx" data-i18n-aria="sfx"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 9h3.7l4.7-4c.6-.5 1.5-.1 1.5.7v12.6c0 .8-.9 1.2-1.5.7l-4.7-4H3.4c-.6 0-1-.4-1-1V10c0-.6.4-1 1-1z"/><path class="stk wave" d="M16.3 9.3a3.8 3.8 0 0 1 0 5.4"/><path class="stk wave" d="M19 6.6a7.6 7.6 0 0 1 0 10.8"/><path class="stk mute" d="M16.6 9.6l4.8 4.8M21.4 9.6l-4.8 4.8"/></svg></button></div>
   </div>
   <div class="mcol" id="mLeft">
     <div id="title">GYROLL</div>
     <div id="tagline">How far can you go?</div>
     <div class="seg" id="modeSeg"><button data-mode="random" data-i18n="modeRandom"></button><button data-mode="daily" data-i18n="modeDaily"></button></div>
-    <div id="modeInfo"><span id="modeTxt"></span> <button class="linkBtn hidden" id="btnNewTrack" data-i18n="newTrack"></button></div>
-    <button class="tg" id="tgKid"><span class="ic">🛡</span><span data-i18n="kid"></span></button>
+    <div id="modeInfo"><span id="modeTxt"></span><button class="linkBtn hidden" id="btnNewTrack" data-i18n="newTrack"></button></div>
+    <button class="tg" id="tgKid"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 2.9l7.4 2.8v5.5c0 4.6-3 8.5-7.4 9.9-4.4-1.4-7.4-5.3-7.4-9.9V5.7z"/><path class="stk" d="M8.6 12.1l2.4 2.4 4.5-4.6"/></svg><span data-i18n="kid"></span></button>
     <div id="menuBest">BEST <span class="num" id="mBest">0 m</span></div>
   </div>
   <div class="mcol" id="mRight">
@@ -311,8 +316,8 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   <h2 data-i18n="pause"></h2>
   <button class="bigBtn" id="btnResume" data-i18n="resume"></button>
   <button class="ghostBtn" id="btnRecal" data-i18n="recal"></button>
-  <div class="volRow"><button class="tg tgMusic"><span class="ic">♫</span><span data-i18n="music"></span></button><input type="range" id="volMusic" min="0" max="100" value="60"></div>
-  <div class="volRow"><button class="tg tgSfx"><span class="ic">🔊</span><span data-i18n="sfx"></span></button><input type="range" id="volSfx" min="0" max="100" value="80"></div>
+  <div class="volRow"><button class="tg icon tgMusic" data-i18n-aria="music"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M8.6 17.4V6.2l11.2-2.7v11.4M8.6 9.6l11.2-2.7"/><ellipse cx="6" cy="17.6" rx="2.9" ry="2.3" transform="rotate(-18 6 17.6)"/><ellipse cx="17.2" cy="15" rx="2.9" ry="2.3" transform="rotate(-18 17.2 15)"/><path class="cut" d="M3.5 3.5l17 17"/><path class="stk slash" d="M3.5 3.5l17 17"/></svg></button><input type="range" id="volMusic" min="0" max="100" value="60"></div>
+  <div class="volRow"><button class="tg icon tgSfx" data-i18n-aria="sfx"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 9h3.7l4.7-4c.6-.5 1.5-.1 1.5.7v12.6c0 .8-.9 1.2-1.5.7l-4.7-4H3.4c-.6 0-1-.4-1-1V10c0-.6.4-1 1-1z"/><path class="stk wave" d="M16.3 9.3a3.8 3.8 0 0 1 0 5.4"/><path class="stk wave" d="M19 6.6a7.6 7.6 0 0 1 0 10.8"/><path class="stk mute" d="M16.6 9.6l4.8 4.8M21.4 9.6l-4.8 4.8"/></svg></button><input type="range" id="volSfx" min="0" max="100" value="80"></div>
   <div class="skins" id="skinsPause"></div>
   <button class="ghostBtn" id="btnQuit" data-i18n="mainMenu"></button>
 </div>
@@ -480,13 +485,13 @@ const TRACK_THEMES = [
     metal: hex(0x8a98b0), accent: hex(0x8a7aff), accent2: hex(0x4ad8ff), hazard: hex(0xff5a8a), gloss: 0.9,
     swatch: 'linear-gradient(135deg,#a8b4c8,#f2f5fa 55%,#8a7aff 56%,#8a7aff 64%,#a8b4c8 65%)' },
 ];
-// Ball skins: type 0 chrome/metal, 1 glass, 2 plasma, 3 candy plastic
+// Ball skins: type 0 polished metal, 1 glass, 2 plasma, 3 candy plastic; rough = surface roughness (0 = mirror)
 const BALL_SKINS = [
-  { name: { fr: 'CHROME', en: 'CHROME' }, type: 0, base: hex(0xe8edf5), glow: hex(0x9fe8ff), swatch: 'radial-gradient(circle at 35% 30%,#fff,#aab4c4 40%,#3a4250 75%,#cfd8e6)' },
-  { name: { fr: 'VERRE', en: 'GLASS' }, type: 1, base: hex(0x8ff0ff), glow: hex(0x4ef2ff), swatch: 'radial-gradient(circle at 35% 30%,#fff,#bff7ff 25%,rgba(80,200,255,.5) 60%,#1a6a9a)' },
-  { name: { fr: 'OR', en: 'GOLD' }, type: 0, base: hex(0xffc85a), glow: hex(0xffd36b), swatch: 'radial-gradient(circle at 35% 30%,#fffbe0,#ffcf5a 35%,#8a5a10 75%,#ffe08a)' },
-  { name: { fr: 'PLASMA', en: 'PLASMA' }, type: 2, base: hex(0x1a1030), glow: hex(0xff4fd8), swatch: 'radial-gradient(circle at 35% 30%,#ff9ae8,#6a1a8a 40%,#10081a 70%,#ff4fd8)' },
-  { name: { fr: 'BONBON', en: 'CANDY' }, type: 3, base: hex(0xff3a5a), glow: hex(0xff8a9a), swatch: 'radial-gradient(circle at 35% 30%,#fff,#ff6a80 30%,#c01a3a 75%,#ff8aa0)' },
+  { name: { fr: 'CHROME', en: 'CHROME' }, type: 0, rough: 0.025, base: hex(0xe8edf5), glow: hex(0x9fe8ff), swatch: 'radial-gradient(circle at 35% 30%,#fff,#aab4c4 40%,#3a4250 75%,#cfd8e6)' },
+  { name: { fr: 'VERRE', en: 'GLASS' }, type: 1, rough: 0.0, base: hex(0x8ff0ff), glow: hex(0x4ef2ff), swatch: 'radial-gradient(circle at 35% 30%,#fff,#bff7ff 25%,rgba(80,200,255,.5) 60%,#1a6a9a)' },
+  { name: { fr: 'OR', en: 'GOLD' }, type: 0, rough: 0.07, base: hex(0xffc85a), glow: hex(0xffd36b), swatch: 'radial-gradient(circle at 35% 30%,#fffbe0,#ffcf5a 35%,#8a5a10 75%,#ffe08a)' },
+  { name: { fr: 'PLASMA', en: 'PLASMA' }, type: 2, rough: 0.03, base: hex(0x1a1030), glow: hex(0xff4fd8), swatch: 'radial-gradient(circle at 35% 30%,#ff9ae8,#6a1a8a 40%,#10081a 70%,#ff4fd8)' },
+  { name: { fr: 'BONBON', en: 'CANDY' }, type: 3, rough: 0.07, base: hex(0xff3a5a), glow: hex(0xff8a9a), swatch: 'radial-gradient(circle at 35% 30%,#fff,#ff6a80 30%,#c01a3a 75%,#ff8aa0)' },
 ];
 
 // ---------------------------------------------------------------- world zones
@@ -515,7 +520,7 @@ const ZONES = [
 const I18N = {
   fr: {
     playGyro: 'JOUER AVEC LE GYROSCOPE', play: 'JOUER', playTouch: 'JOUER AU TACTILE', music: 'MUSIQUE', sfx: 'EFFETS',
-    modeRandom: 'ALÉATOIRE', modeDaily: 'DÉFI DU JOUR', infoRandom: 'Parcours sans fin · vous repartez là où vous tombez', infoContinue: 'Reprise du parcours à {d} m', newTrack: '↻ NOUVEAU PARCOURS', infoDaily: 'Même parcours pour tous · {date}',
+    modeRandom: 'ALÉATOIRE', modeDaily: 'DÉFI DU JOUR', infoRandom: 'Parcours sans fin · vous repartez du dernier checkpoint', infoContinue: 'Reprise au checkpoint {d} m', newTrack: '↻ NOUVEAU PARCOURS', infoDaily: 'Même parcours pour tous · {date}',
     track: 'PISTE', ball: 'BILLE', pause: 'PAUSE', resume: 'REPRENDRE', recal: 'RECALIBRER LE GYROSCOPE', mainMenu: 'MENU PRINCIPAL',
     gameOver: 'GAME OVER', newRecord: 'NOUVEAU RECORD', retry: 'REJOUER', menu: 'MENU',
     share: 'PARTAGER MON SCORE', shareBusy: 'PRÉPARATION DE LA VIDÉO…', shareSaved: 'VIDÉO ENREGISTRÉE ✓', shareReady: 'PARTAGER LA VIDÉO ▶', shareImg: 'PARTAGER MON SCORE',
@@ -532,7 +537,7 @@ const I18N = {
   },
   en: {
     playGyro: 'PLAY WITH GYROSCOPE', play: 'PLAY', playTouch: 'PLAY WITH TOUCH', music: 'MUSIC', sfx: 'SFX',
-    modeRandom: 'RANDOM', modeDaily: 'DAILY RUN', infoRandom: 'Endless track · you restart where you fell', infoContinue: 'Back on the track at {d} m', newTrack: '↻ NEW TRACK', infoDaily: 'Same track for everyone · {date}',
+    modeRandom: 'RANDOM', modeDaily: 'DAILY RUN', infoRandom: 'Endless track · you restart at the last checkpoint', infoContinue: 'Back at the {d} m checkpoint', newTrack: '↻ NEW TRACK', infoDaily: 'Same track for everyone · {date}',
     track: 'TRACK', ball: 'BALL', pause: 'PAUSE', resume: 'RESUME', recal: 'RECALIBRATE GYROSCOPE', mainMenu: 'MAIN MENU',
     gameOver: 'GAME OVER', newRecord: 'NEW RECORD', retry: 'PLAY AGAIN', menu: 'MENU',
     share: 'SHARE MY SCORE', shareBusy: 'PREPARING VIDEO…', shareSaved: 'VIDEO SAVED ✓', shareReady: 'SHARE THE VIDEO ▶', shareImg: 'SHARE MY SCORE',
@@ -747,11 +752,6 @@ class TrackGenerator {
     T.rowN[m] = 1; T.rowF[m] = 0;
     T.rowA[m * 3] = -this.w / 2; T.rowB[m * 3] = this.w / 2; T.rowAO[m * 3] = 1; T.rowBO[m * 3] = 1;
     if (sec.row) sec.row(k, m, s);
-    if (s >= this.nextCheck) {
-      T.rowF[m] |= RF.CHECK;
-      T.objects.push({ kind: 'gate', s: s, u: 0, id: this.count++, cp: Math.round(this.nextCheck - CFG.START_S) });
-      this.nextCheck += CFG.CHECKPOINT;
-    }
     if (sec.spawn) sec.spawn(k, s);
 
     // integrate centerline
@@ -780,6 +780,7 @@ class TrackGenerator {
     const s = this.T.n * CFG.DS, d = this.diff(s), r = this.rng;
     const W = lerp(3.3, 2.25, d);
     if (this.T.n === 0) return this.startPad();
+    if (s >= this.nextCheck) return this.checkPad(W);
     if (this.breathe) { this.breathe = false; const L = lerp(9, 3, d) + r.range(0, 4); return this.mk(L, () => this.flat(W, -0.02), null, null, 'breather'); }
     this.breathe = r.chance(lerp(0.9, 0.45, d));
 
@@ -813,6 +814,16 @@ class TrackGenerator {
   // ------------------------------------------------------------- sections
   startPad() {
     return this.mk(34, () => ({ k: 0, w: 3.6, b: 0, sl: -0.01 }), (k, m) => { if (k < 3) this.T.rowF[m] |= RF.START; }, null, 'start');
+  }
+  // Checkpoint: a calm, wide, straight pad with the gate on a round distance. Random runs restart
+  // here after a fall, so it must be safe to stand still on: no holes, boosters or obstacles.
+  checkPad(W) {
+    const w = Math.max(W, 3), s0 = this.T.n * CFG.DS;
+    const gateS = CFG.START_S + Math.ceil((s0 + 12 - CFG.START_S) / 10) * 10, gk = Math.round((gateS - s0) / CFG.DS);
+    while (this.nextCheck <= gateS) this.nextCheck += CFG.CHECKPOINT;
+    return this.mk(gateS - s0 + 16, () => ({ k: 0, w, b: 0, sl: -0.01 }), (k, m) => { if (k === gk) this.T.rowF[m] |= RF.CHECK; }, (k, s) => {
+      if (k === gk) this.T.objects.push({ kind: 'gate', s, u: 0, id: this.count++, cp: Math.round(s - CFG.START_S) });
+    }, 'checkpoint');
   }
   straight(d, W) {
     const r = this.rng, boost = r.chance(0.3 + d * 0.2), L = boost ? r.range(32, 40) : r.range(16, 30), n = Math.round(L / CFG.DS);
@@ -1232,76 +1243,154 @@ void main(){
   gl_FragColor = vec4(col, clamp(glow * (1.0 - fog), 0.0, 1.0));
 }`;
 
-// Ball: env reflections, fresnel, dynamic highlight, several material types.
+// Ball: physically based look on a perfect sphere. It reflects a live cube map rendered from
+// its center (the real track, coins and scenery), with Schlick fresnel and a sun glint.
+// Materials: 0 polished metal with machined seams, 1 glass marble (refraction, inner vanes,
+// caustic), 2 smoky shell over a glowing plasma core, 3 glossy candy plastic.
 const VS_BALL = `
 attribute vec3 a_pos; attribute vec3 a_nrm;
 uniform mat4 u_vp; uniform mat4 u_model;
-varying vec3 v_wp; varying vec3 v_n; varying vec3 v_on;
-void main(){ vec4 wp = u_model * vec4(a_pos, 1.0); v_wp = wp.xyz; v_n = normalize((u_model * vec4(a_nrm, 0.0)).xyz); v_on = a_nrm; gl_Position = u_vp * wp; }`;
+varying vec3 v_wp; varying vec3 v_on;
+void main(){ vec4 wp = u_model * vec4(a_pos, 1.0); v_wp = wp.xyz; v_on = a_nrm; gl_Position = u_vp * wp; }`;
 
 const FS_BALL = GLSL_COMMON + `
-varying vec3 v_wp; varying vec3 v_n; varying vec3 v_on;
-uniform vec3 u_cam; uniform vec3 u_sunDir; uniform vec3 u_sunCol; uniform vec3 u_floor; uniform vec3 u_accent; uniform vec3 u_skyMid; uniform vec3 u_abyss;
-uniform vec3 u_base; uniform vec3 u_glowCol; uniform float u_type; uniform float u_time; uniform float u_speed; uniform float u_fade; uniform float u_star;
+varying vec3 v_wp; varying vec3 v_on;
+uniform vec3 u_cam; uniform vec3 u_sunDir; uniform vec3 u_sunCol; uniform vec3 u_floor; uniform vec3 u_accent;
+uniform vec3 u_base; uniform vec3 u_glowCol; uniform float u_type; uniform float u_rough; uniform float u_time; uniform float u_speed; uniform float u_fade; uniform float u_star;
 uniform sampler2D u_env; uniform sampler2D u_envBlur; uniform sampler2D u_env2; uniform sampler2D u_envBlur2; uniform float u_envMix;
+uniform samplerCube u_probe; uniform float u_probeOn; uniform float u_probeMips;
+uniform vec3 u_center; uniform mat3 u_rot; uniform mat3 u_irot; uniform vec3 u_gN; uniform float u_gD;
+
 vec3 env(vec3 d){ vec2 q = equirect(d); return mix(texture2D(u_env, q).rgb, texture2D(u_env2, q).rgb, u_envMix); }
 vec3 envB(vec3 d){ vec2 q = equirect(d); return mix(texture2D(u_envBlur, q).rgb, texture2D(u_envBlur2, q).rgb, u_envMix); }
-vec3 world(vec3 R, bool blur){
-  vec3 e = blur ? envB(R) : env(R);
-  // lower hemisphere reflects the track deck and its light strips
+// Fallback without the live probe: sky panorama above, a suggested deck below.
+vec3 world(vec3 R, float rough){
+  vec3 e = mix(env(R), envB(R), clamp(rough * 4.0, 0.0, 1.0));
   float fl = smoothstep(0.02, -0.3, R.y);
   float stripes = smoothstep(0.92, 1.0, abs(sin(atan(R.x, R.z) * 3.0)));
   vec3 flo = u_floor * (0.35 + 0.4 * max(-R.y, 0.0)) + u_accent * stripes * 0.35 * smoothstep(-0.1, -0.35, R.y);
   return mix(e, flo, fl * 0.9);
 }
+// What the ball sees in direction d. rough: 0 mirror … 1 fully blurred (diffuse light).
+vec3 scene(vec3 d, float rough){
+  if (u_probeOn < 0.5) return world(d, rough);
+#ifdef LOD
+  return textureCubeLodEXT(u_probe, d, min(rough * u_probeMips, u_probeMips - 1.0)).rgb;
+#else
+  return textureCube(u_probe, d, rough * u_probeMips - 1.5).rgb;
+#endif
+}
+// The probe is taken at the center: rays that hit the deck are corrected against its plane,
+// so the reflection of the track meets the ball where it touches it.
+vec3 look(vec3 P, vec3 R){
+  float dn = dot(R, u_gN);
+  if (dn < -0.01) { float t = (u_gD - dot(P, u_gN)) / dn; if (t > 0.0) return normalize(P + R * min(t, 60.0) - u_center); }
+  return R;
+}
+// Normalized Blinn-Phong lobe (close to GGX for a sharp sun glint).
+float lobe(float ndh, float rough){ float a = max(rough * rough, 0.0004); float p = min(2.0 / (a * a) - 2.0, 6000.0); return pow(ndh, p) * (p + 8.0) * 0.0398; }
+float schlick(float f0, float c){ return f0 + (1.0 - f0) * pow(1.0 - c, 5.0); }
+
 void main(){
-  vec3 N = normalize(v_n), V = normalize(u_cam - v_wp), R = reflect(-V, N);
-  vec3 o = normalize(v_on);
-  float ndv = max(dot(N, V), 0.0);
-  float fres = pow(1.0 - ndv, 3.0);
-  vec3 L = u_sunDir;
-  float spec = pow(max(dot(R, L), 0.0), 220.0) * 5.0 + pow(max(dot(R, L), 0.0), 24.0) * 0.35;
-  vec3 L2 = normalize(vec3(-L.x, 0.4, -L.z));
-  spec += pow(max(dot(R, L2), 0.0), 90.0) * 0.8;
-  float ndl = max(dot(N, L), 0.0);
-  vec3 amb = mix(u_abyss * 0.3, u_skyMid + 0.1, N.y * 0.5 + 0.5);
-  vec3 col; float glow = 0.0;
-  if (u_type < 0.5) {                          // polished metal
-    vec3 e = world(R, false);
-    col = e * u_base * (1.25 + 0.6 * fres) + u_base * amb * 0.18;
-    float ring = smoothstep(0.035, 0.0, abs(o.y)) + smoothstep(0.02, 0.0, abs(o.x)) * 0.6;
-    col *= 1.0 - ring * 0.55;
-    col += ring * u_glowCol * 0.15;
-  } else if (u_type < 1.5) {                   // glass
-    vec3 T = refract(-V, N, 0.72);
-    vec3 inner = envB(T) * u_base * 0.9;
-    float core = pow(max(dot(-T, normalize(V)), 0.0), 3.0);
-    float swirl = sin(o.x * 7.0 + sin(o.y * 5.0 + u_time * 0.5) * 2.0 + o.z * 4.0);
-    inner += u_glowCol * (0.25 + 0.25 * swirl) * core;
-    col = mix(inner, world(R, false), 0.1 + fres * 0.85);
-    glow = 0.35;
-  } else if (u_type < 2.5) {                   // plasma core
-    float veins = pow(1.0 - abs(sin(o.x * 6.0 + sin(o.y * 7.0 + u_time * 1.3) * 1.6 + o.z * 3.0)), 10.0);
-    veins += pow(1.0 - abs(sin(o.z * 9.0 - o.y * 4.0 + u_time * 0.7)), 16.0) * 0.6;
-    col = u_base * (amb * 0.4 + ndl * 0.3) + world(R, true) * (0.12 + fres * 0.6);
-    col += u_glowCol * veins * (1.3 + u_speed * 0.8);
-    glow = veins * 0.9;
-  } else {                                     // candy plastic with stripe
+  vec3 N = normalize(v_wp - u_center), V = normalize(u_cam - v_wp);
+  vec3 o = normalize(v_on);                                   // object space: rolls with the ball
+  vec3 L = u_sunDir, H = normalize(L + V);
+  float ndv = max(dot(N, V), 0.001), ndl = max(dot(N, L), 0.0);
+  float fr = pow(1.0 - ndv, 5.0), fh = pow(1.0 - max(dot(H, V), 0.0), 5.0);
+  float ao = mix(0.5, 1.0, smoothstep(-0.97, -0.3, dot(N, u_gN)));   // the deck right under the ball
+  vec3 col; float glow = 0.0; vec3 sun = vec3(0.0);
+  if (u_type < 0.5) {
+    // polished metal: V-grooves on the equator and a meridian, a light strip inside each
+    float gy = abs(o.y), gx = abs(o.x);
+    float wy = smoothstep(0.05, 0.012, gy), wx = smoothstep(0.035, 0.008, gx);
+    float groove = max(wy, wx);
+    vec3 no = normalize(o - vec3(sign(o.x) * wx * 0.9, sign(o.y) * wy * 0.9, 0.0));
+    vec3 N2 = normalize(u_rot * no);
+    float c2 = max(dot(N2, V), 0.001);
+    vec3 F = u_base + (1.0 - u_base) * pow(1.0 - c2, 5.0);
+    float rough = u_rough + groove * 0.2;
+    vec3 R2 = reflect(-V, N2);
+    // + a broad soft reflection of the sun (a studio "softbox"), so metal stays bright in dark worlds
+    vec3 e = scene(look(v_wp, R2), rough);
+    e = mix(e, vec3(dot(e, vec3(0.3, 0.55, 0.15))), 0.45);     // less colour cast: gold stays gold in a cyan world
+    e += u_sunCol * (pow(max(dot(R2, L), 0.0), 6.0) * 0.8 + smoothstep(-0.1, 0.8, R2.y) * 0.14);
+    col = e * F * mix(1.0, 0.3, groove) * mix(0.75, 1.0, ao);
+    float strip = smoothstep(0.011, 0.0, gy) + smoothstep(0.007, 0.0, gx);
+    col += u_glowCol * strip * (0.7 + u_speed * 1.4);
+    glow = strip * 0.9;
+    vec3 Fh = u_base + (1.0 - u_base) * fh;
+    sun = Fh * (lobe(max(dot(N2, H), 0.0), rough) + lobe(max(dot(N2, H), 0.0), rough * 4.0 + 0.12) * 0.05) * ndl;
+  } else if (u_type < 1.5) {
+    // glass marble: reflection + the world seen through it (upside down, like a real marble)
+    float F = schlick(0.04, ndv);
+    vec3 refl = scene(look(v_wp, reflect(-V, N)), 0.0);
+    vec3 T1 = refract(-V, N, 0.667);
+    float tc = -2.0 * dot(N, T1);                             // chord through the unit sphere
+    vec3 p2 = N + T1 * tc;                                    // exit point
+    vec3 T2 = refract(T1, -p2, 1.5);
+    if (dot(T2, T2) < 0.5) T2 = reflect(T1, -p2);
+    vec3 tint = mix(vec3(1.0), u_base, 0.45);
+    vec3 trans = scene(T2, 0.02) * tint * mix(vec3(1.0), u_base, clamp(tc * 0.25, 0.0, 1.0));
+    // three twisted coloured vanes inside ("cat's eye"), marched along the chord
+    vec3 ro = u_irot * N, rd = u_irot * T1, acc = vec3(0.0); float tr = 1.0, st = tc / 24.0, j = hash(gl_FragCoord.xy);
+    for (int i = 0; i < 24; i++) {
+      vec3 q = ro + rd * ((float(i) + j) * st);
+      float r = length(q.xz), a = atan(q.z, q.x) + q.y * 2.0;
+      float bl = abs(sin(a * 1.5)) * r;                          // distance to the nearest vane
+      float k = smoothstep(0.11, 0.03, bl) * smoothstep(0.62, 0.48, length(q));
+      vec3 vc = mix(u_glowCol * 1.15, vec3(1.0, 0.97, 0.92), smoothstep(0.06, 0.03, bl) * 0.35);
+      float d = clamp(k * st * 4.5, 0.0, 1.0);
+      acc += tr * d * vc * (0.6 + 0.4 * max(dot(u_rot * normalize(q + 0.001), L), 0.0));
+      tr *= 1.0 - d * 0.9;
+    }
+    float caustic = pow(max(dot(p2, -L), 0.0), 28.0) * 1.6;    // sunlight focused on the far side
+    col = refl * F + (trans * tr + acc + u_sunCol * tint * caustic * tr) * (1.0 - F);
+    glow = 0.2 + caustic * 0.4 + dot(acc, vec3(0.2));
+    sun = vec3(0.04 + 0.96 * fh) * (lobe(max(dot(N, H), 0.0), 0.015) + lobe(max(dot(N, H), 0.0), 0.1) * 0.05) * ndl;
+  } else if (u_type < 2.5) {
+    // smoky glass shell over a plasma core: glowing veins at several depths (real parallax)
+    float F = schlick(0.05, ndv);
+    vec3 refl = scene(look(v_wp, reflect(-V, N)), u_rough);
+    vec3 T1 = refract(-V, N, 0.7);
+    vec3 ro = u_irot * N, rd = u_irot * T1;
+    float b0 = dot(ro, rd), acc = 0.0;
+    // veins on three nested shells (front and back side of each): sharp lines with real depth
+    for (int i = 0; i < 3; i++) {
+      float rs = 0.9 - float(i) * 0.2, h = b0 * b0 - 1.0 + rs * rs, ph = float(i) * 1.7;
+      if (h > 0.0) for (int k = 0; k < 2; k++) {
+        vec3 q = (ro + rd * (-b0 + (float(k) * 2.0 - 1.0) * sqrt(h))) / rs;
+        float v1 = pow(1.0 - abs(sin(q.x * 6.0 + sin(q.y * 7.0 + u_time * 1.3 + ph) * 1.6 + q.z * 3.0)), 10.0);
+        float v2 = pow(1.0 - abs(sin(q.z * 9.0 - q.y * 4.0 + u_time * 0.7 - ph)), 16.0) * 0.6;
+        acc += (v1 + v2) * (0.45 + float(i) * 0.3) * (k == 0 ? 1.0 : 0.45);
+      }
+    }
+    vec3 cx = cross(ro, rd);
+    float core = exp(-dot(cx, cx) * 7.0);               // hot core: closest approach to the center
+    vec3 inner = u_glowCol * (acc * 0.75 + core * 0.8) * (1.2 + u_speed * 1.0) + u_base * 0.25;
+    col = refl * F + inner * (1.0 - F);
+    glow = clamp(acc * 0.45 + core * 0.6, 0.0, 1.0);
+    sun = vec3(0.05 + 0.95 * fh) * (lobe(max(dot(N, H), 0.0), u_rough) + lobe(max(dot(N, H), 0.0), 0.15) * 0.05) * ndl;
+  } else {
+    // candy plastic: coloured diffuse body with a soft subsurface wrap, under a glossy clear coat
     float stripe = smoothstep(0.34, 0.3, abs(o.y));
-    vec3 b = mix(vec3(0.97), u_base, stripe);
-    float dot2 = smoothstep(0.24, 0.2, length(o.xz - vec2(0.0, 0.0)) ) * step(0.5, abs(o.y));
-    b = mix(b, u_base * 0.7, dot2);
-    col = b * (amb * 0.55 + u_sunCol * ndl * 0.8) + world(R, true) * (0.06 + fres * 0.5);
+    vec3 alb = mix(vec3(0.95), u_base, stripe);
+    alb = mix(alb, u_base * 0.7, smoothstep(0.24, 0.2, length(o.xz)) * step(0.5, abs(o.y)));
+    float wrap = max(0.0, (dot(N, L) + 0.45) / 1.45);
+    vec3 diff = alb * (scene(N, 1.0) * 1.25 * ao + u_sunCol * (ndl * 0.75 + wrap * 0.3));
+    float F = schlick(0.045, ndv);
+    col = diff * (1.0 - F) + scene(look(v_wp, reflect(-V, N)), u_rough) * F;
+    sun = vec3(0.045 + 0.955 * fh) * (lobe(max(dot(N, H), 0.0), u_rough) + lobe(max(dot(N, H), 0.0), 0.2) * 0.08) * ndl;
   }
-  col += u_sunCol * spec;
-  col += u_glowCol * fres * (0.25 + u_speed * 0.6);
+  col += u_sunCol * sun;
+  col += u_glowCol * fr * (0.12 + u_speed * 0.6);
   if (u_star > 0.0) {                          // star power: the ball lights up from inside
     float pulse = 0.75 + 0.25 * sin(u_time * 14.0);
-    vec3 starCol = mix(vec3(1.0, 0.82, 0.35), vec3(1.0), 0.35 + 0.35 * fres);
-    col = mix(col, col * 0.4 + starCol * (0.9 + fres * 1.5) * pulse, u_star);
+    vec3 starCol = mix(vec3(1.0, 0.82, 0.35), vec3(1.0), 0.35 + 0.35 * fr);
+    col = mix(col, col * 0.4 + starCol * (0.9 + fr * 1.5) * pulse, u_star);
     glow = max(glow, u_star);
   }
-  gl_FragColor = vec4(col * u_fade, clamp(glow + spec * 0.15 + u_speed * fres * 0.5, 0.0, 1.0));
+  glow += clamp(dot(sun, vec3(0.33)) * 0.05, 0.0, 1.0);
+  gl_FragColor = vec4(col * u_fade, clamp(glow + u_speed * fr * 0.5, 0.0, 1.0));
 }`;
 
 // Sky: fullscreen triangle sampling the pre-rendered equirect panorama.
@@ -1887,6 +1976,9 @@ function makeSkyCanvases(Z, seed) {
 // =====================================================================
 // Renderer — WebGL1 forward renderer with optional bloom post chain.
 // =====================================================================
+// Cube map faces (+X −X +Y −Y +Z −Z): view direction and the up vector that matches the GL layout.
+const CUBE_FACES = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].map((d, i) => Object.assign(d, { up: i === 2 ? [0, 0, 1] : i === 3 ? [0, 0, -1] : [0, -1, 0] }));
+
 class Renderer {
   constructor(canvas) {
     this.cv = canvas;
@@ -1917,7 +2009,11 @@ class Renderer {
     this.pLit = this.inst ? this.program('#define INST\n' + VS_LIT, FS_LIT, litAttrs.concat(['a_m0', 'a_m1', 'a_m2', 'a_m3', 'a_ic'])) : this.program(VS_LIT, FS_LIT, litAttrs);
     if (this.inst) for (let i = 5; i < 10; i++) this.inst.vertexAttribDivisorANGLE(i, 1);
     this.instBuf = gl.createBuffer(); this.batches = new Map(); this.drawCalls = 0;
-    this.pBall = this.program(VS_BALL, FS_BALL, ['a_pos', 'a_nrm']);
+    // exact mip level control for the reflection probe when the device has it
+    this.lodExt = gl.getExtension('EXT_shader_texture_lod');
+    this.pBall = this.program(VS_BALL, (this.lodExt ? '#extension GL_EXT_shader_texture_lod : enable\n#define LOD 1\n' : '') + FS_BALL, ['a_pos', 'a_nrm']);
+    this.probe = null; this.farList = null; this.cullFar = 330;
+    this.rot = new Float32Array(9); this.irot = new Float32Array(9);
     this.pSky = this.program(VS_SKY, FS_SKY, ['a_pos']);
     this.pPts = this.program(VS_PTS, FS_PTS, ['a_pos', 'a_col', 'a_size']);
     this.pFx = this.program(VS_FX, FS_FX, ['a_pos', 'a_uv', 'a_col']);
@@ -1932,7 +2028,7 @@ class Renderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.triBuf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
     this.meshes = {
-      ball: this.upload(Prims.sphere(40, 28)), gem: this.upload(Prims.gem()), post: this.upload(Prims.cylinder(18, 9)),
+      ball: this.upload(Prims.sphere(64, 40)), gem: this.upload(Prims.gem()), post: this.upload(Prims.cylinder(18, 9)),
       slider: this.upload(Prims.box(8)), gate: this.upload(Prims.gate()), mono: this.upload(Prims.box(11)),
       ring: this.upload(Prims.torus(1, 0.035, 64, 6)), cube: this.upload(Prims.box(3)),
       tower: this.upload(Prims.box(13)), pyramid: this.upload(Prims.pyramid()),
@@ -2106,7 +2202,10 @@ class Renderer {
     gl.viewport(0, 0, this.w, this.h);
     gl.disable(gl.CULL_FACE);
     gl.depthMask(true); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    // sky
+    this.drawSky(time, true);
+  }
+  drawSky(time, stars) {
+    const gl = this.gl;
     gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
     const Z = this.Z, p = this.use(this.pSky);
     gl.uniformMatrix4fv(p.u('u_invVP'), false, this.invVP);
@@ -2116,16 +2215,72 @@ class Renderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.triBuf); this.attribs(1);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
-    // stars (at infinity, additive)
-    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
-    const q = this.use(this.pPts);
-    gl.uniformMatrix4fv(q.u('u_vp'), false, this.vp); gl.uniform3fv(q.u('u_off'), this.cam);
-    gl.uniform1f(q.u('u_px'), this.h); gl.uniform1f(q.u('u_persp'), 0); gl.uniform1f(q.u('u_time'), time % 1000); gl.uniform1f(q.u('u_k'), Z.stars);
-    this.bindPts(this.starBuf);
-    gl.drawArrays(gl.POINTS, 0, this.starCount);
-    gl.disable(gl.BLEND);
+    if (stars) {                                   // stars (at infinity, additive)
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+      const q = this.use(this.pPts);
+      gl.uniformMatrix4fv(q.u('u_vp'), false, this.vp); gl.uniform3fv(q.u('u_off'), this.cam);
+      gl.uniform1f(q.u('u_px'), this.h); gl.uniform1f(q.u('u_persp'), 0); gl.uniform1f(q.u('u_time'), time % 1000); gl.uniform1f(q.u('u_k'), Z.stars);
+      this.bindPts(this.starBuf);
+      gl.drawArrays(gl.POINTS, 0, this.starCount);
+      gl.disable(gl.BLEND);
+    }
     gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
   }
+
+  // ------------------------------------------------------------- reflection probe
+  // A cube map rendered from the ball's center, so the ball mirrors the real track, coins and
+  // scenery around it. The game fills it a few faces per frame (see Game.renderProbe).
+  makeProbe(size) {
+    const gl = this.gl;
+    this.freeProbe();
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, tex);
+    for (let f = 0; f < 6; f++) gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + f, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+    const rb = gl.createRenderbuffer(); gl.bindRenderbuffer(gl.RENDERBUFFER, rb);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, size, size);
+    const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, rb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X, tex, 0);
+    const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+    this.probe = { tex, fb, rb, size, mips: Math.log2(size), next: 0, done: 0 };
+    if (!ok) { this.freeProbe(); return false; }
+    return true;
+  }
+  freeProbe() {
+    const P = this.probe; if (!P) return;
+    const gl = this.gl; gl.deleteFramebuffer(P.fb); gl.deleteRenderbuffer(P.rb); gl.deleteTexture(P.tex);
+    this.probe = null;
+  }
+  // The next faces must all be redrawn before the probe is used again (the ball jumped).
+  resetProbe() { if (this.probe) this.probe.done = 0; }
+  // Binds cube face f as the target, looking from `eye`, and draws the sky into it.
+  probeFace(eye, f, time) {
+    const gl = this.gl, P = this.probe, d = CUBE_FACES[f];
+    M4.perspective(this.proj, Math.PI / 2, 1, 0.05, 1400);
+    const t = this.tmpT || (this.tmpT = [0, 0, 0]); t[0] = eye[0] + d[0]; t[1] = eye[1] + d[1]; t[2] = eye[2] + d[2];
+    M4.lookAt(this.view, eye, t, d.up, 0);
+    M4.mul(this.vp, this.proj, this.view); M4.invert(this.invVP, this.vp);
+    this.cam[0] = eye[0]; this.cam[1] = eye[1]; this.cam[2] = eye[2];
+    this.camF[0] = d[0]; this.camF[1] = d[1]; this.camF[2] = d[2];
+    this.time = time; this.cur = null;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, P.fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X + f, P.tex, 0);
+    gl.viewport(0, 0, P.size, P.size);
+    gl.disable(gl.CULL_FACE); gl.depthMask(true); gl.clear(gl.DEPTH_BUFFER_BIT);
+    this.drawSky(time, false);
+  }
+  endProbe(faces) {
+    const gl = this.gl, P = this.probe;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, P.tex); gl.generateMipmap(gl.TEXTURE_CUBE_MAP); gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+    P.done = Math.min(6, P.done + faces);
+  }
+  get probeReady() { return !!this.probe && this.probe.done >= 6; }
   drawFloor(y, time) {
     const gl = this.gl, Z = this.Z, A = ZONES[this.zA], B = ZONES[this.zB], p = this.use(this.pFloor);
     gl.uniformMatrix4fv(p.u('u_vp'), false, this.vp); gl.uniform3fv(p.u('u_cam'), this.cam); gl.uniform1f(p.u('u_y'), y);
@@ -2165,7 +2320,7 @@ class Renderer {
   drawChunk(ch) {
     const dx = ch.cx - this.cam[0], dy = ch.cy - this.cam[1], dz = ch.cz - this.cam[2];
     const d = dx * this.camF[0] + dy * this.camF[1] + dz * this.camF[2];
-    if (d < -ch.rad || Math.hypot(dx, dy, dz) - ch.rad > 330) return;
+    if (d < -ch.rad || Math.hypot(dx, dy, dz) - ch.rad > this.cullFar) return;
     this.bindMesh(ch.mesh, 5);
     this.gl.drawElements(this.gl.TRIANGLES, ch.mesh.count, this.gl.UNSIGNED_SHORT, 0);
   }
@@ -2193,7 +2348,8 @@ class Renderer {
     d.set(model, o); d[o + 16] = color[0]; d[o + 17] = color[1]; d[o + 18] = color[2]; d[o + 19] = emis;
     b.n++;
   }
-  flushBatches() {
+  // keep: leave the queues filled (the reflection probe draws them once per cube face).
+  flushBatches(keep) {
     const gl = this.gl, p = this.pLit;
     for (const b of this.batches.values()) {
       if (!b.n) continue;
@@ -2214,9 +2370,10 @@ class Renderer {
           gl.drawElements(gl.TRIANGLES, b.mesh.count, gl.UNSIGNED_SHORT, 0);
         }
       }
-      b.n = 0;
+      if (!keep) b.n = 0;
     }
   }
+  clearBatches() { for (const b of this.batches.values()) b.n = 0; }
   setFogK(k) { this.gl.uniform1f(this.pLit.u('u_fogK'), k); }
   endLit() {
     this.flushBatches();
@@ -2224,18 +2381,31 @@ class Renderer {
     else this.gl.uniformMatrix4fv(this.pLit.u('u_model'), false, this.ident);
   }
 
-  drawBall(model, skin, speed, fade, star = 0) {
+  // o: { c: center, q: rotation quaternion, gN, gD: deck plane under the ball (dot(x, gN) = gD) }
+  drawBall(model, skin, speed, fade, star, o) {
     const gl = this.gl, T = this.theme, p = this.use(this.pBall);
     gl.uniformMatrix4fv(p.u('u_vp'), false, this.vp); gl.uniformMatrix4fv(p.u('u_model'), false, model);
     const Z = this.Z;
     gl.uniform3fv(p.u('u_cam'), this.cam); gl.uniform3fv(p.u('u_sunDir'), this.sunDir); gl.uniform3fv(p.u('u_sunCol'), Z.sun);
-    gl.uniform3fv(p.u('u_floor'), T.deckA); gl.uniform3fv(p.u('u_accent'), T.accent); gl.uniform3fv(p.u('u_skyMid'), Z.skyMid); gl.uniform3fv(p.u('u_abyss'), Z.abyss);
-    gl.uniform3fv(p.u('u_base'), skin.base); gl.uniform3fv(p.u('u_glowCol'), skin.glow); gl.uniform1f(p.u('u_type'), skin.type);
+    gl.uniform3fv(p.u('u_floor'), T.deckA); gl.uniform3fv(p.u('u_accent'), T.accent);
+    gl.uniform3fv(p.u('u_base'), skin.base); gl.uniform3fv(p.u('u_glowCol'), skin.glow); gl.uniform1f(p.u('u_type'), skin.type); gl.uniform1f(p.u('u_rough'), skin.rough);
     gl.uniform1f(p.u('u_time'), this.time % 1000); gl.uniform1f(p.u('u_speed'), speed); gl.uniform1f(p.u('u_fade'), fade); gl.uniform1f(p.u('u_star'), star);
     this.bindZoneTex(p, 'mid', 'u_env', 'u_env2', 0, 1); this.bindZoneTex(p, 'blur', 'u_envBlur', 'u_envBlur2', 2, 3);
     gl.uniform1f(p.u('u_envMix'), this.zMix);
+    // rotation (object → world) and its inverse for the patterns that roll with the ball
+    const q = o.q, x = q[0], y = q[1], z = q[2], w = q[3], r = this.rot, ir = this.irot;
+    r[0] = 1 - 2 * (y * y + z * z); r[1] = 2 * (x * y + w * z); r[2] = 2 * (x * z - w * y);
+    r[3] = 2 * (x * y - w * z); r[4] = 1 - 2 * (x * x + z * z); r[5] = 2 * (y * z + w * x);
+    r[6] = 2 * (x * z + w * y); r[7] = 2 * (y * z - w * x); r[8] = 1 - 2 * (x * x + y * y);
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) ir[i * 3 + j] = r[j * 3 + i];
+    gl.uniformMatrix3fv(p.u('u_rot'), false, r); gl.uniformMatrix3fv(p.u('u_irot'), false, ir);
+    gl.uniform3fv(p.u('u_center'), o.c); gl.uniform3fv(p.u('u_gN'), o.gN); gl.uniform1f(p.u('u_gD'), o.gD);
+    const P = this.probeReady ? this.probe : null;
+    gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_CUBE_MAP, P ? P.tex : null); gl.uniform1i(p.u('u_probe'), 4); gl.activeTexture(gl.TEXTURE0);
+    gl.uniform1f(p.u('u_probeOn'), P ? 1 : 0); gl.uniform1f(p.u('u_probeMips'), P ? P.mips : 0);
     this.bindMesh(this.meshes.ball, 2);
     gl.drawElements(gl.TRIANGLES, this.meshes.ball.count, gl.UNSIGNED_SHORT, 0);
+    gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_CUBE_MAP, null); gl.activeTexture(gl.TEXTURE0);
   }
 
   beginAdditive() { const gl = this.gl; gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); }
@@ -3192,7 +3362,10 @@ class Environment {
       const k = it.dying ? Math.max(0, it.dying) : 1;
       M4.fromTRS(this.model, it.x, it.y + by, it.z, q, it.sx * k, it.sy * k, it.sz * k);
       const e = it.blink ? it.emis * (Math.sin(time * 5 + it.s) > 0.2 ? 1 : 0.15) : it.emis;
-      if (it.fogK !== 1) { R.setFogK(it.fogK); R.drawProp(it.mesh, this.model, it.col, e); R.setFogK(1); }   // far giants: own fog
+      if (it.fogK !== 1) {                                                    // far giants: own fog
+        if (R.farList) R.farList.push({ mesh: it.mesh, m: Float32Array.from(this.model), col: it.col, e, k: it.fogK });
+        else { R.setFogK(it.fogK); R.drawProp(it.mesh, this.model, it.col, e); R.setFogK(1); }
+      }
       else R.addInst(it.mesh, this.model, it.col, e);
     };
     for (const h of this.heroes) for (const it of h.items) one(it);
@@ -3325,10 +3498,11 @@ class FxBuilder {
 class QualityManager {
   constructor(mobile) {
     this.levels = [
-      { scale: 0.75, post: false, particles: 160, dust: 40, env: 10, bloomDiv: 4, blur: false },
-      { scale: 1.0, post: true, particles: 300, dust: 70, env: 14, bloomDiv: 4, blur: false },
-      { scale: 1.5, post: true, particles: 480, dust: 110, env: 18, bloomDiv: 4, blur: true },
-      { scale: 2.0, post: true, particles: 720, dust: 150, env: 24, bloomDiv: 3, blur: true },
+      // probe: size of the ball's reflection cube map (0 = sky panorama only), faces: cube faces redrawn per frame
+      { scale: 0.75, post: false, particles: 160, dust: 40, env: 10, bloomDiv: 4, blur: false, probe: 0, faces: 0 },
+      { scale: 1.0, post: true, particles: 300, dust: 70, env: 14, bloomDiv: 4, blur: false, probe: 64, faces: 2 },
+      { scale: 1.5, post: true, particles: 480, dust: 110, env: 18, bloomDiv: 4, blur: true, probe: 128, faces: 3 },
+      { scale: 2.0, post: true, particles: 720, dust: 150, env: 24, bloomDiv: 3, blur: true, probe: 256, faces: 6 },
     ];
     this.top = mobile ? 2 : 3; this.level = this.top;
     this.acc = 0; this.frames = 0; this.good = 0; this.drops = 0; this.warm = 2.5; this.changed = false;
@@ -3387,12 +3561,13 @@ class UI {
   applyLang() {
     document.documentElement.lang = LANG;
     for (const e of document.querySelectorAll('[data-i18n]')) e.textContent = tr(e.dataset.i18n);
+    for (const e of document.querySelectorAll('[data-i18n-aria]')) { const t = tr(e.dataset.i18nAria); e.setAttribute('aria-label', t); e.title = t; }
     for (const b of document.querySelectorAll('#langSeg button')) b.classList.toggle('on', b.dataset.lang === LANG);
     this.refreshSkinLabels();
   }
   setToggles(musicOn, sfxOn) {
     for (const b of document.querySelectorAll('.tgMusic')) b.classList.toggle('off', !musicOn);
-    for (const b of document.querySelectorAll('.tgSfx')) { b.classList.toggle('off', !sfxOn); b.querySelector('.ic').textContent = sfxOn ? '🔊' : '🔈'; }
+    for (const b of document.querySelectorAll('.tgSfx')) b.classList.toggle('off', !sfxOn);
   }
   setMode(mode, info) {
     for (const b of document.querySelectorAll('#modeSeg button')) b.classList.toggle('on', b.dataset.mode === mode);
@@ -3684,7 +3859,7 @@ class Game {
     try { qm = new URLSearchParams(location.search).get('mode'); } catch (e) { qm = null; }
     this.gameMode = (qm === 'daily' || qm === 'random' ? qm : Store.get('mode', 'random')) === 'daily' ? 'daily' : 'random';
     this.kid = Store.get('kid', false) === true;
-    // Random mode is one endless track per player: after a fall the next run starts again near that spot.
+    // Random mode is one endless track per player: after a fall the next run starts again at the last checkpoint.
     this.rSeed = (Store.get('rseed', 0) | 0) || this.newSeed();
     this.contS = Math.max(CFG.START_S, +Store.get('rpos', 0) || 0);
     this.best = this.modeBest();
@@ -3775,8 +3950,7 @@ class Game {
     U.applyLang();
     E.btnTilt.textContent = tr(this.mobile ? 'playGyro' : 'play');
     const cont = this.gameMode === 'random' && this.contS > CFG.START_S + 5;
-    U.setMode(this.gameMode, (this.gameMode === 'daily' ? tr('infoDaily', { date: dayLabel(dayKey()) }) : cont ? tr('infoContinue', { d: fmt(this.contS - CFG.START_S) }) : tr('infoRandom'))
-      + (this.kid ? ' · ' + tr('kidInfo') : ''));
+    U.setMode(this.gameMode, this.gameMode === 'daily' ? tr('infoDaily', { date: dayLabel(dayKey()) }) : cont ? tr('infoContinue', { d: fmt(this.contS - CFG.START_S) }) : tr('infoRandom'));
     E.newTrack.classList.toggle('hidden', !cont);
     E.mBest.textContent = fmt(this.modeBest()) + ' m';
     const kb = U.$('tgKid'); kb.classList.toggle('off', !this.kid); kb.title = tr('kidInfo');
@@ -3812,18 +3986,6 @@ class Game {
   newTrack() {
     this.rSeed = this.newSeed(); this.contS = CFG.START_S; Store.set('rpos', this.contS);
     this.refreshTexts(); this.newWorld(); this.used = false;
-  }
-  // Restart point after a fall in random mode: a plain full-width stretch shortly before the spot,
-  // without holes, boosters or obstacles, so the next run does not start in trouble.
-  safeStart(s) {
-    const T = this.track, M = T.mask, lo = Math.max(this.startS, s - 55);
-    const ok = (i) => { const m = i & M; return i >= T.minIndex() && i < T.n - 1 && T.rowN[m] === 1 && T.rowAO[m * 3] && T.rowBO[m * 3] && !(T.rowF[m] & RF.BOOST); };
-    for (let t = Math.floor(s - 4); t >= lo; t -= 1) {
-      const i = Math.floor(t / CFG.DS); let good = true;
-      for (let j = i - 6; j <= i + 20 && good; j++) good = ok(j);
-      if (good && !T.objects.some((o) => (o.kind === 'post' || o.kind === 'slider') && Math.abs(o.s - t) < 10)) return t;
-    }
-    return this.startS;
   }
   bindWindow() {
     const onResize = () => { clearTimeout(this.rt); this.rt = setTimeout(() => this.resize(), 80); };
@@ -3865,17 +4027,26 @@ class Game {
   newWorld(seed, s0 = CFG.START_S) {
     if (seed === undefined) { seed = this.runSeed(); if (this.gameMode === 'random') s0 = this.contS; }
     for (const ch of this.chunks.values()) this.R.free(ch.mesh);
-    this.chunks.clear(); this.nextChunk = Math.max(0, Math.floor((s0 - CFG.BEHIND) / (CFG.CHUNK_ROWS * CFG.DS)) - 1);
+    this.chunks.clear();
     this.track.reset();
     this.gen = new TrackGenerator(this.track, seed);
     this.gen.fill(s0 + CFG.AHEAD + 40);
-    const O = this.track.objects; let w = 0; for (let k = 0; k < O.length; k++) if (O[k].s > s0 - 60) O[w++] = O[k]; O.length = w;
+    const O = this.track.objects;
+    if (s0 > CFG.START_S) {
+      // runs only restart on a checkpoint gate: the last one at or before s0 (or the very start)
+      let cs = CFG.START_S; for (const o of O) if (o.kind === 'gate' && o.s <= s0 + 0.5 && o.s > cs) cs = o.s;
+      s0 = cs;
+      if (this.gameMode === 'random' && this.contS !== s0) { this.contS = s0; Store.set('rpos', s0); this.refreshTexts(); }
+      for (const o of O) if (o.kind === 'gate' && o.s <= s0 + 0.5) o.passed = true;
+    }
+    this.nextChunk = Math.max(0, Math.floor((s0 - CFG.BEHIND) / (CFG.CHUNK_ROWS * CFG.DS)) - 1);
+    let w = 0; for (let k = 0; k < O.length; k++) if (O[k].s > s0 - 60) O[w++] = O[k]; O.length = w;
     const b = this.ball; b.reset();
     this.track.pointAt(s0, 0, CFG.R, this.tmp);
     b.p[0] = this.tmp[0]; b.p[1] = this.tmp[1]; b.p[2] = this.tmp[2]; b.hint = Math.floor(s0 / CFG.DS);
     const L = this.track.locate(b.p[0], b.p[2], b.hint); b.s = L.s; b.u = L.u; b.surfY = this.tmp[1] - CFG.R;
     this.physics.collapseS = this.collapseS = -1e9; this.physics.kid = this.kid; this.physics.time = 0;
-    this.lostS = 0; this.lookRef = null;
+    this.lastCP = b.s; this.lookRef = null;
     this.startS = b.s; this.maxS = b.s; this.score = 0; this.dist = 0; this.mult = 1; this.recordShown = false;
     this.danger = 0; this.timeScale = 1; this.acc = 0; this.runT = 0;
     // star power: coins fill the gauge, a streak of coins raises the coin multiplier
@@ -3889,6 +4060,7 @@ class Game {
     this.env.reset(this.track, b.s, this.quality.cur.env, this.quality.cur.dust, this.R.meshes);
     this.floorY = b.surfY - 62; this.zoneIdx = 0; this.R.setZones(0, 0, 0);
     this.fx.resetTrail(b.p);
+    this.R.resetProbe();
     this.cam.snap(b, this.track, this.R.w / this.R.h);
   }
   updateChunks(maxBuild) {
@@ -3985,7 +4157,7 @@ class Game {
     if (beat) { this.best = dist; this.saveBest(dist); }
     const record = beat && dist >= 10;                 // no fanfare for trivial distances
     if (score > this.bestScore) { this.bestScore = score; Store.set('bestScore', score); }
-    if (this.gameMode === 'random') { this.contS = this.safeStart(Math.min(this.lostS || this.ball.s, this.maxS)); Store.set('rpos', this.contS); }
+    if (this.gameMode === 'random') { this.contS = this.lastCP; Store.set('rpos', this.contS); }
     const U = this.ui, E = U.el;
     E.ovDist.textContent = fmt(dist); const sm = document.createElement('small'); sm.textContent = 'm'; E.ovDist.appendChild(sm);
     E.ovScore.textContent = 'SCORE ' + fmt(score);
@@ -4037,7 +4209,7 @@ class Game {
   }
   lost(b, reason) {
     if (this.state !== 'play') return;
-    this.state = 'falling'; this.fallT = 0; this.timeScale = 0.3; this.lostS = b.s;
+    this.state = 'falling'; this.fallT = 0; this.timeScale = 0.3;
     this.endStar(true);
     this.cam.mode = 'fall';
     this.audio.fall(); this.audio.setRoll(0, false);
@@ -4144,7 +4316,7 @@ class Game {
           if (Math.hypot(this.tmp[0] - b.p[0], this.tmp[1] - b.p[1], this.tmp[2] - b.p[2]) < CFG.R + 0.5) this.coin(o);
         } else if (b.s > o.s + 2.5 && o.s > this.startS) this.coinMissed(o);
       } else if (o.kind === 'gate' && !o.passed && this.maxS >= o.s) {
-        o.passed = true; this.score += 1000; this.audio.checkpoint();
+        o.passed = true; this.lastCP = o.s; this.score += 1000; this.audio.checkpoint();
         this.ui.toast('CHECKPOINT · ' + fmt(o.cp) + ' m', 'cyan', true); this.ui.flash(0.22, 'rgb(170,245,255)');
         T.pointAt(o.s, 0, 2.6, this.tmp);
         const th = TRACK_THEMES[this.themeIdx];
@@ -4302,25 +4474,64 @@ class Game {
       }
     }
   }
+  // Reflection probe: the world seen from the ball's center, drawn into a cube map (some faces
+  // per frame, all six after a jump) so the ball mirrors the real track, coins and scenery.
+  renderProbe(lit) {
+    const R = this.R, q = this.quality.cur, eye = this.ball.p;
+    if (!q.probe || this.noProbe) { R.freeProbe(); return; }
+    if ((!R.probe || R.probe.size !== q.probe) && !R.makeProbe(q.probe)) { this.noProbe = true; return; }
+    const P = R.probe, n = R.probeReady ? q.faces : 6;
+    // one set of instance queues (props + scenery seen from the ball) serves every face
+    R.cam[0] = eye[0]; R.cam[1] = eye[1]; R.cam[2] = eye[2]; R.camF[0] = R.camF[1] = R.camF[2] = 0;
+    R.farList = [];
+    this.drawProps(); this.env.draw(R, this.time, eye);
+    const far = R.farList, pl = Object.assign({}, lit, { fogBase: eye[1] - 7 });
+    R.farList = null; R.cullFar = 160;
+    for (let k = 0; k < n; k++) {
+      R.probeFace(eye, P.next, this.time); P.next = (P.next + 1) % 6;
+      R.drawFloor(this.floorY, this.time);
+      R.litSetup(pl);
+      for (const ch of this.chunks.values()) R.drawChunk(ch);
+      R.flushBatches(true);
+      for (const it of far) { R.setFogK(it.k); R.drawProp(it.mesh, it.m, it.col, it.e); }
+      R.setFogK(1);
+    }
+    R.clearBatches(); R.cullFar = 330;
+    R.endProbe(n);
+  }
+  // The deck plane under the ball (for the reflection of the track at the contact point).
+  ballPlane() {
+    const b = this.ball, T = this.track, o = this.bplane || (this.bplane = { c: b.p, q: b.q, gN: [0, 1, 0], gD: -1e5, a: [0, 0, 0, 0], b: [0, 0, 0, 0], d: [0, 0, 0, 0] });
+    o.c = b.p; o.q = b.q;
+    if (b.lost || b.p[1] > b.surfY + 3 || b.s < T.minIndex() * CFG.DS || b.s > (T.n - 3) * CFG.DS) { o.gN[0] = 0; o.gN[1] = 1; o.gN[2] = 0; o.gD = -1e5; return o; }
+    T.pointAt(b.s, b.u - 0.5, 0, o.a); T.pointAt(b.s, b.u + 0.5, 0, o.b); T.pointAt(b.s + 0.5, b.u, 0, o.d);
+    const ux = o.b[0] - o.a[0], uy = o.b[1] - o.a[1], uz = o.b[2] - o.a[2], vx = o.d[0] - o.a[0], vy = o.d[1] - o.a[1], vz = o.d[2] - o.a[2];
+    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const l = (ny < 0 ? -1 : 1) * (Math.hypot(nx, ny, nz) || 1); nx /= l; ny /= l; nz /= l;
+    o.gN[0] = nx; o.gN[1] = ny; o.gN[2] = nz; o.gD = nx * o.a[0] + ny * o.a[1] + nz * o.a[2];
+    return o;
+  }
   render() {
     const R = this.R, cam = this.cam, b = this.ball, th = TRACK_THEMES[this.themeIdx], sk = BALL_SKINS[this.skinIdx];
     const aspect = R.w / R.h;
-    R.setCamera(cam.eye, cam.tgt, cam.roll, clamp(cam.fov, 0.6, 1.9), 0.08, 1400);
-    R.begin(this.time);
-    R.drawFloor(this.floorY, this.time);
     const Z = R.Z, boostK = clamp(b.boost / 1.3, 0, 1), spK = clamp((b.speed - 6) / 14, 0, 1), stK = this.starK;
     const glowCol = stK > 0.01 ? [lerp(sk.glow[0], STAR_COL[0], stK), lerp(sk.glow[1], STAR_COL[1], stK), lerp(sk.glow[2], STAR_COL[2], stK)] : sk.glow;
-    R.litSetup({
+    const lit = {
       time: this.time, fogDen: 0.0078, fogBase: cam.eye[1] - 7,
       ball: [b.p[0], b.p[1], b.p[2], CFG.R], ballGlow: glowCol, ballLight: 0.3 + boostK * 0.9 + stK * 1.4 + (sk.type === 2 ? 0.35 : sk.type === 1 ? 0.15 : 0),
       shadow: b.lost ? 0 : 1, collapse: this.collapseS,
-    });
+    };
+    this.renderProbe(lit);
+    R.setCamera(cam.eye, cam.tgt, cam.roll, clamp(cam.fov, 0.6, 1.9), 0.08, 1400);
+    R.begin(this.time);
+    R.drawFloor(this.floorY, this.time);
+    R.litSetup(lit);
     for (const ch of this.chunks.values()) R.drawChunk(ch);
     this.drawProps();
     this.env.draw(R, this.time, b.p);
     R.endLit();
     M4.fromTRS(this.model, b.p[0], b.p[1], b.p[2], b.q, CFG.R, CFG.R, CFG.R);
-    R.drawBall(this.model, sk, Math.max(spK, boostK), 1, stK);
+    R.drawBall(this.model, sk, Math.max(spK, boostK), 1, stK, this.ballPlane());
     // additive pass
     R.beginAdditive();
     const F = this.fx; F.begin(R.view);

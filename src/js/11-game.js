@@ -33,7 +33,7 @@ class Game {
     try { qm = new URLSearchParams(location.search).get('mode'); } catch (e) { qm = null; }
     this.gameMode = (qm === 'daily' || qm === 'random' ? qm : Store.get('mode', 'random')) === 'daily' ? 'daily' : 'random';
     this.kid = Store.get('kid', false) === true;
-    // Random mode is one endless track per player: after a fall the next run starts again near that spot.
+    // Random mode is one endless track per player: after a fall the next run starts again at the last checkpoint.
     this.rSeed = (Store.get('rseed', 0) | 0) || this.newSeed();
     this.contS = Math.max(CFG.START_S, +Store.get('rpos', 0) || 0);
     this.best = this.modeBest();
@@ -124,8 +124,7 @@ class Game {
     U.applyLang();
     E.btnTilt.textContent = tr(this.mobile ? 'playGyro' : 'play');
     const cont = this.gameMode === 'random' && this.contS > CFG.START_S + 5;
-    U.setMode(this.gameMode, (this.gameMode === 'daily' ? tr('infoDaily', { date: dayLabel(dayKey()) }) : cont ? tr('infoContinue', { d: fmt(this.contS - CFG.START_S) }) : tr('infoRandom'))
-      + (this.kid ? ' · ' + tr('kidInfo') : ''));
+    U.setMode(this.gameMode, this.gameMode === 'daily' ? tr('infoDaily', { date: dayLabel(dayKey()) }) : cont ? tr('infoContinue', { d: fmt(this.contS - CFG.START_S) }) : tr('infoRandom'));
     E.newTrack.classList.toggle('hidden', !cont);
     E.mBest.textContent = fmt(this.modeBest()) + ' m';
     const kb = U.$('tgKid'); kb.classList.toggle('off', !this.kid); kb.title = tr('kidInfo');
@@ -161,18 +160,6 @@ class Game {
   newTrack() {
     this.rSeed = this.newSeed(); this.contS = CFG.START_S; Store.set('rpos', this.contS);
     this.refreshTexts(); this.newWorld(); this.used = false;
-  }
-  // Restart point after a fall in random mode: a plain full-width stretch shortly before the spot,
-  // without holes, boosters or obstacles, so the next run does not start in trouble.
-  safeStart(s) {
-    const T = this.track, M = T.mask, lo = Math.max(this.startS, s - 55);
-    const ok = (i) => { const m = i & M; return i >= T.minIndex() && i < T.n - 1 && T.rowN[m] === 1 && T.rowAO[m * 3] && T.rowBO[m * 3] && !(T.rowF[m] & RF.BOOST); };
-    for (let t = Math.floor(s - 4); t >= lo; t -= 1) {
-      const i = Math.floor(t / CFG.DS); let good = true;
-      for (let j = i - 6; j <= i + 20 && good; j++) good = ok(j);
-      if (good && !T.objects.some((o) => (o.kind === 'post' || o.kind === 'slider') && Math.abs(o.s - t) < 10)) return t;
-    }
-    return this.startS;
   }
   bindWindow() {
     const onResize = () => { clearTimeout(this.rt); this.rt = setTimeout(() => this.resize(), 80); };
@@ -214,17 +201,26 @@ class Game {
   newWorld(seed, s0 = CFG.START_S) {
     if (seed === undefined) { seed = this.runSeed(); if (this.gameMode === 'random') s0 = this.contS; }
     for (const ch of this.chunks.values()) this.R.free(ch.mesh);
-    this.chunks.clear(); this.nextChunk = Math.max(0, Math.floor((s0 - CFG.BEHIND) / (CFG.CHUNK_ROWS * CFG.DS)) - 1);
+    this.chunks.clear();
     this.track.reset();
     this.gen = new TrackGenerator(this.track, seed);
     this.gen.fill(s0 + CFG.AHEAD + 40);
-    const O = this.track.objects; let w = 0; for (let k = 0; k < O.length; k++) if (O[k].s > s0 - 60) O[w++] = O[k]; O.length = w;
+    const O = this.track.objects;
+    if (s0 > CFG.START_S) {
+      // runs only restart on a checkpoint gate: the last one at or before s0 (or the very start)
+      let cs = CFG.START_S; for (const o of O) if (o.kind === 'gate' && o.s <= s0 + 0.5 && o.s > cs) cs = o.s;
+      s0 = cs;
+      if (this.gameMode === 'random' && this.contS !== s0) { this.contS = s0; Store.set('rpos', s0); this.refreshTexts(); }
+      for (const o of O) if (o.kind === 'gate' && o.s <= s0 + 0.5) o.passed = true;
+    }
+    this.nextChunk = Math.max(0, Math.floor((s0 - CFG.BEHIND) / (CFG.CHUNK_ROWS * CFG.DS)) - 1);
+    let w = 0; for (let k = 0; k < O.length; k++) if (O[k].s > s0 - 60) O[w++] = O[k]; O.length = w;
     const b = this.ball; b.reset();
     this.track.pointAt(s0, 0, CFG.R, this.tmp);
     b.p[0] = this.tmp[0]; b.p[1] = this.tmp[1]; b.p[2] = this.tmp[2]; b.hint = Math.floor(s0 / CFG.DS);
     const L = this.track.locate(b.p[0], b.p[2], b.hint); b.s = L.s; b.u = L.u; b.surfY = this.tmp[1] - CFG.R;
     this.physics.collapseS = this.collapseS = -1e9; this.physics.kid = this.kid; this.physics.time = 0;
-    this.lostS = 0; this.lookRef = null;
+    this.lastCP = b.s; this.lookRef = null;
     this.startS = b.s; this.maxS = b.s; this.score = 0; this.dist = 0; this.mult = 1; this.recordShown = false;
     this.danger = 0; this.timeScale = 1; this.acc = 0; this.runT = 0;
     // star power: coins fill the gauge, a streak of coins raises the coin multiplier
@@ -238,6 +234,7 @@ class Game {
     this.env.reset(this.track, b.s, this.quality.cur.env, this.quality.cur.dust, this.R.meshes);
     this.floorY = b.surfY - 62; this.zoneIdx = 0; this.R.setZones(0, 0, 0);
     this.fx.resetTrail(b.p);
+    this.R.resetProbe();
     this.cam.snap(b, this.track, this.R.w / this.R.h);
   }
   updateChunks(maxBuild) {
@@ -334,7 +331,7 @@ class Game {
     if (beat) { this.best = dist; this.saveBest(dist); }
     const record = beat && dist >= 10;                 // no fanfare for trivial distances
     if (score > this.bestScore) { this.bestScore = score; Store.set('bestScore', score); }
-    if (this.gameMode === 'random') { this.contS = this.safeStart(Math.min(this.lostS || this.ball.s, this.maxS)); Store.set('rpos', this.contS); }
+    if (this.gameMode === 'random') { this.contS = this.lastCP; Store.set('rpos', this.contS); }
     const U = this.ui, E = U.el;
     E.ovDist.textContent = fmt(dist); const sm = document.createElement('small'); sm.textContent = 'm'; E.ovDist.appendChild(sm);
     E.ovScore.textContent = 'SCORE ' + fmt(score);
@@ -386,7 +383,7 @@ class Game {
   }
   lost(b, reason) {
     if (this.state !== 'play') return;
-    this.state = 'falling'; this.fallT = 0; this.timeScale = 0.3; this.lostS = b.s;
+    this.state = 'falling'; this.fallT = 0; this.timeScale = 0.3;
     this.endStar(true);
     this.cam.mode = 'fall';
     this.audio.fall(); this.audio.setRoll(0, false);
@@ -493,7 +490,7 @@ class Game {
           if (Math.hypot(this.tmp[0] - b.p[0], this.tmp[1] - b.p[1], this.tmp[2] - b.p[2]) < CFG.R + 0.5) this.coin(o);
         } else if (b.s > o.s + 2.5 && o.s > this.startS) this.coinMissed(o);
       } else if (o.kind === 'gate' && !o.passed && this.maxS >= o.s) {
-        o.passed = true; this.score += 1000; this.audio.checkpoint();
+        o.passed = true; this.lastCP = o.s; this.score += 1000; this.audio.checkpoint();
         this.ui.toast('CHECKPOINT · ' + fmt(o.cp) + ' m', 'cyan', true); this.ui.flash(0.22, 'rgb(170,245,255)');
         T.pointAt(o.s, 0, 2.6, this.tmp);
         const th = TRACK_THEMES[this.themeIdx];
@@ -651,25 +648,64 @@ class Game {
       }
     }
   }
+  // Reflection probe: the world seen from the ball's center, drawn into a cube map (some faces
+  // per frame, all six after a jump) so the ball mirrors the real track, coins and scenery.
+  renderProbe(lit) {
+    const R = this.R, q = this.quality.cur, eye = this.ball.p;
+    if (!q.probe || this.noProbe) { R.freeProbe(); return; }
+    if ((!R.probe || R.probe.size !== q.probe) && !R.makeProbe(q.probe)) { this.noProbe = true; return; }
+    const P = R.probe, n = R.probeReady ? q.faces : 6;
+    // one set of instance queues (props + scenery seen from the ball) serves every face
+    R.cam[0] = eye[0]; R.cam[1] = eye[1]; R.cam[2] = eye[2]; R.camF[0] = R.camF[1] = R.camF[2] = 0;
+    R.farList = [];
+    this.drawProps(); this.env.draw(R, this.time, eye);
+    const far = R.farList, pl = Object.assign({}, lit, { fogBase: eye[1] - 7 });
+    R.farList = null; R.cullFar = 160;
+    for (let k = 0; k < n; k++) {
+      R.probeFace(eye, P.next, this.time); P.next = (P.next + 1) % 6;
+      R.drawFloor(this.floorY, this.time);
+      R.litSetup(pl);
+      for (const ch of this.chunks.values()) R.drawChunk(ch);
+      R.flushBatches(true);
+      for (const it of far) { R.setFogK(it.k); R.drawProp(it.mesh, it.m, it.col, it.e); }
+      R.setFogK(1);
+    }
+    R.clearBatches(); R.cullFar = 330;
+    R.endProbe(n);
+  }
+  // The deck plane under the ball (for the reflection of the track at the contact point).
+  ballPlane() {
+    const b = this.ball, T = this.track, o = this.bplane || (this.bplane = { c: b.p, q: b.q, gN: [0, 1, 0], gD: -1e5, a: [0, 0, 0, 0], b: [0, 0, 0, 0], d: [0, 0, 0, 0] });
+    o.c = b.p; o.q = b.q;
+    if (b.lost || b.p[1] > b.surfY + 3 || b.s < T.minIndex() * CFG.DS || b.s > (T.n - 3) * CFG.DS) { o.gN[0] = 0; o.gN[1] = 1; o.gN[2] = 0; o.gD = -1e5; return o; }
+    T.pointAt(b.s, b.u - 0.5, 0, o.a); T.pointAt(b.s, b.u + 0.5, 0, o.b); T.pointAt(b.s + 0.5, b.u, 0, o.d);
+    const ux = o.b[0] - o.a[0], uy = o.b[1] - o.a[1], uz = o.b[2] - o.a[2], vx = o.d[0] - o.a[0], vy = o.d[1] - o.a[1], vz = o.d[2] - o.a[2];
+    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const l = (ny < 0 ? -1 : 1) * (Math.hypot(nx, ny, nz) || 1); nx /= l; ny /= l; nz /= l;
+    o.gN[0] = nx; o.gN[1] = ny; o.gN[2] = nz; o.gD = nx * o.a[0] + ny * o.a[1] + nz * o.a[2];
+    return o;
+  }
   render() {
     const R = this.R, cam = this.cam, b = this.ball, th = TRACK_THEMES[this.themeIdx], sk = BALL_SKINS[this.skinIdx];
     const aspect = R.w / R.h;
-    R.setCamera(cam.eye, cam.tgt, cam.roll, clamp(cam.fov, 0.6, 1.9), 0.08, 1400);
-    R.begin(this.time);
-    R.drawFloor(this.floorY, this.time);
     const Z = R.Z, boostK = clamp(b.boost / 1.3, 0, 1), spK = clamp((b.speed - 6) / 14, 0, 1), stK = this.starK;
     const glowCol = stK > 0.01 ? [lerp(sk.glow[0], STAR_COL[0], stK), lerp(sk.glow[1], STAR_COL[1], stK), lerp(sk.glow[2], STAR_COL[2], stK)] : sk.glow;
-    R.litSetup({
+    const lit = {
       time: this.time, fogDen: 0.0078, fogBase: cam.eye[1] - 7,
       ball: [b.p[0], b.p[1], b.p[2], CFG.R], ballGlow: glowCol, ballLight: 0.3 + boostK * 0.9 + stK * 1.4 + (sk.type === 2 ? 0.35 : sk.type === 1 ? 0.15 : 0),
       shadow: b.lost ? 0 : 1, collapse: this.collapseS,
-    });
+    };
+    this.renderProbe(lit);
+    R.setCamera(cam.eye, cam.tgt, cam.roll, clamp(cam.fov, 0.6, 1.9), 0.08, 1400);
+    R.begin(this.time);
+    R.drawFloor(this.floorY, this.time);
+    R.litSetup(lit);
     for (const ch of this.chunks.values()) R.drawChunk(ch);
     this.drawProps();
     this.env.draw(R, this.time, b.p);
     R.endLit();
     M4.fromTRS(this.model, b.p[0], b.p[1], b.p[2], b.q, CFG.R, CFG.R, CFG.R);
-    R.drawBall(this.model, sk, Math.max(spK, boostK), 1, stK);
+    R.drawBall(this.model, sk, Math.max(spK, boostK), 1, stK, this.ballPlane());
     // additive pass
     R.beginAdditive();
     const F = this.fx; F.begin(R.view);

@@ -129,8 +129,8 @@ body.star #starGlow{opacity:1}
   filter:drop-shadow(0 6px 30px rgba(78,242,255,.35)) drop-shadow(0 2px 2px rgba(0,0,0,.6))}
 @keyframes shine{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
 #tagline{margin-top:10px;font-size:clamp(17px,4.6vw,22px);font-style:italic;font-weight:500;letter-spacing:.04em;color:rgba(235,245,255,.85);text-shadow:0 2px 8px #000}
-.bigBtn{margin-top:30px;min-height:64px;padding:18px 26px;border-radius:20px;font-size:16px;font-weight:900;letter-spacing:.08em;line-height:1.25;
-  max-width:420px;width:100%;color:#051018;
+.bigBtn{margin-top:30px;height:64px;padding:0 20px;border-radius:20px;font-size:16px;font-weight:900;letter-spacing:.08em;line-height:1.2;
+  max-width:420px;width:100%;color:#051018;display:flex;align-items:center;justify-content:center;
   background:linear-gradient(135deg,#8ff8ff 0%,var(--accent) 45%,#35b7ff 100%);
   box-shadow:0 10px 40px rgba(78,242,255,.35),inset 0 1px 0 rgba(255,255,255,.7),inset 0 -3px 0 rgba(0,40,80,.25);
   position:relative;overflow:hidden}
@@ -155,21 +155,28 @@ body.star #starGlow{opacity:1}
 .seg button{min-height:38px;padding:6px 12px;border-radius:11px;font-size:12px;font-weight:900;letter-spacing:.12em;color:var(--dim);transition:background .2s,color .2s}
 .seg button.on{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
 #modeSeg{margin-top:20px}
-#modeSeg button{min-width:128px;min-height:44px;font-size:13px}
-#tgKid{margin-top:10px}
-.linkBtn{background:none;border:0;padding:6px 4px;margin-left:4px;font:inherit;font-weight:900;letter-spacing:.08em;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+#modeSeg button{width:142px;min-height:44px;padding:6px 4px;font-size:13px;white-space:nowrap}
+#tgKid{margin-top:10px;width:290px;max-width:100%;justify-content:center;white-space:nowrap}
+.linkBtn{background:none;border:0;padding:2px 6px;font:inherit;font-weight:900;letter-spacing:.08em;line-height:16px;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 #tgKid:not(.off){color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold));border-color:transparent}
 #ovRails{margin-top:10px;padding:6px 14px;border-radius:12px;font-size:13px;font-weight:800;letter-spacing:.06em;color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold))}
-#modeInfo{margin-top:8px;font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.04em;min-height:16px;text-shadow:0 2px 6px #000}
+#modeInfo{margin-top:6px;height:40px;width:100%;max-width:380px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:12px;line-height:16px;font-weight:700;color:var(--dim);letter-spacing:.04em;text-shadow:0 2px 6px #000}
 .tgRow{display:flex;gap:8px}
 .tg{min-height:44px;padding:0 13px;border-radius:14px;background:var(--glass);border:1px solid var(--glass-brd);display:inline-flex;align-items:center;gap:7px;
   font-size:11px;font-weight:900;letter-spacing:.12em;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);transition:color .2s,opacity .2s}
-.tg .ic{font-size:17px;letter-spacing:0;position:relative;line-height:1}
+.tg.icon{width:44px;padding:0;justify-content:center;color:#fff}
+.ic{width:22px;height:22px;flex:none;fill:currentColor;overflow:visible}
+.ic .stk{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ic .cut{fill:none;stroke:#0c1122;stroke-width:5.5;stroke-linecap:round}
+.ic .mute,.ic .cut,.ic .slash{display:none}
 .tg.off{color:rgba(255,255,255,.42)}
-.tg.off .ic::after{content:"";position:absolute;left:-3px;right:-3px;top:50%;height:2px;background:#ff6a8a;transform:rotate(-40deg);border-radius:1px}
+.tg.icon.off{color:rgba(255,255,255,.55)}
+.tg.off .ic .wave{display:none}
+.tg.off .ic .mute,.tg.off .ic .cut,.tg.off .ic .slash{display:inline}
 .tg:active{transform:scale(.95)}
 .skins{margin-top:20px;display:flex;flex-direction:column;gap:10px;align-items:center;width:100%;max-width:420px}
-.skinName{font-size:12px;font-weight:700;letter-spacing:.14em;color:rgba(255,255,255,.75);min-height:16px}
+.skinName{font-size:12px;font-weight:700;letter-spacing:.14em;color:rgba(255,255,255,.75);height:16px;line-height:16px;white-space:nowrap}
 .ghostBtn.small{min-height:42px;margin-top:14px;padding:8px 18px;width:auto;font-size:12px}
 .shareBtn{position:relative;overflow:hidden}
 .shareBtn .prog{position:absolute;left:0;bottom:0;height:3px;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .2s}
@@ -178,7 +185,6 @@ body.star #starGlow{opacity:1}
 @keyframes shReady{from{box-shadow:0 0 0 1px var(--accent),0 0 8px rgba(78,242,255,.25)}to{box-shadow:0 0 0 2px var(--accent),0 0 24px rgba(78,242,255,.6)}}
 #ovMode{margin-top:6px;font-size:12px;font-weight:800;letter-spacing:.2em;color:var(--accent)}
 #pause .skins{margin-top:16px}
-#pause .volRow .tg{width:130px;justify-content:center}
 #permMsg{margin-top:14px;font-size:13px;font-weight:700;color:#ffb3c7;max-width:380px;text-shadow:0 2px 6px #000}
 
 #calib{background:rgba(5,6,13,.25)}
@@ -197,7 +203,6 @@ body.star #starGlow{opacity:1}
 #pause h2,#over h2{font-size:clamp(40px,12vw,64px);font-weight:900;letter-spacing:.1em;margin-right:-.1em;text-shadow:0 4px 20px rgba(0,0,0,.8)}
 #pause{background:rgba(5,6,13,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .volRow{margin-top:14px;display:flex;align-items:center;gap:12px;width:100%;max-width:360px}
-.volRow span{font-size:11px;font-weight:800;letter-spacing:.2em;color:var(--dim);width:64px;text-align:left}
 input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:rgba(255,255,255,.18);outline:none}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px rgba(78,242,255,.35)}
 input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:#fff;border:0}
@@ -226,12 +231,12 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 .mcol{display:flex;flex-direction:column;align-items:center;width:100%}
 #mLeft #menuBest{order:3}
 @media (orientation:portrait){ #menuBest{margin-top:12px} #mRight{margin-top:0} #menu .bigBtn{margin-top:22px} }
-@media (orientation:portrait) and (max-height:700px){ #tagline{margin-top:4px} #modeSeg{margin-top:12px} #menu .bigBtn{margin-top:14px;min-height:56px} .skins{margin-top:12px} .sw{width:40px;height:40px} #menuBest{margin-top:8px} }
+@media (orientation:portrait) and (max-height:700px){ #tagline{margin-top:4px} #modeSeg{margin-top:12px} #menu .bigBtn{margin-top:14px;height:56px} .skins{margin-top:12px} .sw{width:40px;height:40px} #menuBest{margin-top:8px} }
 @media (orientation:landscape) and (max-height:560px){
   #menu{flex-direction:row;gap:4vw}
   .mcol{flex:1;max-width:440px}
   #title{font-size:clamp(52px,18vh,110px)}
-  .bigBtn{margin-top:0;min-height:52px;padding:12px 20px;font-size:14px}
+  .bigBtn{margin-top:0;height:52px;font-size:14px}
   .ghostBtn{min-height:44px;margin-top:10px;padding:8px 18px}
   .hint{margin-top:8px;font-size:12px}
   .skins{margin-top:10px;gap:6px}
@@ -281,14 +286,14 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 <div class="screen" id="menu">
   <div id="menuTop">
     <div class="seg" id="langSeg"><button data-lang="fr">FR</button><button data-lang="en">EN</button></div>
-    <div class="tgRow"><button class="tg tgMusic"><span class="ic">♫</span><span data-i18n="music"></span></button><button class="tg tgSfx"><span class="ic">🔊</span><span data-i18n="sfx"></span></button></div>
+    <div class="tgRow"><button class="tg icon tgMusic" data-i18n-aria="music"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M8.6 17.4V6.2l11.2-2.7v11.4M8.6 9.6l11.2-2.7"/><ellipse cx="6" cy="17.6" rx="2.9" ry="2.3" transform="rotate(-18 6 17.6)"/><ellipse cx="17.2" cy="15" rx="2.9" ry="2.3" transform="rotate(-18 17.2 15)"/><path class="cut" d="M3.5 3.5l17 17"/><path class="stk slash" d="M3.5 3.5l17 17"/></svg></button><button class="tg icon tgSfx" data-i18n-aria="sfx"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 9h3.7l4.7-4c.6-.5 1.5-.1 1.5.7v12.6c0 .8-.9 1.2-1.5.7l-4.7-4H3.4c-.6 0-1-.4-1-1V10c0-.6.4-1 1-1z"/><path class="stk wave" d="M16.3 9.3a3.8 3.8 0 0 1 0 5.4"/><path class="stk wave" d="M19 6.6a7.6 7.6 0 0 1 0 10.8"/><path class="stk mute" d="M16.6 9.6l4.8 4.8M21.4 9.6l-4.8 4.8"/></svg></button></div>
   </div>
   <div class="mcol" id="mLeft">
     <div id="title">GYROLL</div>
     <div id="tagline">How far can you go?</div>
     <div class="seg" id="modeSeg"><button data-mode="random" data-i18n="modeRandom"></button><button data-mode="daily" data-i18n="modeDaily"></button></div>
-    <div id="modeInfo"><span id="modeTxt"></span> <button class="linkBtn hidden" id="btnNewTrack" data-i18n="newTrack"></button></div>
-    <button class="tg" id="tgKid"><span class="ic">🛡</span><span data-i18n="kid"></span></button>
+    <div id="modeInfo"><span id="modeTxt"></span><button class="linkBtn hidden" id="btnNewTrack" data-i18n="newTrack"></button></div>
+    <button class="tg" id="tgKid"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 2.9l7.4 2.8v5.5c0 4.6-3 8.5-7.4 9.9-4.4-1.4-7.4-5.3-7.4-9.9V5.7z"/><path class="stk" d="M8.6 12.1l2.4 2.4 4.5-4.6"/></svg><span data-i18n="kid"></span></button>
     <div id="menuBest">BEST <span class="num" id="mBest">0 m</span></div>
   </div>
   <div class="mcol" id="mRight">
@@ -311,8 +316,8 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   <h2 data-i18n="pause"></h2>
   <button class="bigBtn" id="btnResume" data-i18n="resume"></button>
   <button class="ghostBtn" id="btnRecal" data-i18n="recal"></button>
-  <div class="volRow"><button class="tg tgMusic"><span class="ic">♫</span><span data-i18n="music"></span></button><input type="range" id="volMusic" min="0" max="100" value="60"></div>
-  <div class="volRow"><button class="tg tgSfx"><span class="ic">🔊</span><span data-i18n="sfx"></span></button><input type="range" id="volSfx" min="0" max="100" value="80"></div>
+  <div class="volRow"><button class="tg icon tgMusic" data-i18n-aria="music"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M8.6 17.4V6.2l11.2-2.7v11.4M8.6 9.6l11.2-2.7"/><ellipse cx="6" cy="17.6" rx="2.9" ry="2.3" transform="rotate(-18 6 17.6)"/><ellipse cx="17.2" cy="15" rx="2.9" ry="2.3" transform="rotate(-18 17.2 15)"/><path class="cut" d="M3.5 3.5l17 17"/><path class="stk slash" d="M3.5 3.5l17 17"/></svg></button><input type="range" id="volMusic" min="0" max="100" value="60"></div>
+  <div class="volRow"><button class="tg icon tgSfx" data-i18n-aria="sfx"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 9h3.7l4.7-4c.6-.5 1.5-.1 1.5.7v12.6c0 .8-.9 1.2-1.5.7l-4.7-4H3.4c-.6 0-1-.4-1-1V10c0-.6.4-1 1-1z"/><path class="stk wave" d="M16.3 9.3a3.8 3.8 0 0 1 0 5.4"/><path class="stk wave" d="M19 6.6a7.6 7.6 0 0 1 0 10.8"/><path class="stk mute" d="M16.6 9.6l4.8 4.8M21.4 9.6l-4.8 4.8"/></svg></button><input type="range" id="volSfx" min="0" max="100" value="80"></div>
   <div class="skins" id="skinsPause"></div>
   <button class="ghostBtn" id="btnQuit" data-i18n="mainMenu"></button>
 </div>

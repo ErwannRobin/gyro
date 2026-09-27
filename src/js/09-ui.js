@@ -5,10 +5,11 @@
 class QualityManager {
   constructor(mobile) {
     this.levels = [
-      { scale: 0.75, post: false, particles: 160, dust: 40, env: 10, bloomDiv: 4, blur: false },
-      { scale: 1.0, post: true, particles: 300, dust: 70, env: 14, bloomDiv: 4, blur: false },
-      { scale: 1.5, post: true, particles: 480, dust: 110, env: 18, bloomDiv: 4, blur: true },
-      { scale: 2.0, post: true, particles: 720, dust: 150, env: 24, bloomDiv: 3, blur: true },
+      // probe: size of the ball's reflection cube map (0 = sky panorama only), faces: cube faces redrawn per frame
+      { scale: 0.75, post: false, particles: 160, dust: 40, env: 10, bloomDiv: 4, blur: false, probe: 0, faces: 0 },
+      { scale: 1.0, post: true, particles: 300, dust: 70, env: 14, bloomDiv: 4, blur: false, probe: 64, faces: 2 },
+      { scale: 1.5, post: true, particles: 480, dust: 110, env: 18, bloomDiv: 4, blur: true, probe: 128, faces: 3 },
+      { scale: 2.0, post: true, particles: 720, dust: 150, env: 24, bloomDiv: 3, blur: true, probe: 256, faces: 6 },
     ];
     this.top = mobile ? 2 : 3; this.level = this.top;
     this.acc = 0; this.frames = 0; this.good = 0; this.drops = 0; this.warm = 2.5; this.changed = false;
@@ -67,12 +68,13 @@ class UI {
   applyLang() {
     document.documentElement.lang = LANG;
     for (const e of document.querySelectorAll('[data-i18n]')) e.textContent = tr(e.dataset.i18n);
+    for (const e of document.querySelectorAll('[data-i18n-aria]')) { const t = tr(e.dataset.i18nAria); e.setAttribute('aria-label', t); e.title = t; }
     for (const b of document.querySelectorAll('#langSeg button')) b.classList.toggle('on', b.dataset.lang === LANG);
     this.refreshSkinLabels();
   }
   setToggles(musicOn, sfxOn) {
     for (const b of document.querySelectorAll('.tgMusic')) b.classList.toggle('off', !musicOn);
-    for (const b of document.querySelectorAll('.tgSfx')) { b.classList.toggle('off', !sfxOn); b.querySelector('.ic').textContent = sfxOn ? '🔊' : '🔈'; }
+    for (const b of document.querySelectorAll('.tgSfx')) b.classList.toggle('off', !sfxOn);
   }
   setMode(mode, info) {
     for (const b of document.querySelectorAll('#modeSeg button')) b.classList.toggle('on', b.dataset.mode === mode);

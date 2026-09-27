@@ -2,6 +2,9 @@
 // =====================================================================
 // Renderer — WebGL1 forward renderer with optional bloom post chain.
 // =====================================================================
+// Cube map faces (+X −X +Y −Y +Z −Z): view direction and the up vector that matches the GL layout.
+const CUBE_FACES = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]].map((d, i) => Object.assign(d, { up: i === 2 ? [0, 0, 1] : i === 3 ? [0, 0, -1] : [0, -1, 0] }));
+
 class Renderer {
   constructor(canvas) {
     this.cv = canvas;
@@ -32,7 +35,11 @@ class Renderer {
     this.pLit = this.inst ? this.program('#define INST\n' + VS_LIT, FS_LIT, litAttrs.concat(['a_m0', 'a_m1', 'a_m2', 'a_m3', 'a_ic'])) : this.program(VS_LIT, FS_LIT, litAttrs);
     if (this.inst) for (let i = 5; i < 10; i++) this.inst.vertexAttribDivisorANGLE(i, 1);
     this.instBuf = gl.createBuffer(); this.batches = new Map(); this.drawCalls = 0;
-    this.pBall = this.program(VS_BALL, FS_BALL, ['a_pos', 'a_nrm']);
+    // exact mip level control for the reflection probe when the device has it
+    this.lodExt = gl.getExtension('EXT_shader_texture_lod');
+    this.pBall = this.program(VS_BALL, (this.lodExt ? '#extension GL_EXT_shader_texture_lod : enable\n#define LOD 1\n' : '') + FS_BALL, ['a_pos', 'a_nrm']);
+    this.probe = null; this.farList = null; this.cullFar = 330;
+    this.rot = new Float32Array(9); this.irot = new Float32Array(9);
     this.pSky = this.program(VS_SKY, FS_SKY, ['a_pos']);
     this.pPts = this.program(VS_PTS, FS_PTS, ['a_pos', 'a_col', 'a_size']);
     this.pFx = this.program(VS_FX, FS_FX, ['a_pos', 'a_uv', 'a_col']);
@@ -47,7 +54,7 @@ class Renderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.triBuf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
     this.meshes = {
-      ball: this.upload(Prims.sphere(40, 28)), gem: this.upload(Prims.gem()), post: this.upload(Prims.cylinder(18, 9)),
+      ball: this.upload(Prims.sphere(64, 40)), gem: this.upload(Prims.gem()), post: this.upload(Prims.cylinder(18, 9)),
       slider: this.upload(Prims.box(8)), gate: this.upload(Prims.gate()), mono: this.upload(Prims.box(11)),
       ring: this.upload(Prims.torus(1, 0.035, 64, 6)), cube: this.upload(Prims.box(3)),
       tower: this.upload(Prims.box(13)), pyramid: this.upload(Prims.pyramid()),
@@ -221,7 +228,10 @@ class Renderer {
     gl.viewport(0, 0, this.w, this.h);
     gl.disable(gl.CULL_FACE);
     gl.depthMask(true); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    // sky
+    this.drawSky(time, true);
+  }
+  drawSky(time, stars) {
+    const gl = this.gl;
     gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
     const Z = this.Z, p = this.use(this.pSky);
     gl.uniformMatrix4fv(p.u('u_invVP'), false, this.invVP);
@@ -231,16 +241,72 @@ class Renderer {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.triBuf); this.attribs(1);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 8, 0);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
-    // stars (at infinity, additive)
-    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
-    const q = this.use(this.pPts);
-    gl.uniformMatrix4fv(q.u('u_vp'), false, this.vp); gl.uniform3fv(q.u('u_off'), this.cam);
-    gl.uniform1f(q.u('u_px'), this.h); gl.uniform1f(q.u('u_persp'), 0); gl.uniform1f(q.u('u_time'), time % 1000); gl.uniform1f(q.u('u_k'), Z.stars);
-    this.bindPts(this.starBuf);
-    gl.drawArrays(gl.POINTS, 0, this.starCount);
-    gl.disable(gl.BLEND);
+    if (stars) {                                   // stars (at infinity, additive)
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+      const q = this.use(this.pPts);
+      gl.uniformMatrix4fv(q.u('u_vp'), false, this.vp); gl.uniform3fv(q.u('u_off'), this.cam);
+      gl.uniform1f(q.u('u_px'), this.h); gl.uniform1f(q.u('u_persp'), 0); gl.uniform1f(q.u('u_time'), time % 1000); gl.uniform1f(q.u('u_k'), Z.stars);
+      this.bindPts(this.starBuf);
+      gl.drawArrays(gl.POINTS, 0, this.starCount);
+      gl.disable(gl.BLEND);
+    }
     gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
   }
+
+  // ------------------------------------------------------------- reflection probe
+  // A cube map rendered from the ball's center, so the ball mirrors the real track, coins and
+  // scenery around it. The game fills it a few faces per frame (see Game.renderProbe).
+  makeProbe(size) {
+    const gl = this.gl;
+    this.freeProbe();
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, tex);
+    for (let f = 0; f < 6; f++) gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + f, 0, gl.RGBA, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+    const rb = gl.createRenderbuffer(); gl.bindRenderbuffer(gl.RENDERBUFFER, rb);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, size, size);
+    const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, rb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X, tex, 0);
+    const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+    this.probe = { tex, fb, rb, size, mips: Math.log2(size), next: 0, done: 0 };
+    if (!ok) { this.freeProbe(); return false; }
+    return true;
+  }
+  freeProbe() {
+    const P = this.probe; if (!P) return;
+    const gl = this.gl; gl.deleteFramebuffer(P.fb); gl.deleteRenderbuffer(P.rb); gl.deleteTexture(P.tex);
+    this.probe = null;
+  }
+  // The next faces must all be redrawn before the probe is used again (the ball jumped).
+  resetProbe() { if (this.probe) this.probe.done = 0; }
+  // Binds cube face f as the target, looking from `eye`, and draws the sky into it.
+  probeFace(eye, f, time) {
+    const gl = this.gl, P = this.probe, d = CUBE_FACES[f];
+    M4.perspective(this.proj, Math.PI / 2, 1, 0.05, 1400);
+    const t = this.tmpT || (this.tmpT = [0, 0, 0]); t[0] = eye[0] + d[0]; t[1] = eye[1] + d[1]; t[2] = eye[2] + d[2];
+    M4.lookAt(this.view, eye, t, d.up, 0);
+    M4.mul(this.vp, this.proj, this.view); M4.invert(this.invVP, this.vp);
+    this.cam[0] = eye[0]; this.cam[1] = eye[1]; this.cam[2] = eye[2];
+    this.camF[0] = d[0]; this.camF[1] = d[1]; this.camF[2] = d[2];
+    this.time = time; this.cur = null;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, P.fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X + f, P.tex, 0);
+    gl.viewport(0, 0, P.size, P.size);
+    gl.disable(gl.CULL_FACE); gl.depthMask(true); gl.clear(gl.DEPTH_BUFFER_BIT);
+    this.drawSky(time, false);
+  }
+  endProbe(faces) {
+    const gl = this.gl, P = this.probe;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, P.tex); gl.generateMipmap(gl.TEXTURE_CUBE_MAP); gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+    P.done = Math.min(6, P.done + faces);
+  }
+  get probeReady() { return !!this.probe && this.probe.done >= 6; }
   drawFloor(y, time) {
     const gl = this.gl, Z = this.Z, A = ZONES[this.zA], B = ZONES[this.zB], p = this.use(this.pFloor);
     gl.uniformMatrix4fv(p.u('u_vp'), false, this.vp); gl.uniform3fv(p.u('u_cam'), this.cam); gl.uniform1f(p.u('u_y'), y);
@@ -280,7 +346,7 @@ class Renderer {
   drawChunk(ch) {
     const dx = ch.cx - this.cam[0], dy = ch.cy - this.cam[1], dz = ch.cz - this.cam[2];
     const d = dx * this.camF[0] + dy * this.camF[1] + dz * this.camF[2];
-    if (d < -ch.rad || Math.hypot(dx, dy, dz) - ch.rad > 330) return;
+    if (d < -ch.rad || Math.hypot(dx, dy, dz) - ch.rad > this.cullFar) return;
     this.bindMesh(ch.mesh, 5);
     this.gl.drawElements(this.gl.TRIANGLES, ch.mesh.count, this.gl.UNSIGNED_SHORT, 0);
   }
@@ -308,7 +374,8 @@ class Renderer {
     d.set(model, o); d[o + 16] = color[0]; d[o + 17] = color[1]; d[o + 18] = color[2]; d[o + 19] = emis;
     b.n++;
   }
-  flushBatches() {
+  // keep: leave the queues filled (the reflection probe draws them once per cube face).
+  flushBatches(keep) {
     const gl = this.gl, p = this.pLit;
     for (const b of this.batches.values()) {
       if (!b.n) continue;
@@ -329,9 +396,10 @@ class Renderer {
           gl.drawElements(gl.TRIANGLES, b.mesh.count, gl.UNSIGNED_SHORT, 0);
         }
       }
-      b.n = 0;
+      if (!keep) b.n = 0;
     }
   }
+  clearBatches() { for (const b of this.batches.values()) b.n = 0; }
   setFogK(k) { this.gl.uniform1f(this.pLit.u('u_fogK'), k); }
   endLit() {
     this.flushBatches();
@@ -339,18 +407,31 @@ class Renderer {
     else this.gl.uniformMatrix4fv(this.pLit.u('u_model'), false, this.ident);
   }
 
-  drawBall(model, skin, speed, fade, star = 0) {
+  // o: { c: center, q: rotation quaternion, gN, gD: deck plane under the ball (dot(x, gN) = gD) }
+  drawBall(model, skin, speed, fade, star, o) {
     const gl = this.gl, T = this.theme, p = this.use(this.pBall);
     gl.uniformMatrix4fv(p.u('u_vp'), false, this.vp); gl.uniformMatrix4fv(p.u('u_model'), false, model);
     const Z = this.Z;
     gl.uniform3fv(p.u('u_cam'), this.cam); gl.uniform3fv(p.u('u_sunDir'), this.sunDir); gl.uniform3fv(p.u('u_sunCol'), Z.sun);
-    gl.uniform3fv(p.u('u_floor'), T.deckA); gl.uniform3fv(p.u('u_accent'), T.accent); gl.uniform3fv(p.u('u_skyMid'), Z.skyMid); gl.uniform3fv(p.u('u_abyss'), Z.abyss);
-    gl.uniform3fv(p.u('u_base'), skin.base); gl.uniform3fv(p.u('u_glowCol'), skin.glow); gl.uniform1f(p.u('u_type'), skin.type);
+    gl.uniform3fv(p.u('u_floor'), T.deckA); gl.uniform3fv(p.u('u_accent'), T.accent);
+    gl.uniform3fv(p.u('u_base'), skin.base); gl.uniform3fv(p.u('u_glowCol'), skin.glow); gl.uniform1f(p.u('u_type'), skin.type); gl.uniform1f(p.u('u_rough'), skin.rough);
     gl.uniform1f(p.u('u_time'), this.time % 1000); gl.uniform1f(p.u('u_speed'), speed); gl.uniform1f(p.u('u_fade'), fade); gl.uniform1f(p.u('u_star'), star);
     this.bindZoneTex(p, 'mid', 'u_env', 'u_env2', 0, 1); this.bindZoneTex(p, 'blur', 'u_envBlur', 'u_envBlur2', 2, 3);
     gl.uniform1f(p.u('u_envMix'), this.zMix);
+    // rotation (object → world) and its inverse for the patterns that roll with the ball
+    const q = o.q, x = q[0], y = q[1], z = q[2], w = q[3], r = this.rot, ir = this.irot;
+    r[0] = 1 - 2 * (y * y + z * z); r[1] = 2 * (x * y + w * z); r[2] = 2 * (x * z - w * y);
+    r[3] = 2 * (x * y - w * z); r[4] = 1 - 2 * (x * x + z * z); r[5] = 2 * (y * z + w * x);
+    r[6] = 2 * (x * z + w * y); r[7] = 2 * (y * z - w * x); r[8] = 1 - 2 * (x * x + y * y);
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) ir[i * 3 + j] = r[j * 3 + i];
+    gl.uniformMatrix3fv(p.u('u_rot'), false, r); gl.uniformMatrix3fv(p.u('u_irot'), false, ir);
+    gl.uniform3fv(p.u('u_center'), o.c); gl.uniform3fv(p.u('u_gN'), o.gN); gl.uniform1f(p.u('u_gD'), o.gD);
+    const P = this.probeReady ? this.probe : null;
+    gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_CUBE_MAP, P ? P.tex : null); gl.uniform1i(p.u('u_probe'), 4); gl.activeTexture(gl.TEXTURE0);
+    gl.uniform1f(p.u('u_probeOn'), P ? 1 : 0); gl.uniform1f(p.u('u_probeMips'), P ? P.mips : 0);
     this.bindMesh(this.meshes.ball, 2);
     gl.drawElements(gl.TRIANGLES, this.meshes.ball.count, gl.UNSIGNED_SHORT, 0);
+    gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_CUBE_MAP, null); gl.activeTexture(gl.TEXTURE0);
   }
 
   beginAdditive() { const gl = this.gl; gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE); gl.depthMask(false); }

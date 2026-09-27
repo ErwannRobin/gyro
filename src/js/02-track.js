@@ -127,11 +127,6 @@ class TrackGenerator {
     T.rowN[m] = 1; T.rowF[m] = 0;
     T.rowA[m * 3] = -this.w / 2; T.rowB[m * 3] = this.w / 2; T.rowAO[m * 3] = 1; T.rowBO[m * 3] = 1;
     if (sec.row) sec.row(k, m, s);
-    if (s >= this.nextCheck) {
-      T.rowF[m] |= RF.CHECK;
-      T.objects.push({ kind: 'gate', s: s, u: 0, id: this.count++, cp: Math.round(this.nextCheck - CFG.START_S) });
-      this.nextCheck += CFG.CHECKPOINT;
-    }
     if (sec.spawn) sec.spawn(k, s);
 
     // integrate centerline
@@ -160,6 +155,7 @@ class TrackGenerator {
     const s = this.T.n * CFG.DS, d = this.diff(s), r = this.rng;
     const W = lerp(3.3, 2.25, d);
     if (this.T.n === 0) return this.startPad();
+    if (s >= this.nextCheck) return this.checkPad(W);
     if (this.breathe) { this.breathe = false; const L = lerp(9, 3, d) + r.range(0, 4); return this.mk(L, () => this.flat(W, -0.02), null, null, 'breather'); }
     this.breathe = r.chance(lerp(0.9, 0.45, d));
 
@@ -193,6 +189,16 @@ class TrackGenerator {
   // ------------------------------------------------------------- sections
   startPad() {
     return this.mk(34, () => ({ k: 0, w: 3.6, b: 0, sl: -0.01 }), (k, m) => { if (k < 3) this.T.rowF[m] |= RF.START; }, null, 'start');
+  }
+  // Checkpoint: a calm, wide, straight pad with the gate on a round distance. Random runs restart
+  // here after a fall, so it must be safe to stand still on: no holes, boosters or obstacles.
+  checkPad(W) {
+    const w = Math.max(W, 3), s0 = this.T.n * CFG.DS;
+    const gateS = CFG.START_S + Math.ceil((s0 + 12 - CFG.START_S) / 10) * 10, gk = Math.round((gateS - s0) / CFG.DS);
+    while (this.nextCheck <= gateS) this.nextCheck += CFG.CHECKPOINT;
+    return this.mk(gateS - s0 + 16, () => ({ k: 0, w, b: 0, sl: -0.01 }), (k, m) => { if (k === gk) this.T.rowF[m] |= RF.CHECK; }, (k, s) => {
+      if (k === gk) this.T.objects.push({ kind: 'gate', s, u: 0, id: this.count++, cp: Math.round(s - CFG.START_S) });
+    }, 'checkpoint');
   }
   straight(d, W) {
     const r = this.rng, boost = r.chance(0.3 + d * 0.2), L = boost ? r.range(32, 40) : r.range(16, 30), n = Math.round(L / CFG.DS);

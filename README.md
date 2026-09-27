@@ -10,7 +10,7 @@ GYROLL is an endless 3D marble game for your phone. Tilt the phone to roll a hea
 
 ![The five worlds of GYROLL](docs/worlds.jpg)
 
-The whole game is **one self-contained `index.html` file** (about 230 KB): HTML, CSS, JavaScript, GLSL shaders and synthesized audio.
+The whole game is **one self-contained `index.html` file** (about 275 KB): HTML, CSS, JavaScript, GLSL shaders and synthesized audio.
 - It uses no libraries and no external assets, and it needs no network to play.
 - It is assembled from readable source files in [`src/`](src) by a tiny build script that has no dependencies.
 - A few optional files next to it make it installable and nice to share: icons, a manifest, a service worker and a preview image.
@@ -24,10 +24,10 @@ The whole game is **one self-contained `index.html` file** (about 230 KB): HTML,
 - **Endless procedural track** that gets harder with distance:
   - straights, big curves, zigzags, hairpins and narrow passages
   - banked platforms, holes, gaps with jumps, boosters, posts and moving sliders
-  - checkpoints every 250 m and coins to collect
+  - checkpoints about every 250 m, each on a calm, wide, straight pad, and coins to collect
   - The generator always leaves a safe line, so no section is impossible.
 - **Two game modes:**
-  - **Random**: one endless track to explore. After a fall, the next run (and the menu scene) starts again just before the spot where you fell, so you can go further each time. The track and the restart point are saved on the device. **↻ New track** on the menu starts a fresh track from 0 m.
+  - **Random**: one endless track to explore. After a fall, the next run (and the menu scene) starts again at the last checkpoint you passed, so you can go further each time. The track and the restart point are saved on the device. **↻ New track** on the menu starts a fresh track from 0 m.
   - **Daily run**: everyone gets the same track on the same day, and every run starts from the beginning. The seed comes from the UTC date, and the daily best is saved separately. The link `?mode=daily` opens the daily run directly.
 - **Star power.** Coins fill a gauge at the bottom of the screen. Coins taken in a row raise the coin multiplier (×2 after 4, ×3 after 8, ×4 after 12), so the gauge fills faster; missing a single coin resets it. When the gauge is full, flick the phone up quickly (or double-tap, press Space, or tap the gauge): glowing side rails appear, the ball lights up, the music speeds up and the score is doubled. The gauge then drains in about 6 seconds and the rails go away.
 - **Kid mode (side rails).** A menu toggle adds small glowing rails along both edges of the track, so the ball bounces back instead of falling off the side. A hit that is too hard still jumps the rail, and holes and gaps still count. Kid-mode runs keep their own best scores, and the game over screen, the share text and the share video all say "with side rails".
@@ -40,20 +40,25 @@ The whole game is **one self-contained `index.html` file** (about 230 KB): HTML,
 - **Parallax depth.** Objects in the foreground pass close to the track, structures sit in the midground, and slow-moving giant objects, the sky and a floor far below form the background. Fog, dust, light shafts and speed lines add to the sense of speed.
 - **Real rolling physics:** acceleration, inertia, friction, gravity on slopes and banks, rail bounces, jumps and falls. There is no hard speed limit: the push gets weaker as you go faster, but it never stops.
 - **Premium effects:**
-  - a reflective marble with dynamic highlights and a contact shadow
+  - a marble that mirrors the real world around it. A small cube map is rendered from the ball's center every frame, so it reflects the track, coins and scenery, not only the sky. Each skin is its own material:
+    - **chrome and gold:** polished metal with fresnel, a sharp sun glint and machined seams with a light strip that show the roll
+    - **glass:** reflection plus refraction through the sphere (the world appears upside down, like in a real marble), twisted coloured vanes inside and a sun caustic
+    - **plasma:** a smoky glass shell over glowing veins at several depths and a hot core
+    - **candy:** glossy clear coat over a coloured body with a soft subsurface look
+  - a contact shadow and light spill on the deck
   - a speed trail and particles
   - bloom, radial speed blur and chromatic aberration when boosting
   - slow motion when you fall
 - **4 track skins and 5 marble skins** (chrome, glass, gold, plasma, candy). You can change them from the menu or the pause screen.
-- **Sound.** Every sound is synthesized with the Web Audio API, including the rolling sound, impacts, coins, checkpoints, boosts, falls, thunder and generative ambient music. Music and sound effects have separate toggles and volume sliders.
+- **Sound.** Every sound is synthesized with the Web Audio API, including the rolling sound, impacts, coins, checkpoints, boosts, falls, thunder and generative ambient music. Music and sound effects have separate toggles (white icons) and volume sliders.
 - **Share my score.** During the run the game records a light timelapse. When you press **Share my score** at game over, it builds a short accelerated video (intro, run, fall, score card) with `MediaRecorder`; press **Share the video** when it is ready. On phones it is shared through the Web Share API; elsewhere it is downloaded. If video is not supported, a score-card image is used instead.
-- **English and French**, detected from the browser language. You can switch on the menu.
+- **English and French**, detected from the browser language. You can switch on the menu; the menu layout never moves when you change the language or an option.
 - **Look around on the menu.** When motion access is on (Android at once, iPhone after you allowed it once), turning the phone walks the camera around the ball and tilting it raises or lowers the camera.
 - **Built for phones:**
   - portrait first, landscape supported
   - no scrolling or zooming, large touch targets, readable in sunlight
   - screen stays awake while playing, pauses on focus loss
-- **Adaptive quality.** Resolution, bloom, particles and scenery density adjust automatically to hold the frame rate. Repeated scenery is drawn with GPU instancing: about 35 draw calls per frame instead of about 105.
+- **Adaptive quality.** Resolution, bloom, particles and scenery density adjust automatically to hold the frame rate. Repeated scenery is drawn with GPU instancing: about 35 draw calls per frame instead of about 105. The ball's reflection cube map is 256 px on computers and 128 px on phones (half of it redrawn each frame there), and it is turned off on the lowest level.
 - **Installable app (PWA).** Add GYROLL to your home screen. It then opens full screen, locked in portrait so the screen does not rotate while you tilt, and it works offline.
 - **Nice link previews.** Shared links show a preview image and a description.
 
@@ -133,13 +138,16 @@ The tests drive the game loop step by step instead of waiting for real frames, s
 - daily-run determinism
 - tilt directions and the touch fallback
 - language switching, sound toggles and skins
+- a menu layout that never moves when the language, mode, kid mode, sound or skin changes
 - the share link and the share video
 - all five worlds rendering
 - the installable app, including offline play
 - kid mode, safety rails that give way to hard hits, and speed past 50 km/h
 - coins, streak multiplier, star gauge, the tilt-up flick and star power
 - scenery staying out of the track corridor, including giant objects that drift onto it
-- random mode restarting where you fell (and "new track"), daily runs restarting from 0
+- random mode restarting at the last checkpoint (and "new track"), daily runs restarting from 0
+- checkpoints on safe pads, at round distances
+- the ball's reflection cube map facing the right way
 - the share video only being made on request
 - the menu camera following the phone
 
@@ -171,7 +179,7 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
 | `TrackGenerator` | Seeded procedural sections (curves, zigzags, holes, gaps, obstacles…) with a difficulty ramp. The generated values are rate-limited so the geometry stays smooth, and a heading guard makes sure the track never loops back on itself. |
 | `Track` | Ring buffer of centerline samples and per-row solid intervals. Handles point-to-track projection and support tests. |
 | `TrackMesher` | Builds GPU meshes in 32 m chunks: deck, rims, rails, underside beams, hangers. |
-| `Renderer` + GLSL shaders | WebGL1 forward renderer. The shaders handle procedural materials, zone-blended sky panoramas, the floor layer, point-sprite particles and additive FX, followed by a bloom/composite post chain. |
+| `Renderer` + GLSL shaders | WebGL1 forward renderer, plus a cube map reflection probe for the ball. The shaders handle procedural materials, zone-blended sky panoramas, the floor layer, point-sprite particles and additive FX, followed by a bloom/composite post chain. |
 | `Physics`, `Ball` | Fixed 120 Hz steps for a sphere rolling without slipping: slope and bank gravity, rails, props, landing and falling. |
 | `CameraRig` | Chase camera with look-ahead, roll in turns, speed FOV, shake, fall and attract modes. |
 | `InputManager` | DeviceOrientation (with the iOS permission), calibration, low-pass filtering, joystick and keyboard. |
@@ -196,6 +204,7 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
 - **Not yet verified on real devices:**
   - Landscape tilt directions have not been checked on a real phone. Portrait tilt was checked with simulated sensor events.
   - Development and automated tests ran in headless Chromium (software rendering). Reports from real phones are very welcome.
+  - The cost of the ball's reflection probe on real phones is not measured yet. If the frame rate drops, adaptive quality lowers it and then turns it off.
 - **Analytics events.** Page views work whenever Web Analytics is on. Custom events (`run_start`, `game_over`…) may need a Vercel plan that supports them; if not, they are simply ignored.
 
 ## Contributing
@@ -724,6 +733,19 @@ Also, on the menu screen, if the gyroscope is activated, it should control the c
 And the scene should be where we last lost. And we should continue with the same “scene” for the next game in random so that we can explore further more easily. 
 
 Of course daily challenge start over every time.
+````
+
+</details>
+
+<details>
+<summary><strong>Polish prompt</strong></summary>
+
+````markdown
+The menu Ui should not change when switching lang or options. And could we remove the text on the 2 sound toggles ? And replace the sound effect emoji by a proper white icon? 
+
+Also, the respawns should occur at Check points. 
+
+And could we improve the reflection on the ball to really feel the material? It should be exceptionally high quality and stunning
 ````
 
 </details>

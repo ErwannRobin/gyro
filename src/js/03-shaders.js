@@ -266,76 +266,154 @@ void main(){
   gl_FragColor = vec4(col, clamp(glow * (1.0 - fog), 0.0, 1.0));
 }`;
 
-// Ball: env reflections, fresnel, dynamic highlight, several material types.
+// Ball: physically based look on a perfect sphere. It reflects a live cube map rendered from
+// its center (the real track, coins and scenery), with Schlick fresnel and a sun glint.
+// Materials: 0 polished metal with machined seams, 1 glass marble (refraction, inner vanes,
+// caustic), 2 smoky shell over a glowing plasma core, 3 glossy candy plastic.
 const VS_BALL = `
 attribute vec3 a_pos; attribute vec3 a_nrm;
 uniform mat4 u_vp; uniform mat4 u_model;
-varying vec3 v_wp; varying vec3 v_n; varying vec3 v_on;
-void main(){ vec4 wp = u_model * vec4(a_pos, 1.0); v_wp = wp.xyz; v_n = normalize((u_model * vec4(a_nrm, 0.0)).xyz); v_on = a_nrm; gl_Position = u_vp * wp; }`;
+varying vec3 v_wp; varying vec3 v_on;
+void main(){ vec4 wp = u_model * vec4(a_pos, 1.0); v_wp = wp.xyz; v_on = a_nrm; gl_Position = u_vp * wp; }`;
 
 const FS_BALL = GLSL_COMMON + `
-varying vec3 v_wp; varying vec3 v_n; varying vec3 v_on;
-uniform vec3 u_cam; uniform vec3 u_sunDir; uniform vec3 u_sunCol; uniform vec3 u_floor; uniform vec3 u_accent; uniform vec3 u_skyMid; uniform vec3 u_abyss;
-uniform vec3 u_base; uniform vec3 u_glowCol; uniform float u_type; uniform float u_time; uniform float u_speed; uniform float u_fade; uniform float u_star;
+varying vec3 v_wp; varying vec3 v_on;
+uniform vec3 u_cam; uniform vec3 u_sunDir; uniform vec3 u_sunCol; uniform vec3 u_floor; uniform vec3 u_accent;
+uniform vec3 u_base; uniform vec3 u_glowCol; uniform float u_type; uniform float u_rough; uniform float u_time; uniform float u_speed; uniform float u_fade; uniform float u_star;
 uniform sampler2D u_env; uniform sampler2D u_envBlur; uniform sampler2D u_env2; uniform sampler2D u_envBlur2; uniform float u_envMix;
+uniform samplerCube u_probe; uniform float u_probeOn; uniform float u_probeMips;
+uniform vec3 u_center; uniform mat3 u_rot; uniform mat3 u_irot; uniform vec3 u_gN; uniform float u_gD;
+
 vec3 env(vec3 d){ vec2 q = equirect(d); return mix(texture2D(u_env, q).rgb, texture2D(u_env2, q).rgb, u_envMix); }
 vec3 envB(vec3 d){ vec2 q = equirect(d); return mix(texture2D(u_envBlur, q).rgb, texture2D(u_envBlur2, q).rgb, u_envMix); }
-vec3 world(vec3 R, bool blur){
-  vec3 e = blur ? envB(R) : env(R);
-  // lower hemisphere reflects the track deck and its light strips
+// Fallback without the live probe: sky panorama above, a suggested deck below.
+vec3 world(vec3 R, float rough){
+  vec3 e = mix(env(R), envB(R), clamp(rough * 4.0, 0.0, 1.0));
   float fl = smoothstep(0.02, -0.3, R.y);
   float stripes = smoothstep(0.92, 1.0, abs(sin(atan(R.x, R.z) * 3.0)));
   vec3 flo = u_floor * (0.35 + 0.4 * max(-R.y, 0.0)) + u_accent * stripes * 0.35 * smoothstep(-0.1, -0.35, R.y);
   return mix(e, flo, fl * 0.9);
 }
+// What the ball sees in direction d. rough: 0 mirror … 1 fully blurred (diffuse light).
+vec3 scene(vec3 d, float rough){
+  if (u_probeOn < 0.5) return world(d, rough);
+#ifdef LOD
+  return textureCubeLodEXT(u_probe, d, min(rough * u_probeMips, u_probeMips - 1.0)).rgb;
+#else
+  return textureCube(u_probe, d, rough * u_probeMips - 1.5).rgb;
+#endif
+}
+// The probe is taken at the center: rays that hit the deck are corrected against its plane,
+// so the reflection of the track meets the ball where it touches it.
+vec3 look(vec3 P, vec3 R){
+  float dn = dot(R, u_gN);
+  if (dn < -0.01) { float t = (u_gD - dot(P, u_gN)) / dn; if (t > 0.0) return normalize(P + R * min(t, 60.0) - u_center); }
+  return R;
+}
+// Normalized Blinn-Phong lobe (close to GGX for a sharp sun glint).
+float lobe(float ndh, float rough){ float a = max(rough * rough, 0.0004); float p = min(2.0 / (a * a) - 2.0, 6000.0); return pow(ndh, p) * (p + 8.0) * 0.0398; }
+float schlick(float f0, float c){ return f0 + (1.0 - f0) * pow(1.0 - c, 5.0); }
+
 void main(){
-  vec3 N = normalize(v_n), V = normalize(u_cam - v_wp), R = reflect(-V, N);
-  vec3 o = normalize(v_on);
-  float ndv = max(dot(N, V), 0.0);
-  float fres = pow(1.0 - ndv, 3.0);
-  vec3 L = u_sunDir;
-  float spec = pow(max(dot(R, L), 0.0), 220.0) * 5.0 + pow(max(dot(R, L), 0.0), 24.0) * 0.35;
-  vec3 L2 = normalize(vec3(-L.x, 0.4, -L.z));
-  spec += pow(max(dot(R, L2), 0.0), 90.0) * 0.8;
-  float ndl = max(dot(N, L), 0.0);
-  vec3 amb = mix(u_abyss * 0.3, u_skyMid + 0.1, N.y * 0.5 + 0.5);
-  vec3 col; float glow = 0.0;
-  if (u_type < 0.5) {                          // polished metal
-    vec3 e = world(R, false);
-    col = e * u_base * (1.25 + 0.6 * fres) + u_base * amb * 0.18;
-    float ring = smoothstep(0.035, 0.0, abs(o.y)) + smoothstep(0.02, 0.0, abs(o.x)) * 0.6;
-    col *= 1.0 - ring * 0.55;
-    col += ring * u_glowCol * 0.15;
-  } else if (u_type < 1.5) {                   // glass
-    vec3 T = refract(-V, N, 0.72);
-    vec3 inner = envB(T) * u_base * 0.9;
-    float core = pow(max(dot(-T, normalize(V)), 0.0), 3.0);
-    float swirl = sin(o.x * 7.0 + sin(o.y * 5.0 + u_time * 0.5) * 2.0 + o.z * 4.0);
-    inner += u_glowCol * (0.25 + 0.25 * swirl) * core;
-    col = mix(inner, world(R, false), 0.1 + fres * 0.85);
-    glow = 0.35;
-  } else if (u_type < 2.5) {                   // plasma core
-    float veins = pow(1.0 - abs(sin(o.x * 6.0 + sin(o.y * 7.0 + u_time * 1.3) * 1.6 + o.z * 3.0)), 10.0);
-    veins += pow(1.0 - abs(sin(o.z * 9.0 - o.y * 4.0 + u_time * 0.7)), 16.0) * 0.6;
-    col = u_base * (amb * 0.4 + ndl * 0.3) + world(R, true) * (0.12 + fres * 0.6);
-    col += u_glowCol * veins * (1.3 + u_speed * 0.8);
-    glow = veins * 0.9;
-  } else {                                     // candy plastic with stripe
+  vec3 N = normalize(v_wp - u_center), V = normalize(u_cam - v_wp);
+  vec3 o = normalize(v_on);                                   // object space: rolls with the ball
+  vec3 L = u_sunDir, H = normalize(L + V);
+  float ndv = max(dot(N, V), 0.001), ndl = max(dot(N, L), 0.0);
+  float fr = pow(1.0 - ndv, 5.0), fh = pow(1.0 - max(dot(H, V), 0.0), 5.0);
+  float ao = mix(0.5, 1.0, smoothstep(-0.97, -0.3, dot(N, u_gN)));   // the deck right under the ball
+  vec3 col; float glow = 0.0; vec3 sun = vec3(0.0);
+  if (u_type < 0.5) {
+    // polished metal: V-grooves on the equator and a meridian, a light strip inside each
+    float gy = abs(o.y), gx = abs(o.x);
+    float wy = smoothstep(0.05, 0.012, gy), wx = smoothstep(0.035, 0.008, gx);
+    float groove = max(wy, wx);
+    vec3 no = normalize(o - vec3(sign(o.x) * wx * 0.9, sign(o.y) * wy * 0.9, 0.0));
+    vec3 N2 = normalize(u_rot * no);
+    float c2 = max(dot(N2, V), 0.001);
+    vec3 F = u_base + (1.0 - u_base) * pow(1.0 - c2, 5.0);
+    float rough = u_rough + groove * 0.2;
+    vec3 R2 = reflect(-V, N2);
+    // + a broad soft reflection of the sun (a studio "softbox"), so metal stays bright in dark worlds
+    vec3 e = scene(look(v_wp, R2), rough);
+    e = mix(e, vec3(dot(e, vec3(0.3, 0.55, 0.15))), 0.45);     // less colour cast: gold stays gold in a cyan world
+    e += u_sunCol * (pow(max(dot(R2, L), 0.0), 6.0) * 0.8 + smoothstep(-0.1, 0.8, R2.y) * 0.14);
+    col = e * F * mix(1.0, 0.3, groove) * mix(0.75, 1.0, ao);
+    float strip = smoothstep(0.011, 0.0, gy) + smoothstep(0.007, 0.0, gx);
+    col += u_glowCol * strip * (0.7 + u_speed * 1.4);
+    glow = strip * 0.9;
+    vec3 Fh = u_base + (1.0 - u_base) * fh;
+    sun = Fh * (lobe(max(dot(N2, H), 0.0), rough) + lobe(max(dot(N2, H), 0.0), rough * 4.0 + 0.12) * 0.05) * ndl;
+  } else if (u_type < 1.5) {
+    // glass marble: reflection + the world seen through it (upside down, like a real marble)
+    float F = schlick(0.04, ndv);
+    vec3 refl = scene(look(v_wp, reflect(-V, N)), 0.0);
+    vec3 T1 = refract(-V, N, 0.667);
+    float tc = -2.0 * dot(N, T1);                             // chord through the unit sphere
+    vec3 p2 = N + T1 * tc;                                    // exit point
+    vec3 T2 = refract(T1, -p2, 1.5);
+    if (dot(T2, T2) < 0.5) T2 = reflect(T1, -p2);
+    vec3 tint = mix(vec3(1.0), u_base, 0.45);
+    vec3 trans = scene(T2, 0.02) * tint * mix(vec3(1.0), u_base, clamp(tc * 0.25, 0.0, 1.0));
+    // three twisted coloured vanes inside ("cat's eye"), marched along the chord
+    vec3 ro = u_irot * N, rd = u_irot * T1, acc = vec3(0.0); float tr = 1.0, st = tc / 24.0, j = hash(gl_FragCoord.xy);
+    for (int i = 0; i < 24; i++) {
+      vec3 q = ro + rd * ((float(i) + j) * st);
+      float r = length(q.xz), a = atan(q.z, q.x) + q.y * 2.0;
+      float bl = abs(sin(a * 1.5)) * r;                          // distance to the nearest vane
+      float k = smoothstep(0.11, 0.03, bl) * smoothstep(0.62, 0.48, length(q));
+      vec3 vc = mix(u_glowCol * 1.15, vec3(1.0, 0.97, 0.92), smoothstep(0.06, 0.03, bl) * 0.35);
+      float d = clamp(k * st * 4.5, 0.0, 1.0);
+      acc += tr * d * vc * (0.6 + 0.4 * max(dot(u_rot * normalize(q + 0.001), L), 0.0));
+      tr *= 1.0 - d * 0.9;
+    }
+    float caustic = pow(max(dot(p2, -L), 0.0), 28.0) * 1.6;    // sunlight focused on the far side
+    col = refl * F + (trans * tr + acc + u_sunCol * tint * caustic * tr) * (1.0 - F);
+    glow = 0.2 + caustic * 0.4 + dot(acc, vec3(0.2));
+    sun = vec3(0.04 + 0.96 * fh) * (lobe(max(dot(N, H), 0.0), 0.015) + lobe(max(dot(N, H), 0.0), 0.1) * 0.05) * ndl;
+  } else if (u_type < 2.5) {
+    // smoky glass shell over a plasma core: glowing veins at several depths (real parallax)
+    float F = schlick(0.05, ndv);
+    vec3 refl = scene(look(v_wp, reflect(-V, N)), u_rough);
+    vec3 T1 = refract(-V, N, 0.7);
+    vec3 ro = u_irot * N, rd = u_irot * T1;
+    float b0 = dot(ro, rd), acc = 0.0;
+    // veins on three nested shells (front and back side of each): sharp lines with real depth
+    for (int i = 0; i < 3; i++) {
+      float rs = 0.9 - float(i) * 0.2, h = b0 * b0 - 1.0 + rs * rs, ph = float(i) * 1.7;
+      if (h > 0.0) for (int k = 0; k < 2; k++) {
+        vec3 q = (ro + rd * (-b0 + (float(k) * 2.0 - 1.0) * sqrt(h))) / rs;
+        float v1 = pow(1.0 - abs(sin(q.x * 6.0 + sin(q.y * 7.0 + u_time * 1.3 + ph) * 1.6 + q.z * 3.0)), 10.0);
+        float v2 = pow(1.0 - abs(sin(q.z * 9.0 - q.y * 4.0 + u_time * 0.7 - ph)), 16.0) * 0.6;
+        acc += (v1 + v2) * (0.45 + float(i) * 0.3) * (k == 0 ? 1.0 : 0.45);
+      }
+    }
+    vec3 cx = cross(ro, rd);
+    float core = exp(-dot(cx, cx) * 7.0);               // hot core: closest approach to the center
+    vec3 inner = u_glowCol * (acc * 0.75 + core * 0.8) * (1.2 + u_speed * 1.0) + u_base * 0.25;
+    col = refl * F + inner * (1.0 - F);
+    glow = clamp(acc * 0.45 + core * 0.6, 0.0, 1.0);
+    sun = vec3(0.05 + 0.95 * fh) * (lobe(max(dot(N, H), 0.0), u_rough) + lobe(max(dot(N, H), 0.0), 0.15) * 0.05) * ndl;
+  } else {
+    // candy plastic: coloured diffuse body with a soft subsurface wrap, under a glossy clear coat
     float stripe = smoothstep(0.34, 0.3, abs(o.y));
-    vec3 b = mix(vec3(0.97), u_base, stripe);
-    float dot2 = smoothstep(0.24, 0.2, length(o.xz - vec2(0.0, 0.0)) ) * step(0.5, abs(o.y));
-    b = mix(b, u_base * 0.7, dot2);
-    col = b * (amb * 0.55 + u_sunCol * ndl * 0.8) + world(R, true) * (0.06 + fres * 0.5);
+    vec3 alb = mix(vec3(0.95), u_base, stripe);
+    alb = mix(alb, u_base * 0.7, smoothstep(0.24, 0.2, length(o.xz)) * step(0.5, abs(o.y)));
+    float wrap = max(0.0, (dot(N, L) + 0.45) / 1.45);
+    vec3 diff = alb * (scene(N, 1.0) * 1.25 * ao + u_sunCol * (ndl * 0.75 + wrap * 0.3));
+    float F = schlick(0.045, ndv);
+    col = diff * (1.0 - F) + scene(look(v_wp, reflect(-V, N)), u_rough) * F;
+    sun = vec3(0.045 + 0.955 * fh) * (lobe(max(dot(N, H), 0.0), u_rough) + lobe(max(dot(N, H), 0.0), 0.2) * 0.08) * ndl;
   }
-  col += u_sunCol * spec;
-  col += u_glowCol * fres * (0.25 + u_speed * 0.6);
+  col += u_sunCol * sun;
+  col += u_glowCol * fr * (0.12 + u_speed * 0.6);
   if (u_star > 0.0) {                          // star power: the ball lights up from inside
     float pulse = 0.75 + 0.25 * sin(u_time * 14.0);
-    vec3 starCol = mix(vec3(1.0, 0.82, 0.35), vec3(1.0), 0.35 + 0.35 * fres);
-    col = mix(col, col * 0.4 + starCol * (0.9 + fres * 1.5) * pulse, u_star);
+    vec3 starCol = mix(vec3(1.0, 0.82, 0.35), vec3(1.0), 0.35 + 0.35 * fr);
+    col = mix(col, col * 0.4 + starCol * (0.9 + fr * 1.5) * pulse, u_star);
     glow = max(glow, u_star);
   }
-  gl_FragColor = vec4(col * u_fade, clamp(glow + spec * 0.15 + u_speed * fres * 0.5, 0.0, 1.0));
+  glow += clamp(dot(sun, vec3(0.33)) * 0.05, 0.0, 1.0);
+  gl_FragColor = vec4(col * u_fade, clamp(glow + u_speed * fr * 0.5, 0.0, 1.0));
 }`;
 
 // Sky: fullscreen triangle sampling the pre-rendered equirect panorama.

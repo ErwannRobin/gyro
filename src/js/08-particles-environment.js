@@ -287,7 +287,10 @@ class Environment {
       const k = it.dying ? Math.max(0, it.dying) : 1;
       M4.fromTRS(this.model, it.x, it.y + by, it.z, q, it.sx * k, it.sy * k, it.sz * k);
       const e = it.blink ? it.emis * (Math.sin(time * 5 + it.s) > 0.2 ? 1 : 0.15) : it.emis;
-      if (it.fogK !== 1) { R.setFogK(it.fogK); R.drawProp(it.mesh, this.model, it.col, e); R.setFogK(1); }   // far giants: own fog
+      if (it.fogK !== 1) {                                                    // far giants: own fog
+        if (R.farList) R.farList.push({ mesh: it.mesh, m: Float32Array.from(this.model), col: it.col, e, k: it.fogK });
+        else { R.setFogK(it.fogK); R.drawProp(it.mesh, this.model, it.col, e); R.setFogK(1); }
+      }
       else R.addInst(it.mesh, this.model, it.col, e);
     };
     for (const h of this.heroes) for (const it of h.items) one(it);

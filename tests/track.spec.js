@@ -27,6 +27,36 @@ test('procedural track stays feasible for 4 km on many seeds', async ({ page }) 
   expect(r).toEqual([]);
 });
 
+test('checkpoints sit on a safe, straight pad every ~250 m, on round distances', async ({ page }) => {
+  await openGame(page);
+  const r = await page.evaluate(() => {
+    const issues = [], counts = [];
+    for (const seed of [1, 7, 42, 1234, 99999, dailySeed('2026-01-01')]) {
+      const T = new Track(), G = new TrackGenerator(T, seed); G.fill(3000);
+      const gates = T.objects.filter((o) => o.kind === 'gate');
+      counts.push(gates.length);
+      let prev = CFG.START_S;
+      for (const o of gates) {
+        if (o.cp % 10 || Math.round(o.s - CFG.START_S) !== o.cp) issues.push(`cp ${o.cp} at ${o.s} (seed ${seed})`);
+        if (o.s - prev < 200 || o.s - prev > 320) issues.push(`spacing ${o.s - prev} (seed ${seed})`);
+        prev = o.s;
+        const gi = Math.round(o.s / CFG.DS);
+        if (!(T.rowF[gi & T.mask] & RF.CHECK)) issues.push(`no line at ${o.s} (seed ${seed})`);
+        for (let i = gi - 4; i <= gi + 28; i++) {                      // where the ball waits and starts
+          const m = i & T.mask;
+          if (T.rowN[m] !== 1 || !T.rowAO[m * 3] || !T.rowBO[m * 3] || (T.rowF[m] & RF.BOOST) || T.w[m] < 2.9 || Math.abs(T.kap[m]) > 0.02 || Math.abs(T.bank[m]) > 0.02) {
+            issues.push(`pad row ${i} not plain (seed ${seed}, gate ${o.cp})`); break;
+          }
+        }
+        if (T.objects.some((p) => (p.kind === 'post' || p.kind === 'slider') && Math.abs(p.s - o.s) < 16)) issues.push(`obstacle near ${o.cp} (seed ${seed})`);
+      }
+    }
+    return { issues: issues.slice(0, 12), counts };
+  });
+  expect(r.issues).toEqual([]);
+  for (const c of r.counts) expect(c).toBeGreaterThanOrEqual(10);
+});
+
 test('daily run is the same for everyone, a new random track differs', async ({ page, browser }) => {
   await openGame(page, '/?mode=daily');
   const sample = () => { const g = window.__game; g.gen.fill(700); const m = 1200 & g.track.mask; return [g.gameMode, g.track.x[m], g.track.z[m]]; };

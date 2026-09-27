@@ -148,13 +148,13 @@ const TRACK_THEMES = [
     metal: hex(0x8a98b0), accent: hex(0x8a7aff), accent2: hex(0x4ad8ff), hazard: hex(0xff5a8a), gloss: 0.9,
     swatch: 'linear-gradient(135deg,#a8b4c8,#f2f5fa 55%,#8a7aff 56%,#8a7aff 64%,#a8b4c8 65%)' },
 ];
-// Ball skins: type 0 chrome/metal, 1 glass, 2 plasma, 3 candy plastic
+// Ball skins: type 0 polished metal, 1 glass, 2 plasma, 3 candy plastic; rough = surface roughness (0 = mirror)
 const BALL_SKINS = [
-  { name: { fr: 'CHROME', en: 'CHROME' }, type: 0, base: hex(0xe8edf5), glow: hex(0x9fe8ff), swatch: 'radial-gradient(circle at 35% 30%,#fff,#aab4c4 40%,#3a4250 75%,#cfd8e6)' },
-  { name: { fr: 'VERRE', en: 'GLASS' }, type: 1, base: hex(0x8ff0ff), glow: hex(0x4ef2ff), swatch: 'radial-gradient(circle at 35% 30%,#fff,#bff7ff 25%,rgba(80,200,255,.5) 60%,#1a6a9a)' },
-  { name: { fr: 'OR', en: 'GOLD' }, type: 0, base: hex(0xffc85a), glow: hex(0xffd36b), swatch: 'radial-gradient(circle at 35% 30%,#fffbe0,#ffcf5a 35%,#8a5a10 75%,#ffe08a)' },
-  { name: { fr: 'PLASMA', en: 'PLASMA' }, type: 2, base: hex(0x1a1030), glow: hex(0xff4fd8), swatch: 'radial-gradient(circle at 35% 30%,#ff9ae8,#6a1a8a 40%,#10081a 70%,#ff4fd8)' },
-  { name: { fr: 'BONBON', en: 'CANDY' }, type: 3, base: hex(0xff3a5a), glow: hex(0xff8a9a), swatch: 'radial-gradient(circle at 35% 30%,#fff,#ff6a80 30%,#c01a3a 75%,#ff8aa0)' },
+  { name: { fr: 'CHROME', en: 'CHROME' }, type: 0, rough: 0.025, base: hex(0xe8edf5), glow: hex(0x9fe8ff), swatch: 'radial-gradient(circle at 35% 30%,#fff,#aab4c4 40%,#3a4250 75%,#cfd8e6)' },
+  { name: { fr: 'VERRE', en: 'GLASS' }, type: 1, rough: 0.0, base: hex(0x8ff0ff), glow: hex(0x4ef2ff), swatch: 'radial-gradient(circle at 35% 30%,#fff,#bff7ff 25%,rgba(80,200,255,.5) 60%,#1a6a9a)' },
+  { name: { fr: 'OR', en: 'GOLD' }, type: 0, rough: 0.07, base: hex(0xffc85a), glow: hex(0xffd36b), swatch: 'radial-gradient(circle at 35% 30%,#fffbe0,#ffcf5a 35%,#8a5a10 75%,#ffe08a)' },
+  { name: { fr: 'PLASMA', en: 'PLASMA' }, type: 2, rough: 0.03, base: hex(0x1a1030), glow: hex(0xff4fd8), swatch: 'radial-gradient(circle at 35% 30%,#ff9ae8,#6a1a8a 40%,#10081a 70%,#ff4fd8)' },
+  { name: { fr: 'BONBON', en: 'CANDY' }, type: 3, rough: 0.07, base: hex(0xff3a5a), glow: hex(0xff8a9a), swatch: 'radial-gradient(circle at 35% 30%,#fff,#ff6a80 30%,#c01a3a 75%,#ff8aa0)' },
 ];
 
 // ---------------------------------------------------------------- world zones
@@ -183,7 +183,7 @@ const ZONES = [
 const I18N = {
   fr: {
     playGyro: 'JOUER AVEC LE GYROSCOPE', play: 'JOUER', playTouch: 'JOUER AU TACTILE', music: 'MUSIQUE', sfx: 'EFFETS',
-    modeRandom: 'ALÉATOIRE', modeDaily: 'DÉFI DU JOUR', infoRandom: 'Parcours sans fin · vous repartez là où vous tombez', infoContinue: 'Reprise du parcours à {d} m', newTrack: '↻ NOUVEAU PARCOURS', infoDaily: 'Même parcours pour tous · {date}',
+    modeRandom: 'ALÉATOIRE', modeDaily: 'DÉFI DU JOUR', infoRandom: 'Parcours sans fin · vous repartez du dernier checkpoint', infoContinue: 'Reprise au checkpoint {d} m', newTrack: '↻ NOUVEAU PARCOURS', infoDaily: 'Même parcours pour tous · {date}',
     track: 'PISTE', ball: 'BILLE', pause: 'PAUSE', resume: 'REPRENDRE', recal: 'RECALIBRER LE GYROSCOPE', mainMenu: 'MENU PRINCIPAL',
     gameOver: 'GAME OVER', newRecord: 'NOUVEAU RECORD', retry: 'REJOUER', menu: 'MENU',
     share: 'PARTAGER MON SCORE', shareBusy: 'PRÉPARATION DE LA VIDÉO…', shareSaved: 'VIDÉO ENREGISTRÉE ✓', shareReady: 'PARTAGER LA VIDÉO ▶', shareImg: 'PARTAGER MON SCORE',
@@ -200,7 +200,7 @@ const I18N = {
   },
   en: {
     playGyro: 'PLAY WITH GYROSCOPE', play: 'PLAY', playTouch: 'PLAY WITH TOUCH', music: 'MUSIC', sfx: 'SFX',
-    modeRandom: 'RANDOM', modeDaily: 'DAILY RUN', infoRandom: 'Endless track · you restart where you fell', infoContinue: 'Back on the track at {d} m', newTrack: '↻ NEW TRACK', infoDaily: 'Same track for everyone · {date}',
+    modeRandom: 'RANDOM', modeDaily: 'DAILY RUN', infoRandom: 'Endless track · you restart at the last checkpoint', infoContinue: 'Back at the {d} m checkpoint', newTrack: '↻ NEW TRACK', infoDaily: 'Same track for everyone · {date}',
     track: 'TRACK', ball: 'BALL', pause: 'PAUSE', resume: 'RESUME', recal: 'RECALIBRATE GYROSCOPE', mainMenu: 'MAIN MENU',
     gameOver: 'GAME OVER', newRecord: 'NEW RECORD', retry: 'PLAY AGAIN', menu: 'MENU',
     share: 'SHARE MY SCORE', shareBusy: 'PREPARING VIDEO…', shareSaved: 'VIDEO SAVED ✓', shareReady: 'SHARE THE VIDEO ▶', shareImg: 'SHARE MY SCORE',

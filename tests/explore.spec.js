@@ -16,25 +16,37 @@ async function fallAt(page, dist) {
   });
 }
 
-test('random mode: the next run and the menu start near the fall, until "new track"', async ({ page }) => {
+test('random mode: the next run and the menu restart at the last checkpoint, until "new track"', async ({ page }) => {
   const errors = await openGame(page);
   const seed0 = await page.evaluate(() => window.__game.rSeed);
-  await fallAt(page, 320);
+  // a fall before the first checkpoint restarts at the very start
+  await fallAt(page, 150);
+  expect(await page.evaluate(() => window.__game.contS)).toBe(await page.evaluate(() => CFG.START_S));
+  await fallAt(page, 420);
   const r = await page.evaluate(() => { const g = window.__game; return { st: g.state, cont: g.contS - CFG.START_S, saved: +localStorage.getItem('gyroll.rpos') - CFG.START_S }; });
   expect(r.st).toBe('over');
   expect(r.cont).toBeGreaterThan(250);
-  expect(r.cont).toBeLessThan(320);
+  expect(r.cont).toBeLessThan(420);
+  expect(r.cont % 10).toBe(0);                                  // checkpoints sit on round distances
   expect(r.saved).toBe(r.cont);
   // retry starts there, with the distance counted from the new start
   await page.click('#btnRetry');
-  const run = await page.evaluate(() => { const g = window.__game; for (let k = 0; k < 40; k++) g.tick(1 / 30, false); return { s: g.startS - CFG.START_S, dist: g.dist, seed: g.rSeed, zone: g.zoneIdx }; });
+  const run = await page.evaluate(() => {
+    const g = window.__game, gate = g.track.objects.find((o) => o.kind === 'gate' && Math.abs(o.s - g.contS) < 0.01);
+    const toasts = () => [...document.querySelectorAll('.toast')].map((t) => t.textContent).join('|');
+    document.getElementById('toasts').textContent = '';           // toasts left from the last run
+    for (let k = 0; k < 40; k++) g.tick(1 / 30, false);
+    return { s: g.startS - CFG.START_S, dist: g.dist, seed: g.rSeed, gate: !!gate && gate.passed, score: g.score, toasts: toasts() };
+  });
   expect(Math.abs(run.s - r.cont)).toBeLessThan(1);
+  expect(run.gate).toBe(true);                                  // the run starts under that checkpoint's gate…
+  expect(run.toasts).not.toContain('CHECKPOINT');               // …which does not count again
   expect(run.dist).toBeLessThan(5);
   expect(run.seed).toBe(seed0);
   // the menu shows the same spot, and remembers it after a reload
   await page.evaluate(() => window.__game.goMenu());
   expect(await page.evaluate(() => window.__game.ball.s - CFG.START_S)).toBeCloseTo(r.cont, 0);
-  await expect(page.locator('#modeTxt')).toContainText(String(Math.floor(r.cont)));
+  await expect(page.locator('#modeTxt')).toContainText(String(Math.floor(r.cont)) + ' m checkpoint');
   await expect(page.locator('#btnNewTrack')).toBeVisible();
   await page.reload();
   await page.waitForFunction(() => window.__game && window.__game.R);
@@ -50,8 +62,14 @@ test('random mode: the next run and the menu start near the fall, until "new tra
 
 test('worlds follow the position on the track when a run starts far away', async ({ page }) => {
   await openGame(page);
-  await page.evaluate(() => { const g = window.__game; g.contS = CFG.START_S + 1120; g.newWorld(); g.halt = true; for (let k = 0; k < 10; k++) g.tick(1 / 30, false); });
-  expect(await page.evaluate(() => [window.__game.zoneIdx, zoneAt(window.__game.ball.s)])).toEqual([2, 2]);
+  const r = await page.evaluate(() => {
+    const g = window.__game; g.contS = CFG.START_S + 1180; g.newWorld(); g.halt = true; for (let k = 0; k < 10; k++) g.tick(1 / 30, false);
+    return { zone: [g.zoneIdx, zoneAt(g.ball.s)], cont: g.contS - CFG.START_S, info: document.getElementById('modeTxt').textContent, txt: fmt(g.contS - CFG.START_S) };
+  });
+  expect(r.zone).toEqual([2, 2]);
+  // an old save between two checkpoints moves back to the checkpoint before it
+  expect(r.cont).toBeGreaterThan(1000); expect(r.cont).toBeLessThanOrEqual(1180); expect(r.cont % 10).toBe(0);
+  expect(r.info).toContain(r.txt);
 });
 
 test('daily run always starts from the beginning', async ({ page }) => {
