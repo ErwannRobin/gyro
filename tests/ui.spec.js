@@ -31,14 +31,13 @@ test('music and sound toggles work independently', async ({ page }) => {
   expect(await page.evaluate(() => window.__game.audio.sfxOn)).toBe(true);
 });
 
-test('skins can be changed from the pause menu', async ({ page }) => {
+test('the pause screen has no skin pickers: they live in the menu options', async ({ page }) => {
   await openGame(page);
   await play(page);
   await page.evaluate(() => { const g = window.__game; g.halt = true; for (let k = 0; k < 40; k++) g.tick(1 / 30, false); g.pause(); });
   await expect(page.locator('#pause')).toBeVisible();
-  await page.click('#skinsPause .skinRow:nth-child(1) .sw >> nth=2');
-  await page.click('#skinsPause .skinRow:nth-child(2) .sw >> nth=3');
-  expect(await page.evaluate(() => [window.__game.themeIdx, window.__game.skinIdx])).toEqual([2, 3]);
+  await expect(page.locator('#pause .skins, #pause .sw')).toHaveCount(0);
+  expect(await page.evaluate(() => [...document.querySelectorAll('#pause > *')].map((e) => e.id || e.className))).toEqual(['', 'btnResume', 'btnRecal', 'volRow', 'volRow', 'btnQuit']);
 });
 
 test('share text links to the production URL', async ({ page }) => {

@@ -77,9 +77,45 @@ test('the landscape pause screen keeps only resume, sound and menu, and fits', a
   await openGame(page);
   await page.evaluate(() => { const g = window.__game; g.halt = true; g.startRun('tilt'); for (let i = 0; i < 60; i++) g.tick(1 / 30, false); g.pause(); });
   await expect(page.locator('#pause')).toBeVisible();
-  await expect(page.locator('#skinsPause')).toBeHidden();
+  await expect(page.locator('#pause .skins')).toHaveCount(0);
   const r = await page.evaluate(() => [...document.querySelectorAll('#pause > *')].filter((e) => e.offsetParent).map((e) => { const b = e.getBoundingClientRect(); return [e.id || e.className, b.top, b.bottom, b.left, b.right]; }));
   expect(r.map((e) => e[0])).toEqual(['', 'btnResume', 'btnRecal', 'volRow', 'volRow', 'btnQuit']);
   for (const [id, top, bottom, left, right] of r) { expect(top, id).toBeGreaterThanOrEqual(0); expect(bottom, id).toBeLessThanOrEqual(375); expect(left, id).toBeGreaterThanOrEqual(0); expect(right, id).toBeLessThanOrEqual(667); }
   for (let k = 1; k < r.length; k++) expect(r[k][1], r[k][0]).toBeGreaterThanOrEqual(r[k - 1][2] - 1);   // one column, no overlap
 });
+
+// Game over with every extra line (kid badge, new record): nothing is squeezed away. In landscape the
+// result sits on the left and the buttons on the right; in portrait they follow each other.
+for (const [vp, lang] of [[{ width: 667, height: 375 }, 'fr'], [{ width: 932, height: 430 }, 'en'], [{ width: 375, height: 667 }, 'fr'], [{ width: 390, height: 780 }, 'en']]) {
+  test(`game over ${vp.width}x${vp.height} ${lang}: play again, share and menu all show and fit`, async ({ page }) => {
+    await page.setViewportSize(vp);
+    await page.addInitScript((lang) => localStorage.setItem('gyroll.lang', JSON.stringify(lang)), lang);
+    await openGame(page);
+    await page.addStyleTag({ content: '#over *, #over *::before { animation: none !important; transition: none !important }' });
+    await page.evaluate(() => {
+      const g = window.__game; g.halt = true; g.kid = true;
+      g.startRun('keys'); for (let k = 0; k < 40; k++) g.tick(1 / 30, false);
+      g.best = 0; g.dist = 1284; g.finishRun();
+    });
+    await expect(page.locator('#over')).toBeVisible();
+    await expect(page.locator('#record')).toBeVisible();
+    await expect(page.locator('#ovRails')).toBeVisible();
+    const box = (sel) => page.evaluate((sel) => { const b = document.querySelector(sel).getBoundingClientRect(); return { top: b.top, bottom: b.bottom, left: b.left, right: b.right, h: b.height }; }, sel);
+    for (const sel of ['#over h2', '#ovDist', '#ovBest', '#btnRetry', '#btnShare', '#btnMenu']) {
+      const b = await box(sel);
+      expect(b.top, sel).toBeGreaterThanOrEqual(0); expect(b.bottom, sel).toBeLessThanOrEqual(vp.height);
+      expect(b.left, sel).toBeGreaterThanOrEqual(0); expect(b.right, sel).toBeLessThanOrEqual(vp.width);
+    }
+    const retry = await box('#btnRetry'), share = await box('#btnShare'), menu = await box('#btnMenu'), best = await box('#ovBest'), rec = await box('#record .txt'), rails = await box('#ovRails');
+    expect(rec.left).toBeGreaterThanOrEqual(0); expect(rails.left).toBeGreaterThanOrEqual(0);
+    expect(await page.evaluate(() => document.getElementById('ovRails').textContent)).toContain(lang === 'fr' ? 'Réalisé' : 'Achieved');
+    expect(retry.h).toBeGreaterThanOrEqual(48);
+    expect(share.h).toBeGreaterThanOrEqual(42);
+    expect(share.top).toBeGreaterThanOrEqual(retry.bottom - 1);
+    expect(menu.top).toBeGreaterThanOrEqual(share.bottom - 1);
+    if (vp.width > vp.height) for (const r of [best, rec, rails]) expect(retry.left).toBeGreaterThanOrEqual(r.right);
+    else expect(retry.top).toBeGreaterThanOrEqual(best.bottom);
+    await page.click('#btnRetry');
+    expect(await page.evaluate(() => window.__game.state)).not.toBe('over');
+  });
+}

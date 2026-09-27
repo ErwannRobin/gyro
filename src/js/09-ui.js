@@ -200,7 +200,7 @@ class UI {
     document.documentElement.style.setProperty('--accent2', css(theme.accent2));
   }
 
-  // One skin picker per container (menu + pause); both stay in sync.
+  // A skin picker (track row + ball row) in a container; every picker built stays in sync.
   buildSkins(containerId, onTrack, onBall) {
     const box = this.$(containerId);
     const mkRow = (list, round, cb, lblKey) => {

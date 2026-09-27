@@ -48,6 +48,8 @@ test('random mode: the next run and the menu restart at the last checkpoint, unt
   expect(await page.evaluate(() => window.__game.ball.s - CFG.START_S)).toBeCloseTo(r.cont, 0);
   await expect(page.locator('#modeTxt')).toContainText(String(Math.floor(r.cont)) + ' m checkpoint');
   await expect(page.locator('#btnNewTrack')).toBeVisible();
+  // the reset link is plain text with a dark halo (no pill that could look like a button over the sky)
+  expect(await page.evaluate(() => { const c = getComputedStyle(document.getElementById('btnNewTrack')); return [c.backgroundColor, c.textShadow !== 'none']; })).toEqual(['rgba(0, 0, 0, 0)', true]);
   await page.reload();
   await page.waitForFunction(() => window.__game && window.__game.R);
   expect(await page.evaluate(() => [window.__game.rSeed, Math.round(window.__game.ball.s - CFG.START_S)])).toEqual([seed0, Math.round(r.cont)]);
@@ -90,6 +92,17 @@ test('the share video is only made when the button is pressed', async ({ page })
   expect(await page.evaluate(() => window.__game.shareSt)).not.toBe('idle');
   await page.waitForFunction(() => ['ready', 'saved'].includes(window.__game.shareSt), null, { timeout: 60_000 });
   if (await page.evaluate(() => window.__game.shareSt === 'ready')) await expect(page.locator('#btnShare')).toContainText('SHARE THE VIDEO');
+  // the video carries its own music (its sound track decodes to a real, non-silent signal)
+  const au = await page.evaluate(async () => {
+    const f = window.__game.shareFile;
+    if (!f || !f.type.startsWith('video')) return f ? f.type : 'none';
+    const b = await new AudioContext().decodeAudioData(await f.arrayBuffer()), d = b.getChannelData(0);
+    let e = 0; for (let i = 0; i < d.length; i++) e += d[i] * d[i];
+    return { dur: b.duration, rms: Math.sqrt(e / d.length) };
+  });
+  expect(au).toEqual({ dur: expect.any(Number), rms: expect.any(Number) });
+  expect(au.dur).toBeGreaterThan(2.5);
+  expect(au.rms).toBeGreaterThan(0.01);
 });
 
 test('on the menu, turning and tilting the phone moves the camera around the ball', async ({ page }) => {

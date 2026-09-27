@@ -2,10 +2,12 @@
 // =====================================================================
 // Replay — records a light timelapse of the run (small JPEG snapshots of the
 // WebGL canvas) and turns it into a short accelerated video at game over,
-// using MediaRecorder on an offscreen canvas. Falls back to a score image.
+// using MediaRecorder on an offscreen canvas, with its own music when the
+// browser can record sound. Falls back to a score image.
 // =====================================================================
 class Replay {
-  constructor() {
+  constructor(audio) {
+    this.audio = audio;
     this.snap = document.createElement('canvas'); this.snapCx = this.snap.getContext('2d');
     this.pending = 0;
     this.canVideo = typeof window.MediaRecorder === 'function' && typeof HTMLCanvasElement.prototype.captureStream === 'function';
@@ -58,20 +60,29 @@ class Replay {
       const blob = await new Promise((r) => out.toBlob(r, 'image/png'));
       return blob ? new File([blob], `gyroll-${Math.floor(info.dist)}m.png`, { type: 'image/png' }) : null;
     }
-    const types = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
+    const nMain = this.frames.length, fps = Math.max(12, nMain / 7), tMain = nMain / fps, tEnd = this.ending.length / 12;
+    const INTRO = 0.7, OUTRO = 2.4, total = INTRO + tMain + tEnd + OUTRO;
+    const speedX = Math.max(2, Math.round(this.interval * fps));
+    // music fitted to the four parts; a browser that fails to record it gets silent videos from then on
+    let tune = null;
+    if (!this.noAudio && this.audio) tune = await this.audio.videoMusic({ intro: INTRO, main: tMain, end: tEnd, outro: OUTRO, total, record: info.record }).catch(() => null);
+    if (job.abort) { if (tune) tune.stop(); return null; }
+    const types = tune ? ['video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
+      : ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
     const mime = types.find((t) => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } });
     let rec, track;
     try {
       const stream = out.captureStream(30); track = stream.getVideoTracks()[0];
+      if (tune) stream.addTrack(tune.track);
       rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 3000000 } : undefined);
     }
-    catch (e) { this.canVideo = false; return this.make(info, onProgress); }
+    catch (e) {
+      if (tune) { tune.stop(); this.noAudio = true; return this.make(info, onProgress, attempt); }
+      this.canVideo = false; return this.make(info, onProgress);
+    }
     const chunks = [];
     rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
     const done = new Promise((r) => { rec.onstop = r; });
-    const nMain = this.frames.length, fps = Math.max(12, nMain / 7), tMain = nMain / fps, tEnd = this.ending.length / 12;
-    const INTRO = 0.7, OUTRO = 2.4, total = INTRO + tMain + tEnd + OUTRO;
-    const speedX = Math.max(2, Math.round(this.interval * fps));
     // sliding window of decoded frames so memory stays small
     const cache = new Map();
     const want = (i) => { if (i < 0 || i >= list.length || cache.has(i)) return; cache.set(i, this.decode(list[i].b)); };
@@ -80,6 +91,7 @@ class Replay {
     this.frame(g, W, H, first, info, list[0].dist, 0, 0, speedX);          // prime the stream before recording
     rec.start(250);
     for (let k = 0; k < (attempt ? 30 : 4); k++) { await new Promise((r) => setTimeout(r, 40)); this.frame(g, W, H, first, info, list[0].dist, 0, 0, speedX); }
+    if (tune) tune.start();                                    // the music and the pictures share the same start
     const t0 = performance.now();
     let last = null;
     while (!job.abort) {
@@ -99,9 +111,11 @@ class Replay {
     }
     try { rec.requestData(); } catch (e) { /* ignore */ }
     rec.stop(); await done;
+    if (tune) tune.stop();
     for (const p of cache.values()) p.then((b) => b && b.close && b.close());
     if (job.abort) return null;
     if (!chunks.length) {                                   // some encoders need a warm-up: retry once, then use an image
+      if (tune) this.noAudio = true;
       if (attempt === 0) return this.make(info, onProgress, 1);
       this.canVideo = false; const f = await this.make(info, onProgress, 2); this.canVideo = true; return f;
     }

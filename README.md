@@ -10,7 +10,7 @@ GYROLL is an endless 3D marble game for your phone. Tilt the phone to roll a hea
 
 ![The nine worlds of GYROLL](docs/worlds.jpg)
 
-The whole game is **one self-contained `index.html` file** (about 375 KB, about 6 000 lines): HTML, CSS, JavaScript, GLSL shaders and synthesized audio.
+The whole game is **one self-contained `index.html` file** (about 385 KB, about 6 150 lines): HTML, CSS, JavaScript, GLSL shaders and synthesized audio.
 - It uses no libraries and no external assets, and it needs no network to play.
 - It is assembled from readable source files in [`src/`](src) by a tiny build script that has no dependencies.
 - A few optional files next to it make it installable and nice to share: icons, a manifest, a service worker and a preview image.
@@ -27,7 +27,7 @@ The whole game is **one self-contained `index.html` file** (about 375 KB, about 
   - checkpoints about every 250 m, each on a calm, wide, straight pad, and coins to collect
   - The generator always leaves a safe line, so no section is impossible.
 - **Two game modes:**
-  - **Training**: one endless track to explore. After a fall, the next run (and the menu scene) starts again at the last checkpoint you passed, so you can go further each time. The track and the restart point are saved on the device. **↻ Reset track** on the menu (a small dark pill, readable over any sky) starts a fresh track from 0 m.
+  - **Training**: one endless track to explore. After a fall, the next run (and the menu scene) starts again at the last checkpoint you passed, so you can go further each time. The track and the restart point are saved on the device. **↻ Reset track** on the menu (a text link with a dark halo, readable over any sky) starts a fresh track from 0 m.
   - **Daily run**: everyone gets the same track on the same day, and every run starts from the beginning. The seed comes from the UTC date, and the daily best is saved separately. The link `?mode=daily` opens the daily run directly.
 - **Star power.** Coins fill a gauge at the bottom of the screen. Coins taken in a row raise the coin multiplier (×2 after 4, ×3 after 8, ×4 after 12), so the gauge fills faster; missing a single coin resets it. When the gauge is full, flick the phone up quickly (or double-tap, press Space, or tap the gauge): glowing side rails appear, the ball lights up, the music speeds up and the score is doubled. The ball also smashes every post and moving slider it touches into flying pieces (+500 points each, doubled by star power) instead of bouncing off, and it mows grass tufts flat. The gauge then drains in about 6 seconds and the rails go away.
 - **Kid mode (side rails).** A menu toggle adds a bumper fence along both edges of the track: a low bar, short posts and a glowing top bar as high as the ball's center. The ball bounces back instead of falling off the side. A very hard hit (above about 32 km/h sideways) still jumps the fence, and holes and gaps still count. Kid-mode runs keep their own best scores, and the game over screen, the share text and the share video all say "with side rails".
@@ -54,7 +54,7 @@ The whole game is **one self-contained `index.html` file** (about 375 KB, about 
   - bloom, radial speed blur and chromatic aberration when boosting
   - a lens flare when the sun is in view (none when something hides it)
   - slow motion when you fall
-- **5 track skins** (neon carbon, steel & gold, wooden toy, ice marble, grass) **and 5 marble skins** (chrome, glass, gold, plasma, candy). You can change them from the menu options or the pause screen (in portrait; the landscape pause screen keeps only resume, sound and menu, in one column). The pickers show real pictures drawn with the game's own shaders: each marble as it looks in the current world, and each track skin on a short bend under the current sky. They are redrawn when the world or the track skin changes, one picture per frame.
+- **5 track skins** (neon carbon, steel & gold, wooden toy, ice marble, grass) **and 5 marble skins** (chrome, glass, gold, plasma, candy). You can change them from the menu options. The pause screen keeps only resume, recalibrate, sound and main menu, so it stays calm in portrait and fits a short landscape screen. The pickers show real pictures drawn with the game's own shaders: each marble as it looks in the current world, and each track skin on a short bend under the current sky. They are redrawn when the world or the track skin changes, one picture per frame.
 - **Grass track.** A lawn with mowing stripes, clover, daisies, a stone curb and turf sides. It is not only a look: the ball rolls slower (on flat ground it tops out near 76 km/h instead of more than 120 km/h), the uneven ground nudges it sideways, and grass tufts on the track slow it down, kick it aside and make it bounce, with clippings flying. Tufts never sit on narrow ground, boosters, checkpoint pads or among obstacles. They are placed from the track seed without changing the track, so the daily run stays the same for everyone.
 - **A light menu.** The menu shows only the GYROLL title, the tagline, the Training / Daily run switch, one **PLAY** button in the middle of the screen (the ball rolls into view below it) and an **Options** toggle at the bottom. Its parts rise into place one after the other when it opens.
 - **Options.** The toggle raises a glass sheet with every setting: kid mode, controls (gyroscope or touch), time of day, track and marble skins, language and sound. PLAY and the Training / Daily run switch hide, the title shrinks into the top bar between the language and sound buttons, and an **About** button takes the switch's place. **Done** (or a tap outside the sheet) brings the light menu back. The selected option of each switch is marked by a pill that slides under it.
@@ -67,11 +67,11 @@ The whole game is **one self-contained `index.html` file** (about 375 KB, about 
 - **About.** The story of the project and its concept, the real line count and size of `index.html` (the build writes them into the file), and links to the source code on GitHub and to [@diwann](https://x.com/diwann) on X. It opens with its own animation: a circle grows from the About button, a marble draws a neon track and keeps rolling along it, the numbers count up and the text rises line after line. ✕ or `Esc` closes it.
 - **A still menu camera.** Changing the mode, kid mode, the track, a skin or the time of day on the menu never moves the camera: the camera keeps its place next to the ball, and the new world or sky appears with a short cross-fade. Kid mode only adds the rails to the same track.
 - **Sound.** Every sound is synthesized with the Web Audio API, including the rolling sound, impacts, coins, checkpoints, boosts, falls, thunder and generative ambient music. Music and sound effects have separate toggles (white icons) and volume sliders.
-- **Share my score.** During the run the game records a light timelapse. When you press **Share my score** at game over, it builds a short accelerated video (intro, run, fall, score card) with `MediaRecorder`; press **Share the video** when it is ready. On phones it is shared through the Web Share API; elsewhere it is downloaded. If video is not supported, a score-card image is used instead.
+- **Share my score.** During the run the game records a light timelapse. When you press **Share my score** at game over, it builds a short accelerated video (intro, run, fall, score card) with `MediaRecorder`, with its own music; press **Share the video** when it is ready. The music (a 124 BPM tune in A minor) is synthesized for each video and fitted to its parts: a riser under the intro, a house groove under the fast timelapse with a clap roll into the fall, a boom and a falling whoosh over the real-time ending, and a last chord with a bell arpeggio under the score card (in A major after a new record). It is rendered offline, streamed only into the recording (never to the speakers) and added even when the game music is off. On phones it is shared through the Web Share API; elsewhere it is downloaded. If video is not supported, a score-card image is used instead.
 - **English and French**, detected from the browser language. You can switch on the menu; the menu layout never moves when you change the language or an option.
 - **Look around on the menu.** Drag on the background to walk the camera around the ball (up and down too), and pinch (or use the mouse wheel) to zoom in on the marble or out on the world. When motion access is on (Android at once, iPhone after you allowed it once), turning the phone also walks the camera around the ball and tilting it raises or lowers the camera.
 - **Built for phones:**
-  - portrait first, landscape supported
+  - portrait first, landscape supported (the game over screen puts the result on the left and the buttons on the right)
   - no scrolling or zooming, large touch targets, readable in sunlight
   - screen stays awake while playing, pauses on focus loss
 - **Adaptive quality.** Resolution, bloom, particles and scenery density adjust automatically to hold the frame rate. Repeated scenery is drawn with GPU instancing: about 35 draw calls per frame instead of about 105. The ball's reflection cube map is 256 px on computers and 128 px on phones (half of it redrawn each frame there), and it is turned off on the lowest level.
@@ -95,6 +95,10 @@ The whole game is **one self-contained `index.html` file** (about 375 KB, about 
 | Real time: morning sun | Night: moon over the sea | Night: countryside | Day: the city |
 |---|---|---|---|
 | ![Morning sun with a lens flare](docs/sky-sun.jpg) | ![Moon and stars over the sea world](docs/sky-moon.jpg) | ![The countryside world at night](docs/sky-night.jpg) | ![The tech world by day](docs/world-tech-day.jpg) |
+
+| Game over in landscape: the result on the left, the buttons on the right |
+|---|
+| ![Game over screen in landscape](docs/over-landscape.jpg) |
 
 ## Controls
 
@@ -177,11 +181,12 @@ The tests drive the game loop step by step instead of waiting for real frames, s
 - training mode restarting at the last checkpoint (and "reset track"), daily runs restarting from 0
 - checkpoints on safe pads, at round distances
 - the ball's reflection cube map facing the right way
-- the share video only being made on request
+- the share video only being made on request, with a real music track in it
 - the menu camera following the phone
 - the light menu (one PLAY in the middle) and the options sheet (the title moves into the top bar, the mode switch gives its place to About; Done or a tap outside closes it)
 - the About screen: the story in both languages, the line count and size that match the real `index.html`, the links, the marble animation, closing with ✕ or `Esc`, and scrolling on a short landscape screen
-- the landscape pause screen: one column without skin pickers that fits a short screen
+- the pause screen without skin pickers, and in landscape one column that fits a short screen
+- the game over screen with every extra line (kid badge, new record) in English and French: play again, share and menu always show, in two columns in landscape
 - the time of day: the sun's path over the day and the year, the moon and its phase, night palettes, the city's day look, the setting and dark mode, the sun and moon discs, and all worlds rendering at night
 - a menu camera that stays still when options change, and kid mode keeping the same world
 - picker pictures drawn by the game, redrawn for a new world
@@ -235,7 +240,8 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
   - Android Chrome gives access directly.
 - **Sound on iPhone.** The silent switch mutes Web Audio.
 - **Share video:**
-  - The format depends on the browser: MP4 (H.264) where supported, otherwise WebM.
+  - The format depends on the browser: MP4 where supported, otherwise WebM.
+  - The music track needs `MediaStreamAudioDestinationNode` and a recorder that takes sound. A browser that fails to record it gets silent videos from then on.
   - Sharing a file needs Web Share support with files, which mostly means mobile browsers. Otherwise the file is downloaded.
 - **Not yet verified on real devices:**
   - Landscape tilt directions have not been checked on a real phone. Portrait tilt was checked with simulated sensor events.
@@ -244,6 +250,7 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
   - The four nature worlds (countryside, forest, sea, desert) and the picker pictures were only checked in headless Chromium. Their cost on real phones is not measured yet.
   - The grass track's feel (how slow, how bumpy) was tuned with automated runs, not by playing on a phone. It may need adjusting.
   - The finger camera, pinch zoom and the options sheet were tested with simulated pointer events, not on a real touch screen.
+  - The share video's music was checked by its levels and by decoding the recorded file, not yet by ear on a real phone.
 - **Real-time sky, simplified on purpose.** The game does not ask for your location. The sun's path is computed for a place at 45° of latitude (south of the equator when the time zone says so), and it is squeezed towards the front of the view so you can see it more often. Only the moon's phase is real; the moon itself simply stands opposite the sun at night.
 - **Analytics events.** Page views work whenever Web Analytics is on. Custom events (`run_start`, `game_over`…) may need a Vercel plan that supports them; if not, they are simply ignored.
 
@@ -848,6 +855,22 @@ Also, we should apply the day / night theme toggle on the daily run too.
 Also the new track button should be on a small shadow to be readable above a purple background. And it should be “reset track” instead of “new track”
 
 And the pause menu on landscape mode is too packed. Let’s remove the track and ball texture selectors.
+````
+
+</details>
+
+<details>
+<summary><strong>Game over and video music prompt</strong></summary>
+
+````markdown
+The “play again” button is not displayed on the game over screen in landscape mode. 
+Could we move some buttons to a 2 columns layout to save vertical space ?
+
+And we don’t need to have the change track or ball texture options in the pause menu in portrait mode neither. 
+
+And the reset track button is still not always readable. Let’s remove the button background and just apply some shadow to the text. 
+
+And can we have a music in the exported video?
 ````
 
 </details>

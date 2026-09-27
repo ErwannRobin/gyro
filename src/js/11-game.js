@@ -25,7 +25,7 @@ class Game {
     this.parts = new ParticleSystem(this.quality.cur.particles);
     this.env = new Environment();
     this.fx = new FxBuilder();
-    this.replay = new Replay();
+    this.replay = new Replay(this.audio);
     this.chunks = new Map(); this.nextChunk = 0;
     this.themeIdx = clamp(Store.get('theme', 0) | 0, 0, TRACK_THEMES.length - 1);
     this.skinIdx = clamp(Store.get('skin', 0) | 0, 0, BALL_SKINS.length - 1);
@@ -94,7 +94,7 @@ class Game {
     tap($('btnQuit'), () => this.goMenu());
     tap($('btnRetry'), () => { if (this.state === 'over') { this.audio.init(); this.startRun(this.mode); } });
     tap($('btnMenu'), () => this.goMenu());
-    tap(E.share, () => this.share());
+    tap(E.share, () => { this.audio.init(); this.share(); });          // the video's music needs a live audio context
     tap(E.power, () => this.tryStar());
     const vs = $('volSfx'), vm = $('volMusic');
     vs.value = Math.round(this.audio.sfxVol * 100); vm.value = Math.round(this.audio.musicVol * 100);
@@ -104,10 +104,9 @@ class Game {
       if (i === this.themeIdx) return;
       this.themeIdx = i; Store.set('theme', i); this.physics.roll = TRACK_THEMES[i].roll || null;
       this.R.setTheme(TRACK_THEMES[i]); U.setAccent(TRACK_THEMES[i]); U.selectSkins(this.themeIdx, this.skinIdx); this.audio.tick();
-      if (this.state === 'paused') this.render();
     };
-    const onBall = (i) => { this.skinIdx = i; Store.set('skin', i); U.selectSkins(this.themeIdx, this.skinIdx); this.audio.tick(); if (this.state === 'paused') this.render(); };
-    U.buildSkins('skinsMenu', onTrack, onBall); U.buildSkins('skinsPause', onTrack, onBall);
+    const onBall = (i) => { this.skinIdx = i; Store.set('skin', i); U.selectSkins(this.themeIdx, this.skinIdx); this.audio.tick(); };
+    U.buildSkins('skinsMenu', onTrack, onBall);                 // the pickers live in the menu options only
     U.selectSkins(this.themeIdx, this.skinIdx);
     this.refreshTexts();
     window.addEventListener('keydown', (e) => {

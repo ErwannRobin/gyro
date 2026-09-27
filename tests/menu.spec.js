@@ -126,9 +126,9 @@ test('ball and track pickers show pictures drawn by the game', async ({ page }) 
   test.slow();                                                    // 20 pictures rendered in software: slow on CI machines
   const errors = await openGame(page);
   await tickN(page, 90, true);
-  const bg = () => page.evaluate(() => [...document.querySelectorAll('#skinsMenu .sw, #skinsPause .sw')].map((b) => b.style.backgroundImage.slice(0, 27)));
+  const bg = () => page.evaluate(() => [...document.querySelectorAll('.sw')].map((b) => b.style.backgroundImage.slice(0, 27)));
   const all = await bg();
-  expect(all.length).toBe(20);
+  expect(all.length).toBe(10);
   for (const u of all) expect(u).toBe('url("data:image/png;base64,');
   // each picture is different, and it is redrawn for a new world
   const urls = await page.evaluate(() => [...document.querySelectorAll('#skinsMenu .sw')].map((b) => b.style.backgroundImage));

@@ -439,4 +439,143 @@ class AudioManager {
       o.connect(f); o.start(t); o.stop(t + dur + 1.5);
     }
   }
+
+  // ---- music for the shared video: rendered offline to fit the video's parts, then played into a
+  // stream track (never to the speakers) while the recorder runs. It is added even when the game
+  // music is off: the video is made for other people. null when the browser cannot do it.
+  async videoMusic(plan) {
+    const c = this.ctx, OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (!c || !OAC || typeof c.createMediaStreamDestination !== 'function') return null;
+    if (c.state !== 'running') await Promise.race([c.resume().catch(() => {}), new Promise((r) => setTimeout(r, 400))]);
+    if (c.state !== 'running') return null;
+    const buf = await renderTune(new OAC(2, Math.ceil(c.sampleRate * (plan.total + 0.1)), c.sampleRate), plan);
+    const dest = c.createMediaStreamDestination(), track = dest.stream.getAudioTracks()[0];
+    if (!buf || !track) return null;
+    let src = null;
+    return {
+      track,
+      start() { src = c.createBufferSource(); src.buffer = buf; src.connect(dest); src.start(); },
+      stop() { try { if (src) { src.stop(); src.disconnect(); } } catch (e) { /* already stopped */ } track.stop(); },
+    };
+  }
+}
+
+// A 124 BPM tune in A minor for the shared video. P: { intro, main, end, outro, total, record } in
+// seconds. A noise riser under the intro; a house groove (kick, claps, hats, off-beat bass, a
+// ping-pong arpeggio, pumping pads on Am–F–C–G) under the fast timelapse, with a clap roll into the
+// fall; a boom and a falling whoosh over the real-time ending; a last chord and a bell arpeggio
+// under the score card (A major after a record), fading out with the video.
+function renderTune(c, P) {
+  const tA = P.intro, tE = tA + P.main, tO = tE + P.end, T = P.total, beat = 60 / 124, s16 = beat / 4;
+  const mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
+  const out = c.createGain(), comp = c.createDynamicsCompressor();
+  out.gain.setValueAtTime(0.62, 0); out.gain.setValueAtTime(0.62, Math.max(0, T - 0.8)); out.gain.linearRampToValueAtTime(0.0001, T);
+  comp.threshold.value = -12; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.2;
+  out.connect(comp); comp.connect(c.destination);
+  const noise = c.createBuffer(1, c.sampleRate, c.sampleRate), nd = noise.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
+  const verb = c.createConvolver(), ir = c.createBuffer(2, c.sampleRate * 2, c.sampleRate), vOut = c.createGain();
+  for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3); }
+  verb.buffer = ir; vOut.gain.value = 0.3; verb.connect(vOut); vOut.connect(out);
+  const pump = c.createGain(); pump.connect(out);                          // pads, bass and arpeggio duck under each kick
+  let ducked = -1;
+  const duck = (t) => { if (t < ducked + 0.22) return; ducked = t; pump.gain.setValueAtTime(0.4, t); pump.gain.linearRampToValueAtTime(1, t + 0.2); };
+  const delay = c.createDelay(1), fb = c.createGain(), dOut = c.createGain();
+  delay.delayTime.value = s16 * 3; fb.gain.value = 0.32; dOut.gain.value = 0.35;
+  delay.connect(fb); fb.connect(delay); delay.connect(dOut); dOut.connect(pump);
+  const panned = (x) => { if (!c.createStereoPanner) return pump; const p = c.createStereoPanner(); p.pan.value = x; p.connect(pump); return p; };
+  const side = [panned(-0.35), panned(0.35)];
+  const env = (g, t, a, peak, dec) => { g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + dec); };
+  const tone = (type, f, t, a, peak, dec, dest, f2) => {
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + a + dec);
+    env(g, t, a, peak, dec); o.connect(g); g.connect(dest); o.start(t); o.stop(t + a + dec + 0.05);
+    return g;
+  };
+  const hiss = (t, dur, peak, type, f, q, dest, f2) => {
+    const s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = noise; s.loop = true; fl.type = type; fl.frequency.setValueAtTime(f, t); fl.Q.value = q;
+    if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    env(g, t, 0.003, peak, dur); s.connect(fl); fl.connect(g); g.connect(dest);
+    s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.05);
+    return g;
+  };
+  const pad = (notes, t, dur, cut, peak) => {
+    const f = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'lowpass'; f.frequency.setValueAtTime(cut, t); f.Q.value = 0.4;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + 0.06);
+    g.gain.setValueAtTime(peak, t + Math.max(0.07, dur - 0.1)); g.gain.linearRampToValueAtTime(0.0001, t + dur + 0.3);
+    f.connect(g); g.connect(pump); g.connect(verb);
+    for (const m of notes) for (const det of [-9, 9]) {
+      const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = mtof(m); o.detune.value = det;
+      o.connect(f); o.start(t); o.stop(t + dur + 0.35);
+    }
+    return f;
+  };
+  const kick = (t, peak = 0.8) => { tone('sine', 150, t, 0.002, peak, 0.3, out, 46); hiss(t, 0.012, 0.08, 'highpass', 4000, 0.7, out); duck(t); };
+  const crash = (t, peak) => { const g = hiss(t, 1.3, peak, 'highpass', 3200, 0.5, out); g.connect(verb); };
+  const CH = [
+    { root: 33, pad: [57, 60, 64, 67, 71], arp: [69, 72, 76, 79] },       // Am9
+    { root: 29, pad: [53, 57, 60, 64, 67], arp: [65, 69, 72, 76] },       // Fmaj9
+    { root: 36, pad: [55, 59, 60, 64, 67], arp: [67, 72, 76, 79] },       // Cmaj7
+    { root: 31, pad: [55, 59, 62, 64, 67], arp: [67, 71, 74, 79] },       // G6
+  ];
+  const ARP = [0, 1, 2, 3, 1, 2, 3, 2];
+  // intro: a rising noise sweep and the first chord opening up
+  if (tA > 0.1) {
+    const s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = noise; s.loop = true; fl.type = 'bandpass'; fl.Q.value = 1.2;
+    fl.frequency.setValueAtTime(300, 0); fl.frequency.exponentialRampToValueAtTime(6000, tA);
+    g.gain.setValueAtTime(0.0001, 0); g.gain.exponentialRampToValueAtTime(0.22, tA); g.gain.linearRampToValueAtTime(0.0001, tA + 0.03);
+    s.connect(fl); fl.connect(g); g.connect(out); s.start(0); s.stop(tA + 0.05);
+    const f = pad(CH[0].pad, 0, tA, 300, 0.035); f.frequency.exponentialRampToValueAtTime(2200, tA);
+  }
+  // the timelapse: a house groove on a 16th-note grid; the last beat before the fall is a clap roll
+  crash(tA, 0.14);
+  for (let k = 0; ; k++) {
+    const t = tA + k * s16;
+    if (t > tE - 0.02) break;
+    const ch = CH[Math.floor(k / 16) % 4], roll = t >= tE - beat;
+    if (k % 16 === 0) pad(ch.pad, t, Math.min(beat * 4, tE - t), 1800, 0.045);
+    if (roll) { hiss(t, 0.1, 0.08 + 0.17 * (1 - (tE - t) / beat), 'bandpass', 1700, 0.9, out); continue; }
+    if (k % 4 === 0) kick(t);
+    if (k % 8 === 4) { const g = hiss(t, 0.15, 0.3, 'bandpass', 1500, 0.8, out); g.connect(verb); }
+    if (k % 2 === 1 || k % 4 === 2) hiss(t, 0.035, k % 4 === 2 ? 0.11 : 0.035, 'highpass', 8000, 0.7, out);
+    if (k % 4 === 2 || k % 16 === 15) {
+      const o = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain();
+      o.type = 'sawtooth'; o.frequency.value = mtof(ch.root + (k % 16 === 15 ? 12 : 0));
+      f.type = 'lowpass'; f.Q.value = 5; f.frequency.setValueAtTime(900, t); f.frequency.exponentialRampToValueAtTime(220, t + s16 * 1.8);
+      env(g, t, 0.004, 0.2, s16 * 1.8); o.connect(f); f.connect(g); g.connect(pump); o.start(t); o.stop(t + s16 * 2 + 0.05);
+    }
+    const g = tone('triangle', mtof(ch.arp[ARP[k % 8]] + (k % 32 >= 16 ? 12 : 0)), t, 0.003, 0.07, 0.16, side[k & 1]);
+    g.connect(delay);
+  }
+  // the real-time ending: a boom, the chord of the fall closing down and a whoosh falling with the ball
+  if (tO - tE > 0.1) {
+    kick(tE, 1); crash(tE, 0.12);
+    tone('sine', 90, tE, 0.005, 0.5, P.end + 0.4, out, 30);
+    const f = pad([53, 57, 60, 64], tE, P.end, 2400, 0.05); f.frequency.exponentialRampToValueAtTime(260, tO);
+    const s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = noise; s.loop = true; fl.type = 'bandpass'; fl.Q.value = 2;
+    fl.frequency.setValueAtTime(5000, tE); fl.frequency.exponentialRampToValueAtTime(180, tO);
+    g.gain.setValueAtTime(0.0001, tE); g.gain.linearRampToValueAtTime(0.16, tE + 0.15); g.gain.exponentialRampToValueAtTime(0.0001, tO + 0.1);
+    s.connect(fl); fl.connect(g); g.connect(out); s.start(tE); s.stop(tO + 0.15);
+  }
+  // the score card: the last chord, a bell arpeggio going up, the low A under it
+  const third = P.record ? 61 : 60;
+  kick(tO, 0.8); crash(tO, 0.16);
+  pad([45, 57, third, 64, 69, 71], tO, T - tO, 2600, 0.06);
+  tone('sine', mtof(33), tO, 0.01, 0.35, T - tO, out);
+  const bells = P.record ? [69, 73, 76, 81, 85, 88] : [69, 72, 76, 81, 83, 88];
+  bells.forEach((m, i) => {
+    const t = tO + 0.1 + i * beat / 2;
+    if (t > T - 0.3) return;
+    const a = tone('sine', mtof(m), t, 0.003, 0.12, 1.1, side[i & 1]), b = tone('sine', mtof(m) * 2.01, t, 0.002, 0.035, 0.4, side[i & 1]);
+    a.connect(verb); b.connect(verb); a.connect(delay);
+  });
+  return new Promise((res) => {
+    c.oncomplete = (e) => res(e.renderedBuffer);
+    const p = c.startRendering();                                         // a promise, except on old Safari
+    if (p && p.catch) p.catch(() => res(null));
+  });
 }

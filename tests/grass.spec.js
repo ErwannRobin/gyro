@@ -112,8 +112,9 @@ test('choosing the grass track changes how the ball rolls; tufts show and the ba
   });
   expect(r).toEqual({ hit: true, bob: expect.any(Number), debris: true });
   expect(r.bob).toBeGreaterThan(0.02);
-  await page.evaluate(() => window.__game.pause());
-  await page.click('#skinsPause .skinRow:nth-child(1) .sw >> nth=0');
+  await page.evaluate(() => window.__game.goMenu());
+  await openOptions(page);
+  await page.click('#skinsMenu .skinRow:nth-child(1) .sw >> nth=0');
   expect(await page.evaluate(() => window.__game.physics.roll)).toBe(null);
   expect(errors).toEqual([]);
 });
