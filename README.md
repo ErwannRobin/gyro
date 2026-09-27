@@ -29,8 +29,8 @@ The whole game is **one self-contained `index.html` file** (about 320 KB): HTML,
 - **Two game modes:**
   - **Random**: one endless track to explore. After a fall, the next run (and the menu scene) starts again at the last checkpoint you passed, so you can go further each time. The track and the restart point are saved on the device. **↻ New track** on the menu starts a fresh track from 0 m.
   - **Daily run**: everyone gets the same track on the same day, and every run starts from the beginning. The seed comes from the UTC date, and the daily best is saved separately. The link `?mode=daily` opens the daily run directly.
-- **Star power.** Coins fill a gauge at the bottom of the screen. Coins taken in a row raise the coin multiplier (×2 after 4, ×3 after 8, ×4 after 12), so the gauge fills faster; missing a single coin resets it. When the gauge is full, flick the phone up quickly (or double-tap, press Space, or tap the gauge): glowing side rails appear, the ball lights up, the music speeds up and the score is doubled. The gauge then drains in about 6 seconds and the rails go away.
-- **Kid mode (side rails).** A menu toggle adds small glowing rails along both edges of the track, so the ball bounces back instead of falling off the side. A hit that is too hard still jumps the rail, and holes and gaps still count. Kid-mode runs keep their own best scores, and the game over screen, the share text and the share video all say "with side rails".
+- **Star power.** Coins fill a gauge at the bottom of the screen. Coins taken in a row raise the coin multiplier (×2 after 4, ×3 after 8, ×4 after 12), so the gauge fills faster; missing a single coin resets it. When the gauge is full, flick the phone up quickly (or double-tap, press Space, or tap the gauge): glowing side rails appear, the ball lights up, the music speeds up and the score is doubled. The ball also smashes every post and moving slider it touches into flying pieces (+500 points each, doubled by star power) instead of bouncing off, and it mows grass tufts flat. The gauge then drains in about 6 seconds and the rails go away.
+- **Kid mode (side rails).** A menu toggle adds a bumper fence along both edges of the track: a low bar, short posts and a glowing top bar as high as the ball's center. The ball bounces back instead of falling off the side. A very hard hit (above about 32 km/h sideways) still jumps the fence, and holes and gaps still count. Kid-mode runs keep their own best scores, and the game over screen, the share text and the share video all say "with side rails".
 - **Nine worlds** that change every 500 m of track and blend smoothly into each other. After the last one, the list starts again:
   - **Tech** (0–500 m): towers with lit windows, beacons, a glowing grid below
   - **Countryside** (500–1000 m): a sunny patchwork of fields and hedges far below, rows of tall cypresses, floating meadows with trees, wind turbines, hot-air balloons, rolling hills and white clouds
@@ -53,8 +53,9 @@ The whole game is **one self-contained `index.html` file** (about 320 KB): HTML,
   - a speed trail and particles
   - bloom, radial speed blur and chromatic aberration when boosting
   - slow motion when you fall
-- **4 track skins and 5 marble skins** (chrome, glass, gold, plasma, candy). You can change them from the menu or the pause screen. The pickers show real pictures drawn with the game's own shaders: each marble as it looks in the current world, and each track skin on a short bend under the current sky. They are redrawn when the world or the track skin changes, one picture per frame.
-- **Clean menu view.** Tap the menu background to hide everything except the two play buttons and enjoy the world (or look around with the phone). Tap again to bring the rest back. Nothing moves on the screen when you do it.
+- **5 track skins** (neon carbon, steel & gold, wooden toy, ice marble, grass) **and 5 marble skins** (chrome, glass, gold, plasma, candy). You can change them from the menu or the pause screen. The pickers show real pictures drawn with the game's own shaders: each marble as it looks in the current world, and each track skin on a short bend under the current sky. They are redrawn when the world or the track skin changes, one picture per frame.
+- **Grass track.** A lawn with mowing stripes, clover, daisies, a stone curb and turf sides. It is not only a look: the ball rolls slower (on flat ground it tops out near 76 km/h instead of more than 120 km/h), the uneven ground nudges it sideways, and grass tufts on the track slow it down, kick it aside and make it bounce, with clippings flying. Tufts never sit on narrow ground, boosters, checkpoint pads or among obstacles. They are placed from the track seed without changing the track, so the daily run stays the same for everyone.
+- **Clean menu view.** Tap the menu background to hide everything except the GYROLL title and the two play buttons, and enjoy the world (or look around with the phone). The play buttons glide to the middle of the screen so the ball below them is in view. Tap again to bring the rest back.
 - **A still menu camera.** Changing the mode, kid mode, the track or a skin on the menu never moves the camera: the camera keeps its place next to the ball, and the new world appears with a short cross-fade. Kid mode only adds the rails to the same track.
 - **Sound.** Every sound is synthesized with the Web Audio API, including the rolling sound, impacts, coins, checkpoints, boosts, falls, thunder and generative ambient music. Music and sound effects have separate toggles (white icons) and volume sliders.
 - **Share my score.** During the run the game records a light timelapse. When you press **Share my score** at game over, it builds a short accelerated video (intro, run, fall, score card) with `MediaRecorder`; press **Share the video** when it is ready. On phones it is shared through the Web Share API; elsewhere it is downloaded. If video is not supported, a score-card image is used instead.
@@ -77,6 +78,10 @@ The whole game is **one self-contained `index.html` file** (about 320 KB): HTML,
 | Neon | Sea | Desert | Abstract | Chaos |
 |---|---|---|---|---|
 | ![Neon world](docs/world-neon.jpg) | ![Sea world](docs/world-sea.jpg) | ![Desert world](docs/world-desert.jpg) | ![Abstract world](docs/world-abstract.jpg) | ![Chaos world](docs/world-chaos.jpg) |
+
+| Clean menu | Grass track | Star power smash (kid mode) |
+|---|---|---|
+| ![Clean menu view](docs/menu-clean.jpg) | ![Grass track with tufts](docs/track-grass.jpg) | ![Star power smashing a post, with the kid mode fence](docs/star-smash.jpg) |
 
 ## Controls
 
@@ -148,15 +153,16 @@ The tests drive the game loop step by step instead of waiting for real frames, s
 - the share link and the share video
 - all nine worlds rendering, and the loop back to the first one
 - the installable app, including offline play
-- kid mode, safety rails that give way to hard hits, and speed past 50 km/h
-- coins, streak multiplier, star gauge, the tilt-up flick and star power
+- kid mode, safety rails that give way to hard hits (kid rails hold more), and speed past 50 km/h
+- coins, streak multiplier, star gauge, the tilt-up flick and star power, which smashes obstacles
+- the grass track: slower rolling, uneven ground, tufts that slow and push the ball (and that star power mows), tufts only on safe ground, the same for everyone and never changing the track shape
 - scenery staying out of the track corridor, including giant objects that drift onto it
 - random mode restarting at the last checkpoint (and "new track"), daily runs restarting from 0
 - checkpoints on safe pads, at round distances
 - the ball's reflection cube map facing the right way
 - the share video only being made on request
 - the menu camera following the phone
-- the clean menu view (a tap on the background), with play buttons that stay in place
+- the clean menu view (a tap on the background): the title stays, the play buttons move to the middle
 - a menu camera that stays still when options change, and kid mode keeping the same world
 - picker pictures drawn by the game, redrawn for a new world
 
@@ -185,11 +191,11 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
 
 | Part | Role |
 |---|---|
-| `TrackGenerator` | Seeded procedural sections (curves, zigzags, holes, gaps, obstacles…) with a difficulty ramp. The generated values are rate-limited so the geometry stays smooth, and a heading guard makes sure the track never loops back on itself. |
+| `TrackGenerator` | Seeded procedural sections (curves, zigzags, holes, gaps, obstacles…) with a difficulty ramp. The generated values are rate-limited so the geometry stays smooth, and a heading guard makes sure the track never loops back on itself. Grass tufts are placed from a hash of the row, apart from the section random numbers. |
 | `Track` | Ring buffer of centerline samples and per-row solid intervals. Handles point-to-track projection and support tests. |
-| `TrackMesher` | Builds GPU meshes in 32 m chunks: deck, rims, rails, underside beams, hangers. |
+| `TrackMesher` | Builds GPU meshes in 32 m chunks: deck, rims, rails, kid-mode fences, underside beams, hangers. |
 | `Renderer` + GLSL shaders | WebGL1 forward renderer, plus a cube map reflection probe for the ball. The shaders handle procedural materials, zone-blended sky panoramas, the floor layer, point-sprite particles and additive FX, followed by a bloom/composite post chain. |
-| `Physics`, `Ball` | Fixed 120 Hz steps for a sphere rolling without slipping: slope and bank gravity, rails, props, landing and falling. |
+| `Physics`, `Ball` | Fixed 120 Hz steps for a sphere rolling without slipping: slope and bank gravity, rails, props, landing and falling. The track skin can change the rolling (grass: drag, uneven ground, tufts). |
 | `CameraRig` | Chase camera with look-ahead, roll in turns, speed FOV, shake, fall and attract modes. |
 | `InputManager` | DeviceOrientation (with the iOS permission), calibration, low-pass filtering, joystick and keyboard. |
 | `AudioManager` | Web Audio synthesis and a generative music scheduler, with separate music and SFX buses. |
@@ -215,6 +221,7 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
   - Development and automated tests ran in headless Chromium (software rendering). Reports from real phones are very welcome.
   - The cost of the ball's reflection probe on real phones is not measured yet. If the frame rate drops, adaptive quality lowers it and then turns it off.
   - The four nature worlds (countryside, forest, sea, desert) and the picker pictures were only checked in headless Chromium. Their cost on real phones is not measured yet.
+  - The grass track's feel (how slow, how bumpy) was tuned with automated runs, not by playing on a phone. It may need adjusting.
 - **Analytics events.** Page views work whenever Web Analytics is on. Custom events (`run_start`, `game_over`…) may need a Vercel plan that supports them; if not, they are simply ignored.
 
 ## Contributing
@@ -772,6 +779,20 @@ Also, changing the options should not make the camera to jump.
 And the balls and track texture selection in the menu is not as nice as in game. Could we improve it?
 
 And could we have more landscape backgrounds, such as forest, campaigns, see, or desert ?
+````
+
+</details>
+
+<details>
+<summary><strong>Grass track and star power prompt</strong></summary>
+
+````markdown
+On the light menu mode, we should still see the game title. And the 2 CTAs should become
+Vertically centered to better see the ball. 
+
+Also, let’s do a 5th track, made of grass, which roll slower than the others and with perturbations du to the grass. 
+
+And When the star power is activated, the ball should destroy the obstacles on the road and the side rails should be higher on kid mode.
 ````
 
 </details>

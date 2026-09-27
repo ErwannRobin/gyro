@@ -329,6 +329,20 @@ Prims.mesa = (seed) => {
   return mb;
 };
 
+// Grass tuft (1 high, radius ~1): blades leaning out of a clump, each bent in two parts.
+Prims.tuft = (seed) => {
+  const r = RNG(seed), mb = new MeshBuilder(300); mb.M = [19, 0, 0, 1];
+  for (let k = 0; k < 17; k++) {
+    const a = k / 17 * TAU + r.range(-0.25, 0.25), rad = r.range(0, 0.35), h = r.range(0.5, 1), lean = r.range(0.2, 0.6) + rad, w = r.range(0.06, 0.1);
+    const cx = Math.cos(a), cz = Math.sin(a), tx = -cz * w, tz = cx * w, bx = cx * rad, bz = cz * rad;
+    const mx = bx + cx * lean * 0.3, mz = bz + cz * lean * 0.3, my = h * 0.55;
+    const ctr = [bx - cx, -0.6, bz - cz];                 // lit side faces up and out
+    mb.face([bx - tx, 0, bz - tz], [bx + tx, 0, bz + tz], [mx + tx * 0.7, my, mz + tz * 0.7], [mx - tx * 0.7, my, mz - tz * 0.7], ctr);
+    mb.face([mx - tx * 0.7, my, mz - tz * 0.7], [mx + tx * 0.7, my, mz + tz * 0.7], [bx + cx * lean, h, bz + cz * lean], [mx - tx * 0.7, my, mz - tz * 0.7], ctr);
+  }
+  return mb;
+};
+
 // ---------------------------------------------------------------- track chunk mesher
 const TrackMesher = {
   covered(T, j, u) {
@@ -400,11 +414,14 @@ const TrackMesher = {
             mb.strut(e, t, 0.03);
           }
         };
-        // kid mode: a small glowing bumper on every outer edge that has no real rail
+        // kid mode: a bumper fence on every outer edge that has no real rail: a low bar, short posts
+        // and a glowing top bar as high as the ball's center
         const kidRail = (u0, u1, sg) => {
-          mb.M[0] = 7; mb.M[3] = 0.7;
           const o0 = u0 - sg * 0.01, o1 = u1 - sg * 0.01, q0 = u0 - sg * 0.1, q1 = u1 - sg * 0.1;
-          mb.hexa([P(fA, o0, 0.04), P(fA, q0, 0.04), P(fB, q1, 0.04), P(fB, o1, 0.04), P(fA, o0, 0.2), P(fA, q0, 0.2), P(fB, q1, 0.2), P(fB, o1, 0.2)]);
+          const bar = (y0, y1) => mb.hexa([P(fA, o0, y0), P(fA, q0, y0), P(fB, q1, y0), P(fB, o1, y0), P(fA, o0, y1), P(fA, q0, y1), P(fB, q1, y1), P(fB, o1, y1)]);
+          mb.M[0] = 6; bar(0.03, 0.13);
+          if ((i & 1) === 0) { const c = (o0 + q0) / 2; mb.strut(P(fA, c, 0.12), P(fA, c, 0.35), 0.025); }
+          mb.M[0] = 7; mb.M[3] = 0.75; bar(0.34, 0.44);
           mb.M[3] = 1;
         };
         if ((flags & RF.RAIL_L) && ao) rail(a0, a1, -1); else if (kid && ao) kidRail(a0, a1, -1);

@@ -134,7 +134,32 @@ test('safety rails give way to a hard side hit', async ({ page }) => {
     }, speed);
   };
   expect(await hit(4)).toBe(true);
+  expect(await hit(7.5)).toBe(true);                            // kid rails are higher: they hold more than star power rails
   expect(await hit(11)).toBe(false);
+});
+
+test('star power smashes the obstacles it touches; without it they stop the ball', async ({ page }) => {
+  const errors = await openGame(page);
+  await startRun(page);
+  const run = (star) => page.evaluate(([star, tp]) => {
+    const g = window.__game, b = g.ball, T = g.track;
+    g.gen.fill(3000);
+    const o = T.objects.find((o) => o.kind === 'post' && o.s > 400 && !o.broken);
+    eval('(' + tp + ')')(o.s - CFG.START_S - 8);
+    const p = [0, 0, 0, 0]; T.pointAt(o.s - 5, o.u, CFG.R, p);
+    b.p[0] = p[0]; b.p[1] = p[1]; b.p[2] = p[2]; b.v[0] = Math.sin(p[3]) * 12; b.v[2] = Math.cos(p[3]) * 12; b.hint = Math.floor((o.s - 5) / CFG.DS);
+    g.input.update = function () { this.x = 0; this.y = 0; };
+    if (star) { g.power = 1; g.tryStar(); } else g.endStar(true);
+    const sc = g.score; let v1 = 0;
+    for (let k = 0; k < 60 && g.state === 'play'; k++) { g.tick(1 / 60, false); if (!v1 && (o.broken || b.s > o.s - 0.8)) v1 = b.speed; }
+    return { broken: !!o.broken, debris: g.debris.length, passed: b.s > o.s + 2, v1, bonus: g.score - sc, state: g.state };
+  }, [star, teleport.toString()]);
+  const a = await run(true);
+  expect(a.broken).toBe(true); expect(a.debris).toBeGreaterThan(8); expect(a.passed).toBe(true); expect(a.v1).toBeGreaterThan(10);
+  expect(a.bonus).toBeGreaterThanOrEqual(1000);
+  const b = await run(false);
+  expect(b.broken).toBe(false); expect(b.passed).toBe(false);
+  expect(errors).toEqual([]);
 });
 
 test('speed keeps growing past 50 km/h with full forward tilt', async ({ page }) => {

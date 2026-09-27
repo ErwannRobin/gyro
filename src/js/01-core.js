@@ -15,6 +15,8 @@ const TAU = Math.PI * 2;
 const wrapAngle = (a) => { a = (a + Math.PI) % TAU; if (a < 0) a += TAU; return a - Math.PI; };
 const fmt = (n) => Math.floor(Math.max(0, n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 const hex = (h) => [((h >> 16) & 255) / 255, ((h >> 8) & 255) / 255, (h & 255) / 255];
+// Integer hash to [0, 1): the same result on every device.
+const ihash = (a) => { a = Math.imul(a ^ (a >>> 16), 0x45d9f3b); a = Math.imul(a ^ (a >>> 16), 0x45d9f3b); return ((a ^ (a >>> 16)) >>> 0) / 4294967296; };
 
 // Deterministic PRNG (mulberry32) so a run's track is reproducible from a seed.
 function RNG(seed) {
@@ -133,7 +135,8 @@ const Q = {
 };
 
 // ---------------------------------------------------------------- track / ball skins
-// Track themes style the plank only: deck pattern 0 carbon weave, 1 brushed metal, 2 wood, 3 marble.
+// Track themes style the plank: deck pattern 0 carbon weave, 1 brushed metal, 2 wood, 3 marble, 4 lawn.
+// `roll` changes how the ball rolls on it (grass: more drag, an uneven ground and tufts that bump the ball).
 const TRACK_THEMES = [
   { name: { fr: 'NÉON CARBONE', en: 'NEON CARBON' }, pattern: 0, deckA: hex(0x151a26), deckB: hex(0x0b0e16), trim: hex(0x8a93a8), under: hex(0x1a1f2c),
     metal: hex(0x3b4356), accent: hex(0x4ef2ff), accent2: hex(0xff4fd8), hazard: hex(0xffc93c), gloss: 0.55,
@@ -147,6 +150,10 @@ const TRACK_THEMES = [
   { name: { fr: 'MARBRE GLACE', en: 'ICE MARBLE' }, pattern: 3, deckA: hex(0xd6dce6), deckB: hex(0x98a4ba), trim: hex(0xd0e4ff), under: hex(0x3a4458),
     metal: hex(0x8a98b0), accent: hex(0x8a7aff), accent2: hex(0x4ad8ff), hazard: hex(0xff5a8a), gloss: 0.9,
     swatch: 'linear-gradient(135deg,#a8b4c8,#f2f5fa 55%,#8a7aff 56%,#8a7aff 64%,#a8b4c8 65%)' },
+  { name: { fr: 'GAZON', en: 'GRASS' }, pattern: 4, deckA: hex(0x86c850), deckB: hex(0x2d6420), trim: hex(0xe2d9bd), under: hex(0x3b2818),
+    metal: hex(0x6e5236), accent: hex(0xfff27a), accent2: hex(0xff7ab8), hazard: hex(0xff6a3a), gloss: 0.12,
+    roll: { drag: 0.05, wobble: 1.6, tuftSlow: 0.86, tuftKick: 0.75 },
+    swatch: 'linear-gradient(135deg,#2d6420,#86c850 55%,#fff27a 56%,#fff27a 64%,#2d6420 65%)' },
 ];
 // Ball skins: type 0 polished metal, 1 glass, 2 plasma, 3 candy plastic; rough = surface roughness (0 = mirror)
 const BALL_SKINS = [
@@ -294,7 +301,8 @@ const CFG = {
   ACC: 15,               // tilt acceleration at full input
   VMAX: 14,              // reference speed (score/visual tiers)
   VFADE: 13,             // speed at which the forward push is halved (it never reaches 0)
-  RAIL_BREAK: 6.5,       // sideways impact (m/s) above which the ball jumps a small safety rail
+  RAIL_BREAK: 6.5,       // sideways impact (m/s) above which the ball jumps a star power safety rail
+  KID_RAIL_BREAK: 9,     // the same for the higher kid mode rails
   VBOOST: 20,            // boost speed
   CHECKPOINT: 250,       // meters between checkpoints
   COIN_POWER: 0.07,      // star gauge gained per coin (× coin multiplier)

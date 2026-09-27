@@ -69,6 +69,7 @@ class Renderer {
       cacti: [4, 8].map((k) => this.upload(Prims.cactus(k))), mesas: [2, 6].map((k) => this.upload(Prims.mesa(k))),
       rocksD: [1, 2, 3].map((k) => this.upload(Prims.withMat(Prims.rock(k * 17), 23))), pyramidS: this.upload(Prims.withMat(Prims.pyramid(), 23)),
       pole: this.upload(Prims.cylinder(10, 25)),
+      tufts: [7, 13].map((k) => this.upload(Prims.tuft(k))),
     };
     this.dynBuf = gl.createBuffer();
     this.ptsBuf = gl.createBuffer();

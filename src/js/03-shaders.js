@@ -89,11 +89,22 @@ vec3 deck(vec2 uv, float seed, out float gloss){
     float seam = smoothstep(0.035, 0.0, abs(fract(uv.y * 2.6) - 0.0)) + smoothstep(0.96, 1.0, fract(uv.y * 2.6));
     float seam2 = smoothstep(0.02, 0.0, abs(fract((uv.x + off) / 3.0) - 0.0) * 3.0);
     c *= 1.0 - 0.55 * clamp(seam + seam2, 0.0, 1.0);
-  } else {                           // marble
+  } else if (u_pattern < 3.5) {     // marble
     float f = fbm(uv * vec2(0.35, 0.8) + seed * 0.1);
     float vein = pow(1.0 - abs(sin((uv.x * 0.45 + uv.y * 1.2 + f * 5.0) * 1.7)), 14.0);
     float vein2 = pow(1.0 - abs(sin((uv.x * 0.9 - uv.y * 0.6 + f * 7.0) * 2.3)), 22.0);
     c = mix(u_deckA, u_deckB, clamp(vein * 0.8 + vein2 * 0.5 + f * 0.25, 0.0, 1.0));
+  } else {                           // lawn: mowing stripes, blades, clover patches and daisies
+    float stripe = smoothstep(0.42, 0.5, abs(fract(uv.x * 0.25) - 0.5));
+    float n = fbm(uv * 0.9 + seed * 0.1);
+    float bl = noise(vec2(uv.x * 34.0, uv.y * 11.0)) * 0.6 + noise(vec2(uv.x * 9.0, uv.y * 57.0)) * 0.4;
+    c = mix(u_deckB, u_deckA, clamp(0.3 + stripe * 0.22 + n * 0.34 + (bl - 0.5) * 0.5, 0.0, 1.0));
+    c = mix(c, c * vec3(0.8, 1.05, 0.7), smoothstep(0.62, 0.8, fbm(uv * 0.35 + 4.0)));   // clover
+    vec2 cell = floor(uv * 2.5), f = fract(uv * 2.5) - 0.5;
+    float d = length(f - (vec2(hash(cell + 1.3), hash(cell + 2.7)) - 0.5) * 0.6);
+    float fl = step(0.94, hash(cell + 7.0)) * smoothstep(0.09, 0.06, d);
+    c = mix(c, mix(vec3(0.98, 0.97, 0.92), vec3(1.0, 0.8, 0.15), smoothstep(0.04, 0.025, d)), fl);
+    gloss *= 0.4 + 0.8 * bl;
   }
   return c;
 }
@@ -105,26 +116,26 @@ void main(){
   vec3 base = u_metal; float gloss = 0.4; float spec = 0.5; vec3 emis = vec3(0.0); float glow = 0.0; float metal = 0.3;
 
   if (mat < 0.5) {                                   // deck top
-    float s = v_uv.x, u = v_uv.y;
-    base = deck(v_uv, v_aux.y, gloss); spec = 0.6;
+    float s = v_uv.x, u = v_uv.y, lawn = step(3.5, u_pattern);
+    base = deck(v_uv, v_aux.y, gloss); spec = mix(0.6, 0.15, lawn);
     float seamD = abs(fract(s * 0.5) - 0.5) * 2.0;    // plank joints every 2 m
-    float jt = smoothstep(0.012, 0.0, abs(seamD - 1.0) * 1.0) ;
-    base *= 1.0 - 0.6 * smoothstep(0.985, 1.0, seamD);
+    base *= 1.0 - 0.6 * smoothstep(0.985, 1.0, seamD) * (1.0 - lawn);
     float dEdge = halfW - abs(u);
-    // trim band along outer edges
+    // trim band along outer edges (a stone curb on the lawn)
     float band = smoothstep(0.2, 0.18, dEdge);
-    base = mix(base, u_trim * 0.8, band * 0.75);
-    // rivets
+    base = mix(base, u_trim * mix(0.8, 0.7 + 0.25 * noise(vec2(s * 3.0, u * 9.0)), lawn), band * mix(0.75, 0.95, lawn));
+    // rivets (none on the lawn)
     vec2 rv = vec2(fract(s) - 0.5, dEdge - 0.1);
     float rr = length(rv);
-    float riv = smoothstep(0.038, 0.028, rr) * step(dEdge, 0.2);
+    float riv = smoothstep(0.038, 0.028, rr) * step(dEdge, 0.2) * (1.0 - lawn);
     base = mix(base, u_trim * 1.25 + 0.15, riv); spec += riv * 2.0;
-    // center guide dashes (subtle, give speed feeling)
+    // center guide dashes (subtle, give speed feeling; painted chalk on the lawn)
     float dash = step(0.55, fract(s * 0.5)) * smoothstep(0.03, 0.015, abs(u));
-    emis += u_accent * dash * 0.55; glow += dash * 0.35;
+    base = mix(base, vec3(0.93, 0.95, 0.88), dash * lawn * 0.85);
+    emis += u_accent * dash * mix(0.55, 0.12, lawn); glow += dash * mix(0.35, 0.08, lawn);
     // edge light line
     float el = smoothstep(0.05, 0.0, abs(dEdge - 0.21));
-    emis += u_accent * el * 0.9; glow += el * 0.6;
+    emis += u_accent * el * mix(0.9, 0.45, lawn); glow += el * mix(0.6, 0.3, lawn);
     // hazard stripes near hole edges / gap edges
     float hz = 0.0;
     if (bit(flags, 1.0) > 0.5) hz = max(hz, smoothstep(0.26, 0.24, u - v_aux.z));
@@ -153,6 +164,12 @@ void main(){
       float ck = mod(floor(s * 3.0) + floor(u * 3.0 + 30.0), 2.0);
       base = mix(vec3(0.05), vec3(0.92), ck);
     }
+  } else if (mat < 1.5 && u_pattern > 3.5) {          // lawn side: a slab of turf over layered soil and pebbles
+    float v = v_uv.y, n = noise(vec2(v_uv.x * 3.0, v * 6.0));
+    float turf = smoothstep(0.2 + 0.08 * noise(vec2(v_uv.x * 14.0, 1.0)), 0.12, v);
+    float peb = step(0.8, hash(floor(vec2(v_uv.x * 9.0, v * 5.0)))) * step(0.3, v);
+    base = mix(u_under * (0.8 + 0.5 * n + 0.2 * sin(v * 19.0)), u_deckB * (0.9 + 0.4 * n), turf) + peb * 0.08;
+    gloss = 0.1; spec = 0.1; metal = 0.0;
   } else if (mat < 1.5) {                             // outer side wall with light strip
     float v = v_uv.y;
     base = u_trim * 0.4; gloss = 0.45; spec = 0.5; metal = 0.8;

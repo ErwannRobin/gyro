@@ -123,13 +123,17 @@ body.star #starGlow{opacity:1}
   background:radial-gradient(140% 90% at 50% 40%,rgba(5,6,13,0) 0%,rgba(5,6,13,.55) 70%,rgba(5,6,13,.85) 100%);
   transition:opacity .45s;overflow:hidden}
 .screen.fade{opacity:0;pointer-events:none}
-/* menu: a tap on the background hides everything but the play buttons (the layout never moves) */
+/* menu: a tap on the background hides everything but the title and the play buttons; the play
+   buttons glide to the middle of the screen (--cleanY, set by the game) so the ball below shows */
 #menu{background:none}
 #menu::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;transition:opacity .4s;
   background:radial-gradient(140% 90% at 50% 40%,rgba(5,6,13,0) 0%,rgba(5,6,13,.55) 70%,rgba(5,6,13,.85) 100%)}
 #menuTop,#menu .mcol > *{transition:opacity .35s,visibility .35s}
+#menu #btnTilt,#menu #btnTouch{transition:opacity .35s,visibility .35s,transform .45s cubic-bezier(.2,.8,.25,1)}
 #menu.clean::before{opacity:0}
-#menu.clean #menuTop,#menu.clean .mcol > :not(#btnTilt):not(#btnTouch){opacity:0;visibility:hidden;pointer-events:none}
+#menu.clean #menuTop,#menu.clean .mcol > :not(#title):not(#btnTilt):not(#btnTouch){opacity:0;visibility:hidden;pointer-events:none}
+#menu.clean #btnTilt,#menu.clean #btnTouch{transform:translateY(var(--cleanY,0px))}
+#menu.clean #btnTilt:active,#menu.clean #btnTouch:active{transform:translateY(var(--cleanY,0px)) scale(.97)}
 #xfade{position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:0}
 #title{font-size:clamp(62px,19vw,150px);font-weight:900;letter-spacing:.04em;line-height:.9;margin-right:-.06em;
   background:linear-gradient(100deg,#fff 0%,#d9fbff 30%,var(--accent) 45%,#fff 52%,var(--accent2) 70%,#fff 100%);background-size:250% 100%;

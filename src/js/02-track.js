@@ -88,7 +88,7 @@ class Track {
 class TrackGenerator {
   constructor(track, seed) {
     this.T = track;
-    this.rng = RNG(seed);
+    this.rng = RNG(seed); this.seed = seed | 0; this.lastTuft = -99;
     this.th = 0; this.x = 0; this.y = 0; this.z = 0;
     this.kap = 0; this.w = 3.6; this.bank = 0; this.slope = 0;
     this.sec = null; this.k = 0;
@@ -128,6 +128,7 @@ class TrackGenerator {
     T.rowA[m * 3] = -this.w / 2; T.rowB[m * 3] = this.w / 2; T.rowAO[m * 3] = 1; T.rowBO[m * 3] = 1;
     if (sec.row) sec.row(k, m, s);
     if (sec.spawn) sec.spawn(k, s);
+    this.tuft(i, m, s, sec.name);
 
     // integrate centerline
     const thMid = this.th + this.kap * DS * 0.5;
@@ -146,6 +147,18 @@ class TrackGenerator {
     if (this.th > 0.45) sg = -1; else if (this.th < -0.45) sg = 1;
     if (Math.abs(this.th + sg * angle) > lim) sg = -sg;
     return sg;
+  }
+  // Grass tufts sit on every track, placed by a hash of the row (not the section RNG, so tracks
+  // keep their shape). Only grass themes show them and let them bump the ball. Never on narrow
+  // ground, pads, boosters or among obstacles.
+  tuft(i, m, s, name) {
+    const T = this.T;
+    if (s < CFG.START_S + 25 || i - this.lastTuft < 5 || name === 'checkpoint' || name === 'start' || name === 'obstacles') return;
+    if (T.rowN[m] !== 1 || (T.rowF[m] & (RF.BOOST | RF.CHECK | RF.START))) return;
+    const a = T.rowA[m * 3], b = T.rowB[m * 3], h = Math.imul(i, 0x9E3779B1) ^ this.seed;
+    if (b - a < 2 || ihash(h) > lerp(0.07, 0.12, this.diff(s))) return;
+    this.lastTuft = i;
+    T.objects.push({ kind: 'tuft', s: s + CFG.DS * 0.5, u: a + 0.45 + ihash(h + 1) * (b - a - 0.9), id: i, hit: -1 });
   }
   gem(s, u, h = 0.55) { this.T.objects.push({ kind: 'gem', s, u, h, id: this.count++, taken: false }); }
   mk(len, at, row, spawn, name) { return { len: Math.max(2, Math.round(len / CFG.DS)), at, row, spawn, name }; }

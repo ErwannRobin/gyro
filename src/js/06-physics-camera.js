@@ -12,7 +12,8 @@ class Ball {
 }
 
 class Physics {
-  constructor(track, ev) { this.T = track; this.ev = ev; this.collapseS = -1e9; this.time = 0; this.tmp = [0, 0, 0, 0]; }
+  // roll: the track theme's rolling feel (null = hard deck; grass: drag, wobble and tufts)
+  constructor(track, ev) { this.T = track; this.ev = ev; this.collapseS = -1e9; this.time = 0; this.tmp = [0, 0, 0, 0]; this.roll = null; }
 
   supported(L) {
     if (L.out || L.s < this.collapseS) return false;
@@ -49,10 +50,15 @@ class Physics {
       }
       b.v[0] += (iax + L.fx * gA + L.rx * gL) * dt;
       b.v[2] += (iaz + L.fz * gA + L.rz * gL) * dt;
-      // rolling resistance: stronger when slow (so the ball settles), light at speed
-      const sp = Math.hypot(b.v[0], b.v[2]);
-      const damp = 1 - (0.05 + 0.2 * Math.exp(-sp / 6) + (Math.abs(ix) + Math.abs(iy) < 0.05 && sp < 1.2 ? 1.4 : 0)) * dt;
+      // rolling resistance: stronger when slow (so the ball settles), light at speed; grass adds its own
+      const sp = Math.hypot(b.v[0], b.v[2]), Rl = this.roll;
+      const damp = 1 - (0.05 + 0.2 * Math.exp(-sp / 6) + (Rl ? Rl.drag * (1 + sp / 12) : 0) + (Math.abs(ix) + Math.abs(iy) < 0.05 && sp < 1.2 ? 1.4 : 0)) * dt;
       b.v[0] *= damp; b.v[2] *= damp;
+      if (Rl) {                                      // uneven ground: a sideways push that wanders along the track
+        const n = Math.sin(L.s * 1.7 + 1.3) * Math.sin(L.s * 0.63 + 0.4) + 0.5 * Math.sin(L.s * 3.1 + 2);
+        const a = Rl.wobble * n * Math.min(1, sp / 8) * dt;
+        b.v[0] += L.rx * a; b.v[2] += L.rz * a;
+      }
       const py = b.p[1];
       b.p[0] += b.v[0] * dt; b.p[2] += b.v[2] * dt;
       L = T.locate(b.p[0], b.p[2], b.hint); b.hint = L.i;
@@ -99,8 +105,8 @@ class Physics {
     for (let j = 0; j < 3; j++) if (!Number.isFinite(b.p[j]) || !Number.isFinite(b.v[j])) { b.v.fill(0); b.p[j] = fin(b.p[j]); b.lost = true; }
   }
 
-  // Real rails (tall, on some bends) always hold. Small safety rails (kid mode, star power)
-  // hold gentle bumps only: hit them too hard and the ball jumps over.
+  // Real rails (tall, on some bends) always hold. Safety rails (kid mode, star power) hold
+  // moderate bumps only: hit them too hard and the ball jumps over.
   rails(b, L) {
     const T = this.T, m = L.i & T.mask, real = T.rowF[m] & (RF.RAIL_L | RF.RAIL_R);
     const f = real | (this.kid || this.star ? RF.RAIL_L | RF.RAIL_R : 0);
@@ -115,8 +121,10 @@ class Physics {
     if (soft && (b.hop > 0 || !b.grounded)) return;       // already jumping over it
     const nx = -L.rx * side, nz = -L.rz * side;        // normal pointing back to the track
     const vn = b.v[0] * nx + b.v[2] * nz;
-    if (soft && -vn > CFG.RAIL_BREAK) {
-      b.hop = 0.6; b.grounded = false; b.air = 0; b.v[1] = 2 + (-vn - CFG.RAIL_BREAK) * 0.25;
+    // kid rails are as high as the ball's center: they take a harder hit, and the ball must jump higher to clear them
+    const brk = this.kid ? CFG.KID_RAIL_BREAK : CFG.RAIL_BREAK;
+    if (soft && -vn > brk) {
+      b.hop = 0.6; b.grounded = false; b.air = 0; b.v[1] = (this.kid ? 4.8 : 2) + (-vn - brk) * 0.25;
       this.ev.railJump(b, -vn, [b.p[0] - nx * CFG.R, b.p[1], b.p[2] - nz * CFG.R]);
       return;
     }
@@ -129,10 +137,14 @@ class Physics {
   }
 
   props(b, L) {
-    const T = this.T, R = CFG.R;
+    const T = this.T, R = CFG.R, Rl = this.roll;
     for (const o of T.objects) {
-      if (o.kind !== 'post' && o.kind !== 'slider') continue;
       if (Math.abs(o.s - L.s) > 3) continue;
+      if (o.kind === 'tuft') {
+        if (Rl && o.hit < 0 && Math.abs(o.s - L.s) < 0.6 && Math.abs(o.u - L.u) < 0.6) this.tuft(b, L, o, Rl);
+        continue;
+      }
+      if ((o.kind !== 'post' && o.kind !== 'slider') || o.broken) continue;
       let ou = o.u, ovx = 0, ovz = 0;
       if (o.kind === 'slider') {
         const ph = TAU * this.time / o.period + o.phase;
@@ -144,6 +156,11 @@ class Physics {
       T.pointAt(o.s, ou, 0, this.tmp);
       const dx = b.p[0] - this.tmp[0], dz = b.p[2] - this.tmp[2], d = Math.hypot(dx, dz), min = R + o.rad;
       if (d >= min || d < 1e-5) continue;
+      if (this.star) {                               // star power: the ball smashes through
+        o.broken = this.time; b.v[0] *= 0.96; b.v[2] *= 0.96;
+        this.ev.smash(b, o, [this.tmp[0], b.p[1], this.tmp[2]]);
+        continue;
+      }
       const nx = dx / d, nz = dz / d;
       b.p[0] += nx * (min - d); b.p[2] += nz * (min - d);
       const rvx = b.v[0] - ovx, rvz = b.v[2] - ovz, vn = rvx * nx + rvz * nz;
@@ -152,6 +169,16 @@ class Physics {
         if (-vn > 0.6) this.ev.hit(b, -vn, [this.tmp[0] + nx * o.rad, b.p[1], this.tmp[2] + nz * o.rad]);
       }
     }
+  }
+
+  // A grass tuft slows the ball and kicks it away sideways; with star power the ball mows it flat instead.
+  tuft(b, L, o, Rl) {
+    o.hit = this.time;
+    const sp = Math.hypot(b.v[0], b.v[2]);
+    if (this.star) { o.cut = true; this.ev.tuft(b, o, sp, true); return; }
+    const sg = Math.sign(L.u - o.u) || (o.id & 1 ? 1 : -1), kick = Math.min(2.2, Rl.tuftKick + sp * 0.06);
+    b.v[0] = b.v[0] * Rl.tuftSlow + L.rx * sg * kick; b.v[2] = b.v[2] * Rl.tuftSlow + L.rz * sg * kick;
+    this.ev.tuft(b, o, sp, false);
   }
 }
 

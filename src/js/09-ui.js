@@ -61,6 +61,14 @@ class UI {
       clearTimeout(e._t); e._t = setTimeout(() => { if (e.classList.contains('fade')) e.classList.add('hidden'); }, 450);
     }
   }
+  // Clean menu: how far the play buttons slide to sit in the middle of the screen. Layout offsets
+  // ignore that slide, so the value holds while it plays.
+  centerCta() {
+    const m = this.el.menu, bs = [this.el.btnTilt, this.el.btnTouch].filter((b) => b.offsetParent === m);
+    if (!bs.length) return;
+    const top = Math.min(...bs.map((b) => b.offsetTop)), bot = Math.max(...bs.map((b) => b.offsetTop + b.offsetHeight));
+    m.style.setProperty('--cleanY', Math.round(m.clientHeight / 2 - (top + bot) / 2) + 'px');
+  }
   hideNow(name) { const e = this.el[name]; e.classList.add('hidden', 'fade'); }
   hud(on) { this.el.hud.classList.toggle('on', on); }
 

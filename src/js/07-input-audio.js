@@ -236,15 +236,16 @@ class AudioManager {
   suspend() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend().catch(() => {}); }
   resume() { if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); }
 
-  setRoll(speed, contact) {
+  // soft: rolling on grass (a duller rustle, less rumble)
+  setRoll(speed, contact, soft) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime, lv = contact ? clamp(speed / 16, 0, 1) : 0;
-    this.rollAmp.gain.setTargetAtTime(lv * 0.34, t, 0.05);
-    this.rollBP.frequency.setTargetAtTime(160 + speed * 70, t, 0.08);
-    this.rumAmp.gain.setTargetAtTime(lv * 0.22, t, 0.06);
+    this.rollAmp.gain.setTargetAtTime(lv * (soft ? 0.24 : 0.34), t, 0.05);
+    this.rollBP.frequency.setTargetAtTime(soft ? 900 + speed * 45 : 160 + speed * 70, t, 0.08);
+    this.rumAmp.gain.setTargetAtTime(lv * (soft ? 0.08 : 0.22), t, 0.06);
     this.rum.frequency.setTargetAtTime(38 + speed * 2.4, t, 0.1);
     this.lfo.frequency.setTargetAtTime(Math.max(0.5, speed / 1.0), t, 0.1);
-    this.lfoAmp.gain.setTargetAtTime(lv * 0.12, t, 0.05);
+    this.lfoAmp.gain.setTargetAtTime(lv * (soft ? 0.18 : 0.12), t, 0.05);
   }
 
   // ---- tiny synth helpers
@@ -268,6 +269,20 @@ class AudioManager {
     if (!this.ok) return; const t = this.ctx.currentTime, v = clamp(impact / 9, 0.12, 1);
     this.burst(t, 0.08, 0.5 * v, 'bandpass', 2600, 1.2);
     for (const f of [410, 1130, 1870, 2960]) this.tone('sine', f * (0.95 + Math.random() * 0.1), t, 0.002, 0.14 * v, 0.28 + Math.random() * 0.2);
+  }
+  // rolling through a grass tuft (cut: mowed by star power)
+  grass(speed, cut) {
+    if (!this.ok) return; const t = this.ctx.currentTime, v = clamp(speed / 14, 0.3, 1);
+    this.burst(t, cut ? 0.22 : 0.16, (cut ? 0.3 : 0.22) * v, 'bandpass', cut ? 3200 : 2200, 0.9, null, cut ? 1400 : 900);
+    if (!cut) this.tone('sine', 150, t, 0.004, 0.18 * v, 0.12, null, 70);
+  }
+  // star power smashing an obstacle
+  smash() {
+    if (!this.ok) return; const t = this.ctx.currentTime;
+    this.burst(t, 0.45, 0.5, 'lowpass', 2400, 0.8, null, 180);
+    this.burst(t, 0.12, 0.35, 'highpass', 3000, 0.7);
+    this.tone('sine', 140, t, 0.004, 0.45, 0.35, null, 45);
+    for (const m of [84, 91]) this.tone('triangle', this.mtof(m), t + 0.04, 0.005, 0.08, 0.4, this.verbS);
   }
   land(imp) {
     if (!this.ok) return; const t = this.ctx.currentTime, v = clamp(imp / 10, 0.1, 1);

@@ -3,7 +3,7 @@
 // Game — state machine, main loop, glue between all systems.
 // States: menu → calib → play → falling → over  (+ paused)
 // =====================================================================
-const GEM_COL = hex(0xffd36b), STAR_COL = [1, 0.82, 0.4];
+const GEM_COL = hex(0xffd36b), STAR_COL = [1, 0.82, 0.4], TUFT_COL = hex(0x62b236), TUFT_COL2 = hex(0x8fd24c);
 class Game {
   constructor() {
     LANG = detectLang();
@@ -44,7 +44,8 @@ class Game {
     this.railPts = [[0, 0, 0], [0, 0, 0]]; this.starK = 0; this.starKey = false;
     this.gemGlow = new Float32Array(96 * 3); this.gemGlowN = 0;
     this.collapseS = -1e9; this.danger = 0; this.warnT = 0; this.pruneT = 0; this.emitAcc = 0;
-    this.R.setTheme(TRACK_THEMES[this.themeIdx]);
+    this.R.setTheme(TRACK_THEMES[this.themeIdx]); this.physics.roll = TRACK_THEMES[this.themeIdx].roll || null;
+    this.debris = []; this.bobY = 0; this.bobV = 0; this.bobP = [0, 0, 0];
     this.R.setZones(0, 0, 0); this.zoneIdx = 0; this.floorY = 0;
     this.ui.setAccent(TRACK_THEMES[this.themeIdx]);
     this.bindUI();
@@ -63,8 +64,12 @@ class Game {
     const U = this.ui, E = U.el, $ = U.$;
     const tap = (el, fn) => el.addEventListener('click', (e) => { e.preventDefault(); fn(e); });
     for (const b of document.querySelectorAll('#langSeg button')) tap(b, () => { LANG = b.dataset.lang; Store.set('lang', LANG); this.refreshTexts(); this.audio.tick(); });
-    // a tap on the menu background shows only the play buttons (and the world); another tap brings the rest back
-    E.menu.addEventListener('click', (e) => { if (this.state === 'menu' && !e.target.closest('button,input,a,.seg,.skinRow,.tgRow')) E.menu.classList.toggle('clean'); });
+    // a tap on the menu background shows only the title, the play buttons (moved to the middle) and
+    // the world; another tap brings the rest back
+    E.menu.addEventListener('click', (e) => {
+      if (this.state !== 'menu' || e.target.closest('button,input,a,.seg,.skinRow,.tgRow')) return;
+      U.centerCta(); E.menu.classList.toggle('clean');
+    });
     tap($('tgKid'), () => { if (this.state === 'menu') { this.setKid(!this.kid); this.audio.tick(); } });
     tap(E.newTrack, () => { if (this.state === 'menu') { this.newTrack(); this.audio.tick(); } });
     for (const b of document.querySelectorAll('#modeSeg button')) tap(b, () => { if (this.state === 'menu' && b.dataset.mode !== this.gameMode) { this.setGameMode(b.dataset.mode); this.audio.tick(); } });
@@ -104,7 +109,7 @@ class Game {
     vs.addEventListener('input', vol); vm.addEventListener('input', vol);
     const onTrack = (i) => {
       if (i === this.themeIdx) return;
-      this.themeIdx = i; Store.set('theme', i);
+      this.themeIdx = i; Store.set('theme', i); this.physics.roll = TRACK_THEMES[i].roll || null;
       this.R.setTheme(TRACK_THEMES[i]); U.setAccent(TRACK_THEMES[i]); U.selectSkins(this.themeIdx, this.skinIdx); this.audio.tick();
       if (this.state === 'paused') this.render();
     };
@@ -228,6 +233,7 @@ class Game {
     if (force || this.R.post !== q.post || this.R.bloomDiv !== q.bloomDiv) { this.R.freeFBO(); this.R.w = 0; }
     this.R.post = q.post; this.R.bloomDiv = q.bloomDiv;
     this.R.resize(w, h, this.quality.pixelScale(w, h));
+    this.ui.centerCta();
   }
   applyQuality() {
     const q = this.quality.cur;
@@ -267,7 +273,7 @@ class Game {
     this.coinStreak = 0; this.coinMult = 1; this.coins = 0;
     this.input.flick = this.input.doubleTap = this.starKey = false;
     this.audio.setTempo(1); this.ui.updatePower(0, 1, 'fill', '');
-    this.parts.clear();
+    this.parts.clear(); this.debris.length = 0; this.bobY = this.bobV = 0;
     this.replay.reset(); this.shareToken = (this.shareToken || 0) + 1; this.shareFile = null; this.shareInfo = null;
     this.updateChunks(99);
     this.env.reset(this.track, b.s, this.quality.cur.env, this.quality.cur.dust, this.R.meshes);
@@ -401,6 +407,52 @@ class Game {
     this.cam.shake = Math.min(1, this.cam.shake + impact / 12);
     if (impact > 5 && navigator.vibrate) try { navigator.vibrate(12); } catch (e) { /* ignore */ }
   }
+  // Grass tuft: the ball bounces a little (drawn only: the physics ball stays on the ground) and
+  // clippings fly; with star power the tuft is mowed flat.
+  tuft(b, o, sp, cut) {
+    this.audio.grass(sp, cut);
+    this.bobV = Math.max(this.bobV, cut ? 0 : Math.min(2.4, 1.1 + sp * 0.06));
+    this.cam.shake = Math.min(1, this.cam.shake + (cut ? 0.05 : 0.12));
+    const M = this.R.meshes, n = cut ? 9 : 6;
+    for (let k = 0; k < n; k++) {
+      const a = Math.random() * TAU, v = 1 + Math.random() * 2 + sp * 0.1;
+      this.addDebris(M.tufts[k & 1], k & 1 ? TUFT_COL : TUFT_COL2, b.p[0] + Math.cos(a) * 0.2, b.p[1] - CFG.R + 0.1, b.p[2] + Math.sin(a) * 0.2,
+        Math.cos(a) * v + b.v[0] * 0.35, 2 + Math.random() * 2.5, Math.sin(a) * v + b.v[2] * 0.35, 0.09 + Math.random() * 0.06, 0.8);
+    }
+  }
+  // Star power: an obstacle the ball touches bursts into pieces.
+  smash(b, o, pos) {
+    const th = TRACK_THEMES[this.themeIdx], M = this.R.meshes, post = o.kind === 'post', col = post ? th.trim : th.hazard;
+    this.audio.smash();
+    const pts = 500 * (this.star ? 2 : 1); this.score += pts;
+    this.ui.toast('SMASH! +' + fmt(pts), 'gold');
+    this.ui.flash(0.18, 'rgb(255,225,150)');
+    this.cam.shake = Math.min(1, this.cam.shake + 0.55); this.cam.kick = Math.max(this.cam.kick, 0.5);
+    for (let k = 0; k < 14; k++) {
+      const a = Math.random() * TAU, v = 3 + Math.random() * 5;
+      this.addDebris(post ? M.post : M.slider, col, pos[0] + (Math.random() - 0.5) * 0.4, pos[1] + Math.random() * (post ? 0.8 : 0.4), pos[2] + (Math.random() - 0.5) * 0.4,
+        Math.cos(a) * v + b.v[0] * 0.55, 3 + Math.random() * 5, Math.sin(a) * v + b.v[2] * 0.55, post ? 0.08 + Math.random() * 0.1 : 0.12 + Math.random() * 0.14, 1.6);
+    }
+    this.parts.burst(pos[0], pos[1] + 0.4, pos[2], 46, 7, STAR_COL, { life: 0.8, size: 0.12, grav: 8, mix: col, up: 2, vx: b.v[0] * 0.4, vz: b.v[2] * 0.4 });
+    if (navigator.vibrate) try { navigator.vibrate(25); } catch (e) { /* ignore */ }
+  }
+  addDebris(mesh, col, x, y, z, vx, vy, vz, size, life) {
+    if (this.debris.length > 60) this.debris.shift();
+    const q = Q.fromAxisAngle([0, 0, 0, 1], Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5, Math.random() * TAU), l = Math.hypot(q[0], q[1], q[2], q[3]);
+    for (let j = 0; j < 4; j++) q[j] /= l;
+    this.debris.push({ mesh, col, p: [x, y, z], v: [vx, vy, vz], q, w: [(Math.random() - 0.5) * 16, (Math.random() - 0.5) * 16, (Math.random() - 0.5) * 16], size, life, max: life });
+  }
+  updateDebris(dt) {
+    const D = this.debris;
+    for (let k = D.length - 1; k >= 0; k--) {
+      const d = D[k]; d.life -= dt;
+      if (d.life <= 0) { D.splice(k, 1); continue; }
+      d.v[1] -= 16 * dt; for (let j = 0; j < 3; j++) { d.v[j] *= 1 - 0.8 * dt; d.p[j] += d.v[j] * dt; }
+      Q.integrate(d.q, d.w[0], d.w[1], d.w[2], dt);
+    }
+    // the ball's little bounce over a tuft (drawing only)
+    if (this.bobV > 0 || this.bobY > 0) { this.bobY += this.bobV * dt; this.bobV -= CFG.G * dt; if (this.bobY <= 0) { this.bobY = 0; this.bobV = 0; } }
+  }
   land(b, imp) {
     if (imp < 2) return;
     this.audio.land(imp);
@@ -487,12 +539,12 @@ class Game {
       this.floorY = lerp(this.floorY, b.surfY - 62, damp(0.4, dtR));
       this.pruneT -= dtR;
       if (this.pruneT <= 0) { this.pruneT = 2; const o = this.track.objects, cut = b.s - 60; let w = 0; for (let k = 0; k < o.length; k++) if (o[k].s > cut) o[w++] = o[k]; o.length = w; }
-      this.parts.update(dt);
+      this.parts.update(dt); this.updateDebris(dt);
       this.fx.pushTrail(b.p, dt);
       this.cam.update(st === 'falling' ? dtR : dtR, b, this.track, this.R.w / this.R.h);
       this.audio.intensity = lerp(this.audio.intensity, st === 'play' ? clamp(b.speed / CFG.VMAX, 0.15, 1) : 0.15, damp(0.5, dtR));
       this.rollT = (this.rollT || 0) + dtR;
-      if (this.rollT > 0.05) { this.rollT = 0; this.audio.setRoll(b.speed, st === 'play' && b.grounded && b.support); }
+      if (this.rollT > 0.05) { this.rollT = 0; this.audio.setRoll(b.speed, st === 'play' && b.grounded && b.support, !!this.physics.roll); }
     }
     // while the replay video is being encoded, draw the backdrop at half rate
     if (draw && st === 'over' && this.shareSt === 'busy' && (this.halfTick = !this.halfTick)) draw = false;
@@ -540,12 +592,12 @@ class Game {
     // rolling sparks / boost streaks / acceleration dust
     const th = TRACK_THEMES[this.themeIdx];
     if (b.grounded && b.support) {
-      const rate = (b.speed > 11 ? (b.speed - 11) * 4 : 0) + (b.boost > 0 ? 45 : 0) + (this.input.y > 0.5 && b.speed > 4 && b.speed < 11 ? 6 : 0);
+      const grass = !!th.roll, rate = (b.speed > 11 ? (b.speed - 11) * (grass ? 2 : 4) : 0) + (b.boost > 0 ? 45 : 0) + (this.input.y > 0.5 && b.speed > 4 && b.speed < 11 ? 6 : 0);
       this.emitAcc += rate * dt;
       while (this.emitAcc >= 1) {
         this.emitAcc -= 1;
         const bo = b.boost > 0 && Math.random() < 0.6;
-        const col = bo ? th.accent2 : Math.random() < 0.5 ? th.accent : [1, 0.9, 0.7];
+        const col = bo ? th.accent2 : grass ? (Math.random() < 0.6 ? TUFT_COL2 : [0.75, 0.85, 0.45]) : Math.random() < 0.5 ? th.accent : [1, 0.9, 0.7];   // clippings on grass
         this.parts.emit(b.p[0] + (Math.random() - 0.5) * 0.3, b.p[1] - CFG.R * 0.85, b.p[2] + (Math.random() - 0.5) * 0.3,
           -b.v[0] * 0.25 + (Math.random() - 0.5) * 1.5, Math.random() * 1.8, -b.v[2] * 0.25 + (Math.random() - 0.5) * 1.5,
           bo ? 0.5 : 0.35, col, bo ? 0.1 : 0.06, 7, 2);
@@ -631,11 +683,21 @@ class Game {
         M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q2, 0.34, 0.07, 0.34);
         R.addInst(M.coin, this.model, GEM_COL, o.missed ? 0.25 : 1);             // a missed coin goes dull
         if (!o.missed && this.gemGlowN < 96) { this.gemGlow.set([this.tmp[0], this.tmp[1], this.tmp[2]], this.gemGlowN * 3); this.gemGlowN++; }
+      } else if (o.kind === 'tuft') {
+        if (!th.roll) continue;
+        // pressed flat by the ball, it stands back up; mowed by star power, it stays short
+        const k = o.hit < 0 ? 1 : clamp((this.physics.time - o.hit) / 1.4, 0, 1), sy = o.cut ? 0.22 : 1 - 0.65 * (1 - k) * (1 - k);
+        T.pointAt(o.s, o.u, yo - 0.02, this.tmp);
+        Q.yaw(this.q, o.id * 2.39996);
+        M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q, 0.4 * (1.6 - sy * 0.6), 0.48 * sy, 0.4 * (1.6 - sy * 0.6));
+        R.addInst(M.tufts[o.id & 1], this.model, o.id & 2 ? TUFT_COL : TUFT_COL2, 1);
       } else if (o.kind === 'post') {
+        if (o.broken) continue;
         T.pointAt(o.s, o.u, yo - 0.05, this.tmp);
         M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.qi, o.rad, 0.95, o.rad);
         R.addInst(M.post, this.model, th.trim, 1);
       } else if (o.kind === 'slider') {
+        if (o.broken) continue;
         const u = o.amp * Math.sin(TAU * this.physics.time / o.period + o.phase);
         T.pointAt(o.s, u, 0.3 + yo, this.tmp);
         Q.yaw(this.q, this.tmp[3]);
@@ -648,6 +710,11 @@ class Game {
         M4.fromTRS(this.model, this.tmp[0], this.tmp[1], this.tmp[2], this.q, 1, 1, 1);
         R.addInst(M.gate, this.model, o.passed ? GEM_COL : th.accent, 1);
       }
+    }
+    for (const d of this.debris) {
+      const k = Math.sqrt(d.life / d.max) * d.size;
+      M4.fromTRS(this.model, d.p[0], d.p[1], d.p[2], d.q, k, k, k);
+      R.addInst(d.mesh, this.model, d.col, 1);
     }
     // previous-best marker
     const sb = this.startS + this.best;
@@ -748,7 +815,16 @@ class Game {
     R.setTheme(TRACK_THEMES[k]);
     if (R.beginPreview(S, [a[0], a[1], a[2]], [t[0], t[1], t[2]], 1.05)) {
       R.drawSky(lit.time, false); R.drawFloor(a[1] - 64, lit.time);
-      R.litSetup(lit); R.drawChunk(this.pvMesh); R.endLit();
+      R.litSetup(lit); R.drawChunk(this.pvMesh);
+      if (TRACK_THEMES[k].roll) {                     // grass: a few tufts on the bend
+        const p = [0, 0, 0, 0];
+        for (const [ps, pu] of [[5, -0.95], [8.6, 0.75], [12.5, -0.25]]) {
+          T.pointAt(ps, pu, 0, p); Q.yaw(this.q, ps * 2);
+          M4.fromTRS(this.model, p[0], p[1], p[2], this.q, 0.4, 0.48, 0.4);
+          R.addInst(R.meshes.tufts[ps & 1], this.model, TUFT_COL, 1);
+        }
+      }
+      R.endLit();
       this.ui.setPreview('track', k, R.endPreview());
     }
     R.setTheme(TRACK_THEMES[this.themeIdx]);
@@ -770,9 +846,10 @@ class Game {
     const aspect = R.w / R.h;
     const Z = R.Z, boostK = clamp(b.boost / 1.3, 0, 1), spK = clamp((b.speed - 6) / 14, 0, 1), stK = this.starK;
     const glowCol = stK > 0.01 ? [lerp(sk.glow[0], STAR_COL[0], stK), lerp(sk.glow[1], STAR_COL[1], stK), lerp(sk.glow[2], STAR_COL[2], stK)] : sk.glow;
+    const bp = this.bobP; bp[0] = b.p[0]; bp[1] = b.p[1] + this.bobY; bp[2] = b.p[2];
     const lit = {
       time: this.time, fogDen: 0.0078 * Z.haze, fogBase: cam.eye[1] - 7,
-      ball: [b.p[0], b.p[1], b.p[2], CFG.R], ballGlow: glowCol, ballLight: 0.3 + boostK * 0.9 + stK * 1.4 + (sk.type === 2 ? 0.35 : sk.type === 1 ? 0.15 : 0),
+      ball: [bp[0], bp[1], bp[2], CFG.R], ballGlow: glowCol, ballLight: 0.3 + boostK * 0.9 + stK * 1.4 + (sk.type === 2 ? 0.35 : sk.type === 1 ? 0.15 : 0),
       shadow: b.lost ? 0 : 1, collapse: this.collapseS,
     };
     this.renderProbe(lit);
@@ -784,8 +861,9 @@ class Game {
     this.drawProps();
     this.env.draw(R, this.time, b.p);
     R.endLit();
-    M4.fromTRS(this.model, b.p[0], b.p[1], b.p[2], b.q, CFG.R, CFG.R, CFG.R);
-    R.drawBall(this.model, sk, Math.max(spK, boostK), 1, stK, this.ballPlane());
+    M4.fromTRS(this.model, bp[0], bp[1], bp[2], b.q, CFG.R, CFG.R, CFG.R);
+    const pl = this.ballPlane(); pl.c = bp;
+    R.drawBall(this.model, sk, Math.max(spK, boostK), 1, stK, pl);
     // additive pass
     R.beginAdditive();
     const F = this.fx; F.begin(R.view);

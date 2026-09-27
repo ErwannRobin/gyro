@@ -5,18 +5,24 @@ test.use({ viewport: { width: 360, height: 720 }, hasTouch: true, isMobile: true
 
 const tickN = (page, n, draw = false) => page.evaluate(([n, draw]) => { const g = window.__game; g.halt = true; for (let k = 0; k < n; k++) g.tick(1 / 60, draw); }, [n, draw]);
 
-test('a tap on the menu background shows only the play buttons, a second tap brings the rest back', async ({ page }) => {
+test('a tap on the menu background shows only the title and the play buttons, a second tap brings the rest back', async ({ page }) => {
   const errors = await openGame(page);
-  const vis = () => page.evaluate(() => ['#title', '#modeSeg', '#tgKid', '#skinsMenu', '#langSeg', '#menuBest', '#btnTilt', '#btnTouch']
+  const vis = () => page.evaluate(() => ['#title', '#tagline', '#modeSeg', '#tgKid', '#skinsMenu', '#langSeg', '#menuBest', '#btnTilt', '#btnTouch']
     .map((s) => getComputedStyle(document.querySelector(s)).visibility));
-  const pos = () => page.evaluate(() => ['#btnTilt', '#btnTouch'].map((s) => { const r = document.querySelector(s).getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round).join(','); }));
+  const pos = () => page.evaluate(() => ['#title', '#btnTilt', '#btnTouch'].map((s) => { const r = document.querySelector(s).getBoundingClientRect(); return [r.x, r.y, r.width, r.height].map(Math.round); }));
   await page.addStyleTag({ content: '#menu *, #menu::before { transition: none !important }' });   // check the end state of the fades
   const p0 = await pos();
   await page.locator('#tagline').click();                        // any text or empty area counts as background
-    expect(await vis()).toEqual(['hidden', 'hidden', 'hidden', 'hidden', 'hidden', 'hidden', 'visible', 'visible']);
-  expect(await pos()).toEqual(p0);                               // the play buttons do not move
-  await page.mouse.click(180, 80);
-    expect((await vis()).every((v) => v === 'visible')).toBe(true);
+  expect(await vis()).toEqual(['visible', 'hidden', 'hidden', 'hidden', 'hidden', 'hidden', 'hidden', 'visible', 'visible']);
+  // the title stays put; the play buttons slide together to the middle of the screen (the ball shows below)
+  const p1 = await pos();
+  expect(p1[0]).toEqual(p0[0]);
+  expect(p1[1][0]).toBe(p0[1][0]); expect(p1[2][1] - p1[1][1]).toBe(p0[2][1] - p0[1][1]);
+  expect(Math.abs((p1[1][1] + p1[2][1] + p1[2][3]) / 2 - 360)).toBeLessThan(2);
+  expect(p1[1][1]).toBeLessThan(p0[1][1]);
+  await page.mouse.click(180, 20);
+  expect((await vis()).every((v) => v === 'visible')).toBe(true);
+  expect(await pos()).toEqual(p0);
   // buttons never toggle it
   await page.click('#modeSeg button[data-mode=daily]');
   await page.click('#tgKid');
@@ -62,7 +68,7 @@ test('ball and track pickers show pictures drawn by the game', async ({ page }) 
   await tickN(page, 90, true);
   const bg = () => page.evaluate(() => [...document.querySelectorAll('#skinsMenu .sw, #skinsPause .sw')].map((b) => b.style.backgroundImage.slice(0, 27)));
   const all = await bg();
-  expect(all.length).toBe(18);
+  expect(all.length).toBe(20);
   for (const u of all) expect(u).toBe('url("data:image/png;base64,');
   // each picture is different, and it is redrawn for a new world
   const urls = await page.evaluate(() => [...document.querySelectorAll('#skinsMenu .sw')].map((b) => b.style.backgroundImage));
