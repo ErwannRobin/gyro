@@ -27,7 +27,7 @@ test('procedural track stays feasible for 4 km on many seeds', async ({ page }) 
   expect(r).toEqual([]);
 });
 
-test('daily run is the same for everyone, random runs differ', async ({ page, browser }) => {
+test('daily run is the same for everyone, a new random track differs', async ({ page, browser }) => {
   await openGame(page, '/?mode=daily');
   const sample = () => { const g = window.__game; g.gen.fill(700); const m = 1200 & g.track.mask; return [g.gameMode, g.track.x[m], g.track.z[m]]; };
   const a = await page.evaluate(sample);
@@ -37,5 +37,7 @@ test('daily run is the same for everyone, random runs differ', async ({ page, br
   expect(await other.evaluate(sample)).toEqual(a);
   const r1 = await page.evaluate(() => { const g = window.__game; g.setGameMode('random'); g.gen.fill(700); return g.track.x[1200 & g.track.mask]; });
   const r2 = await page.evaluate(() => { const g = window.__game; g.newWorld(); g.gen.fill(700); return g.track.x[1200 & g.track.mask]; });
-  expect(r1).not.toBe(r2);
+  expect(r2).toBe(r1);                                          // random mode keeps its track until "new track"
+  const r3 = await page.evaluate(() => { const g = window.__game; g.newTrack(); g.gen.fill(700); return g.track.x[1200 & g.track.mask]; });
+  expect(r3).not.toBe(r1);
 });

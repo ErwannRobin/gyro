@@ -44,7 +44,7 @@ class UI {
       ctrl: $('ctrlTag'), toasts: $('toasts'), danger: $('danger'), flash: $('flash'), menu: $('menu'), calib: $('calib'),
       calibNum: $('calibNum'), calibTxt: $('calibTxt'), calibSub: $('calibSub'), go: $('go'), pause: $('pause'), over: $('over'),
       record: $('record'), ovDist: $('ovDist'), ovScore: $('ovScore'), ovBest: $('ovBest'), ovMode: $('ovMode'), ovRails: $('ovRails'), mBest: $('mBest'), perm: $('permMsg'),
-      btnTilt: $('btnTilt'), btnTouch: $('btnTouch'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), share: $('btnShare'), recal: $('btnRecal'),
+      btnTilt: $('btnTilt'), btnTouch: $('btnTouch'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), modeTxt: $('modeTxt'), newTrack: $('btnNewTrack'), share: $('btnShare'), recal: $('btnRecal'),
       power: $('power'), pwCoin: $('pwCoin'), pwTxt: $('pwTxt'), pwFill: $('pwFill'),
     };
     this.cache = {};
@@ -76,7 +76,7 @@ class UI {
   }
   setMode(mode, info) {
     for (const b of document.querySelectorAll('#modeSeg button')) b.classList.toggle('on', b.dataset.mode === mode);
-    this.el.modeInfo.textContent = info;
+    this.el.modeTxt.textContent = info;
   }
 
   updateHud(dist, score, best, speed, mult) {
@@ -165,7 +165,8 @@ class UI {
     if (this.cache.share !== key) {
       this.cache.share = key;
       b.classList.toggle('busy', state === 'busy'); b.disabled = state === 'busy';
-      b.querySelector('.lbl').textContent = state === 'busy' ? tr('shareBusy') : state === 'saved' ? tr('shareSaved') : tr('share');
+      b.classList.toggle('ready', state === 'ready');
+      b.querySelector('.lbl').textContent = tr({ busy: 'shareBusy', saved: 'shareSaved', ready: 'shareReady' }[state] || 'share');
       b.classList.toggle('hidden', state === 'none');
     }
     const w = state === 'busy' ? Math.round(p * 20) * 5 + '%' : '0';          // 5 % steps: few DOM writes

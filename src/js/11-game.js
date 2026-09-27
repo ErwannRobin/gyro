@@ -33,6 +33,9 @@ class Game {
     try { qm = new URLSearchParams(location.search).get('mode'); } catch (e) { qm = null; }
     this.gameMode = (qm === 'daily' || qm === 'random' ? qm : Store.get('mode', 'random')) === 'daily' ? 'daily' : 'random';
     this.kid = Store.get('kid', false) === true;
+    // Random mode is one endless track per player: after a fall the next run starts again near that spot.
+    this.rSeed = (Store.get('rseed', 0) | 0) || this.newSeed();
+    this.contS = Math.max(CFG.START_S, +Store.get('rpos', 0) || 0);
     this.best = this.modeBest();
     this.bestScore = Math.max(0, +Store.get('bestScore', 0) || 0);
     this.state = 'menu'; this.time = 0; this.timeScale = 1; this.acc = 0; this.used = false; this.mode = 'touch';
@@ -61,6 +64,7 @@ class Game {
     const tap = (el, fn) => el.addEventListener('click', (e) => { e.preventDefault(); fn(e); });
     for (const b of document.querySelectorAll('#langSeg button')) tap(b, () => { LANG = b.dataset.lang; Store.set('lang', LANG); this.refreshTexts(); this.audio.tick(); });
     tap($('tgKid'), () => { if (this.state === 'menu') { this.setKid(!this.kid); this.audio.tick(); } });
+    tap(E.newTrack, () => { if (this.state === 'menu') { this.newTrack(); this.audio.tick(); } });
     for (const b of document.querySelectorAll('#modeSeg button')) tap(b, () => { if (this.state === 'menu' && b.dataset.mode !== this.gameMode) { this.setGameMode(b.dataset.mode); this.audio.tick(); } });
     const toggles = () => U.setToggles(this.audio.musicOn, this.audio.sfxOn);
     for (const b of document.querySelectorAll('.tgMusic')) tap(b, () => { this.audio.init(); this.audio.setMusic(!this.audio.musicOn); toggles(); });
@@ -119,10 +123,12 @@ class Game {
     const U = this.ui, E = U.el;
     U.applyLang();
     E.btnTilt.textContent = tr(this.mobile ? 'playGyro' : 'play');
-    U.setMode(this.gameMode, this.gameMode === 'daily' ? tr('infoDaily', { date: dayLabel(dayKey()) }) : tr('infoRandom'));
+    const cont = this.gameMode === 'random' && this.contS > CFG.START_S + 5;
+    U.setMode(this.gameMode, (this.gameMode === 'daily' ? tr('infoDaily', { date: dayLabel(dayKey()) }) : cont ? tr('infoContinue', { d: fmt(this.contS - CFG.START_S) }) : tr('infoRandom'))
+      + (this.kid ? ' · ' + tr('kidInfo') : ''));
+    E.newTrack.classList.toggle('hidden', !cont);
     E.mBest.textContent = fmt(this.modeBest()) + ' m';
     const kb = U.$('tgKid'); kb.classList.toggle('off', !this.kid); kb.title = tr('kidInfo');
-    if (this.kid) E.modeInfo.textContent += ' · ' + tr('kidInfo');
     if (this.shareSt) U.shareState(this.shareSt, this.shareP || 0);
   }
   // ------------------------------------------------------------- game modes
@@ -149,7 +155,24 @@ class Game {
   }
   runSeed() {
     if (this.gameMode === 'daily') { this.runDay = dayKey(); return dailySeed(this.runDay); }
-    return (Math.random() * 1e9) | 0;
+    return this.rSeed;
+  }
+  newSeed() { const s = ((Math.random() * 1e9) | 0) || 1; Store.set('rseed', s); return s; }
+  newTrack() {
+    this.rSeed = this.newSeed(); this.contS = CFG.START_S; Store.set('rpos', this.contS);
+    this.refreshTexts(); this.newWorld(); this.used = false;
+  }
+  // Restart point after a fall in random mode: a plain full-width stretch shortly before the spot,
+  // without holes, boosters or obstacles, so the next run does not start in trouble.
+  safeStart(s) {
+    const T = this.track, M = T.mask, lo = Math.max(this.startS, s - 55);
+    const ok = (i) => { const m = i & M; return i >= T.minIndex() && i < T.n - 1 && T.rowN[m] === 1 && T.rowAO[m * 3] && T.rowBO[m * 3] && !(T.rowF[m] & RF.BOOST); };
+    for (let t = Math.floor(s - 4); t >= lo; t -= 1) {
+      const i = Math.floor(t / CFG.DS); let good = true;
+      for (let j = i - 6; j <= i + 20 && good; j++) good = ok(j);
+      if (good && !T.objects.some((o) => (o.kind === 'post' || o.kind === 'slider') && Math.abs(o.s - t) < 10)) return t;
+    }
+    return this.startS;
   }
   bindWindow() {
     const onResize = () => { clearTimeout(this.rt); this.rt = setTimeout(() => this.resize(), 80); };
@@ -188,18 +211,20 @@ class Game {
   }
 
   // ------------------------------------------------------------- world
-  newWorld(seed) {
-    seed = seed === undefined ? this.runSeed() : seed;
+  newWorld(seed, s0 = CFG.START_S) {
+    if (seed === undefined) { seed = this.runSeed(); if (this.gameMode === 'random') s0 = this.contS; }
     for (const ch of this.chunks.values()) this.R.free(ch.mesh);
-    this.chunks.clear(); this.nextChunk = 0;
+    this.chunks.clear(); this.nextChunk = Math.max(0, Math.floor((s0 - CFG.BEHIND) / (CFG.CHUNK_ROWS * CFG.DS)) - 1);
     this.track.reset();
     this.gen = new TrackGenerator(this.track, seed);
-    this.gen.fill(CFG.AHEAD + 40);
+    this.gen.fill(s0 + CFG.AHEAD + 40);
+    const O = this.track.objects; let w = 0; for (let k = 0; k < O.length; k++) if (O[k].s > s0 - 60) O[w++] = O[k]; O.length = w;
     const b = this.ball; b.reset();
-    this.track.pointAt(CFG.START_S, 0, CFG.R, this.tmp);
-    b.p[0] = this.tmp[0]; b.p[1] = this.tmp[1]; b.p[2] = this.tmp[2]; b.hint = Math.floor(CFG.START_S / CFG.DS);
+    this.track.pointAt(s0, 0, CFG.R, this.tmp);
+    b.p[0] = this.tmp[0]; b.p[1] = this.tmp[1]; b.p[2] = this.tmp[2]; b.hint = Math.floor(s0 / CFG.DS);
     const L = this.track.locate(b.p[0], b.p[2], b.hint); b.s = L.s; b.u = L.u; b.surfY = this.tmp[1] - CFG.R;
     this.physics.collapseS = this.collapseS = -1e9; this.physics.kid = this.kid; this.physics.time = 0;
+    this.lostS = 0; this.lookRef = null;
     this.startS = b.s; this.maxS = b.s; this.score = 0; this.dist = 0; this.mult = 1; this.recordShown = false;
     this.danger = 0; this.timeScale = 1; this.acc = 0; this.runT = 0;
     // star power: coins fill the gauge, a streak of coins raises the coin multiplier
@@ -309,12 +334,13 @@ class Game {
     if (beat) { this.best = dist; this.saveBest(dist); }
     const record = beat && dist >= 10;                 // no fanfare for trivial distances
     if (score > this.bestScore) { this.bestScore = score; Store.set('bestScore', score); }
+    if (this.gameMode === 'random') { this.contS = this.safeStart(Math.min(this.lostS || this.ball.s, this.maxS)); Store.set('rpos', this.contS); }
     const U = this.ui, E = U.el;
     E.ovDist.textContent = fmt(dist); const sm = document.createElement('small'); sm.textContent = 'm'; E.ovDist.appendChild(sm);
     E.ovScore.textContent = 'SCORE ' + fmt(score);
     E.ovBest.textContent = 'BEST '; const bb = document.createElement('b'); bb.textContent = fmt(this.best) + ' m'; E.ovBest.appendChild(bb);
     this.prepareShare(record);
-    Analytics.event('game_over', { mode: this.gameMode, control: this.mode, zone: ZONES[zoneAt(CFG.START_S + dist)].id, meters: Math.floor(dist / 50) * 50, record: !!record, kid: this.kid, stars: this.starN });
+    Analytics.event('game_over', { mode: this.gameMode, control: this.mode, zone: ZONES[zoneAt(this.maxS)].id, from: Math.floor((this.startS - CFG.START_S) / 100) * 100, meters: Math.floor(dist / 50) * 50, record: !!record, kid: this.kid, stars: this.starN });
     E.ovRails.textContent = tr('kidBadge'); E.ovRails.classList.toggle('hidden', !this.kid);
     E.ovMode.textContent = this.gameMode === 'daily' ? tr('dailyTag', { date: dayLabel(this.runDay || dayKey()) }) : tr('randomTag');
     E.record.classList.add('hidden');
@@ -360,7 +386,7 @@ class Game {
   }
   lost(b, reason) {
     if (this.state !== 'play') return;
-    this.state = 'falling'; this.fallT = 0; this.timeScale = 0.3;
+    this.state = 'falling'; this.fallT = 0; this.timeScale = 0.3; this.lostS = b.s;
     this.endStar(true);
     this.cam.mode = 'fall';
     this.audio.fall(); this.audio.setRoll(0, false);
@@ -413,6 +439,7 @@ class Game {
       while (this.acc >= h && n < 10) { this.physics.step(b, ix, iy, this.cam.yaw, h); this.acc -= h; n++; }
       if (n >= 10) this.acc = 0;
     }
+    if (st === 'menu') this.menuLook(); else this.cam.gyroLook = this.lookRef = null;
     if (st === 'play') { this.progress(dt); this.updateStar(dt); }
     else this.input.flick = this.input.doubleTap = this.starKey = false;
     this.starK += ((this.star ? 1 : 0) - this.starK) * damp(7, dtR);
@@ -487,6 +514,18 @@ class Game {
           bo ? 0.5 : 0.35, col, bo ? 0.1 : 0.06, 7, 2);
       }
     }
+  }
+
+  // Phone motion on the menu: turning the phone walks the camera around the ball, tilting it
+  // raises or lowers the camera. The way the phone is held when the menu opens is the reference.
+  menuLook() {
+    const I = this.input;
+    if (!I.raw || performance.now() - I.lastEvt > 600) { this.cam.gyroLook = this.lookRef = null; return; }
+    if (!this.lookRef) this.lookRef = { h: I.heading, p: I.pitch, x: I.sx };
+    const R = this.lookRef, L = this.lookV || (this.lookV = { yaw: 0, pitch: 0 });
+    L.yaw = I.heading !== null && R.h !== null ? wrapAngle(I.heading - R.h) : clamp((I.sx - R.x) * 2.2, -1.6, 1.6);
+    L.pitch = I.pitch - R.p;
+    this.cam.gyroLook = L;
   }
 
   // ------------------------------------------------------------- coins & star power
@@ -574,7 +613,7 @@ class Game {
       }
     }
     // previous-best marker
-    const sb = CFG.START_S + this.best;
+    const sb = this.startS + this.best;
     if (this.best >= 30 && sb > s0 && sb < s1 && this.state !== 'menu') {
       T.pointAt(sb, 0, this.fallOffset(sb), this.tmp);
       if (!this.camCrossing(this.tmp)) {
@@ -656,8 +695,9 @@ class Game {
   // Zone follows distance; the last 14 % of each zone cross-fades into the next.
   updateZones(dt) {
     const R = this.R;
-    for (let i = 0; i < ZONES.length; i++) if (!R.zoneTex[i]) { if (this.state === 'menu' || this.state === 'calib' || this.dist > (i - 1) * ZONE_LEN + 300) R.ensureZone(i); break; }
-    const zf = clamp(this.dist / ZONE_LEN, 0, ZONES.length - 1), zA = Math.min(ZONES.length - 1, Math.floor(zf));
+    const pos = Math.max(0, this.maxS - CFG.START_S);                    // worlds follow the position on the track
+    for (let i = 0; i < ZONES.length; i++) if (!R.zoneTex[i]) { if (this.state === 'menu' || this.state === 'calib' || pos > (i - 1) * ZONE_LEN + 300) R.ensureZone(i); break; }
+    const zf = clamp(pos / ZONE_LEN, 0, ZONES.length - 1), zA = Math.min(ZONES.length - 1, Math.floor(zf));
     const fr = zf - zA, k = zA < ZONES.length - 1 ? clamp((fr - 0.86) / 0.14, 0, 1) : 0, kk = k * k * (3 - 2 * k);
     R.setZones(zA, Math.min(ZONES.length - 1, zA + 1), kk);
     const cur = kk > 0.5 ? zA + 1 : zA;
@@ -700,19 +740,32 @@ class Game {
       tag: [this.gameMode === 'daily' ? tr('dailyTag', { date: dayLabel(this.runDay || dayKey()) }) : '', this.kid ? '🛡 ' + tr('kidShare').toUpperCase() : ''].filter(Boolean).join(' · '),
       accent: css(th.accent), accent2: css(th.accent2), portrait: this.R.h >= this.R.w,
     };
-    this.shareInfo = info; this.shareFile = null; this.setShare('busy', 0);
-    const token = this.shareToken = (this.shareToken || 0) + 1;
-    setTimeout(() => {                                   // let the last falling snapshots finish encoding
+    this.shareInfo = info; this.shareFile = null; this.shareToken = (this.shareToken || 0) + 1;
+    this.setShare('idle');
+  }
+  // The video is only made when asked for (first tap). Making it takes longer than the browser
+  // keeps the tap "active", so sharing it needs a second tap unless it was quick (image fallback).
+  makeShare() {
+    const token = this.shareToken, t0 = performance.now();
+    this.setShare('busy', 0);
+    const done = (f) => {
       if (token !== this.shareToken) return;
-      this.replay.make(info, (p) => { if (token === this.shareToken) this.setShare('busy', p); })
-        .then((f) => { if (token === this.shareToken) { this.shareFile = f; this.setShare('ready'); } })
-        .catch((e) => { if (token === this.shareToken) { this.shareFile = null; this.setShare('ready'); } });
-    }, 600);
+      this.shareFile = f;
+      if (performance.now() - t0 < 900) this.share(); else this.setShare('ready');
+    };
+    const go = () => {
+      if (token !== this.shareToken) return;
+      if (this.replay.pending > 0) { setTimeout(go, 100); return; }          // last snapshots still encoding
+      this.replay.make(this.shareInfo, (p) => { if (token === this.shareToken) this.setShare('busy', p); })
+        .then(done).catch(() => done(null));
+    };
+    go();
   }
   setShare(st, p = 0) { this.shareSt = st; this.shareP = p; this.ui.shareState(st, p); }
   share() {
     const f = this.shareFile, info = this.shareInfo;
     if (!info || this.shareSt === 'busy') return;
+    if (this.shareSt === 'idle') { this.makeShare(); return; }
     const url = PROD_URL + (this.gameMode === 'daily' ? '?mode=daily' : '');
     let text = tr('shareText', { d: fmt(info.dist), s: fmt(info.score) });
     if (this.gameMode === 'daily') text += ' — ' + tr('shareDaily', { date: dayLabel(this.runDay || dayKey()) });

@@ -27,11 +27,11 @@ The whole game is **one self-contained `index.html` file** (about 230 KB): HTML,
   - checkpoints every 250 m and coins to collect
   - The generator always leaves a safe line, so no section is impossible.
 - **Two game modes:**
-  - **Random**: a new track every run.
-  - **Daily run**: everyone gets the same track on the same day. The seed comes from the UTC date, and the daily best is saved separately. The link `?mode=daily` opens the daily run directly.
+  - **Random**: one endless track to explore. After a fall, the next run (and the menu scene) starts again just before the spot where you fell, so you can go further each time. The track and the restart point are saved on the device. **↻ New track** on the menu starts a fresh track from 0 m.
+  - **Daily run**: everyone gets the same track on the same day, and every run starts from the beginning. The seed comes from the UTC date, and the daily best is saved separately. The link `?mode=daily` opens the daily run directly.
 - **Star power.** Coins fill a gauge at the bottom of the screen. Coins taken in a row raise the coin multiplier (×2 after 4, ×3 after 8, ×4 after 12), so the gauge fills faster; missing a single coin resets it. When the gauge is full, flick the phone up quickly (or double-tap, press Space, or tap the gauge): glowing side rails appear, the ball lights up, the music speeds up and the score is doubled. The gauge then drains in about 6 seconds and the rails go away.
 - **Kid mode (side rails).** A menu toggle adds small glowing rails along both edges of the track, so the ball bounces back instead of falling off the side. A hit that is too hard still jumps the rail, and holes and gaps still count. Kid-mode runs keep their own best scores, and the game over screen, the share text and the share video all say "with side rails".
-- **Five worlds** that change every 500 m and blend smoothly into each other:
+- **Five worlds** that change every 500 m of track and blend smoothly into each other:
   - **Tech** (0–500 m): towers with lit windows, beacons, a glowing grid below
   - **Landscape** (500–1000 m): sunset, floating rock islands, mountains, a sea of clouds
   - **Neon** (1000–1500 m): synthwave sun, neon grid, neon rings to roll through
@@ -46,8 +46,9 @@ The whole game is **one self-contained `index.html` file** (about 230 KB): HTML,
   - slow motion when you fall
 - **4 track skins and 5 marble skins** (chrome, glass, gold, plasma, candy). You can change them from the menu or the pause screen.
 - **Sound.** Every sound is synthesized with the Web Audio API, including the rolling sound, impacts, coins, checkpoints, boosts, falls, thunder and generative ambient music. Music and sound effects have separate toggles and volume sliders.
-- **Share my score.** During the run the game records a light timelapse. At game over it builds a short accelerated video (intro, run, fall, score card) with `MediaRecorder`. On phones it is shared through the Web Share API; elsewhere it is downloaded. If video is not supported, a score-card image is used instead.
+- **Share my score.** During the run the game records a light timelapse. When you press **Share my score** at game over, it builds a short accelerated video (intro, run, fall, score card) with `MediaRecorder`; press **Share the video** when it is ready. On phones it is shared through the Web Share API; elsewhere it is downloaded. If video is not supported, a score-card image is used instead.
 - **English and French**, detected from the browser language. You can switch on the menu.
+- **Look around on the menu.** When motion access is on (Android at once, iPhone after you allowed it once), turning the phone walks the camera around the ball and tilting it raises or lowers the camera.
 - **Built for phones:**
   - portrait first, landscape supported
   - no scrolling or zooming, large touch targets, readable in sunlight
@@ -81,7 +82,7 @@ The whole game is **one self-contained `index.html` file** (about 230 KB): HTML,
 
 ## Scoring
 
-- **Distance** is the furthest point you have reached (meters).
+- **Distance** is the furthest point you have reached in this run (meters), counted from where the run started.
 - **Score:** each meter is worth 10 points × a speed multiplier. The multiplier is ×2 above ~29 km/h, ×3 above ~43 km/h, ×4 above ~72 km/h or while boosting, and ×5 above ~108 km/h.
 - **Coin:** 250 × the coin multiplier. **Checkpoint:** +1000.
 - **Star power** doubles every point while it lasts.
@@ -137,7 +138,10 @@ The tests drive the game loop step by step instead of waiting for real frames, s
 - the installable app, including offline play
 - kid mode, safety rails that give way to hard hits, and speed past 50 km/h
 - coins, streak multiplier, star gauge, the tilt-up flick and star power
-- the chase camera never ending up inside roadside scenery
+- scenery staying out of the track corridor, including giant objects that drift onto it
+- random mode restarting where you fell (and "new track"), daily runs restarting from 0
+- the share video only being made on request
+- the menu camera following the phone
 
 ## Deploy
 
@@ -173,7 +177,7 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
 | `InputManager` | DeviceOrientation (with the iOS permission), calibration, low-pass filtering, joystick and keyboard. |
 | `AudioManager` | Web Audio synthesis and a generative music scheduler, with separate music and SFX buses. |
 | `ParticleSystem`, `FxBuilder` | Pooled particles, trail ribbon, glows, light shafts, speed lines and lightning. |
-| `Environment` | Zone-driven scenery in three parallax layers. |
+| `Environment` | Zone-driven scenery in three parallax layers. Nothing may enter a keep-out zone around the track; objects that newer track bends towards shrink away, and anything between the camera and the ball is hidden. |
 | `Replay` | Timelapse capture and share-video composition. |
 | `QualityManager`, `UI`, `Game` | Adaptive quality, DOM overlay with FR/EN strings, and the state machine / main loop. |
 | `Analytics`, `sw.js` | Opt-out-friendly stats on the official site, and the offline cache for the installable app. |
@@ -704,3 +708,22 @@ The kid mode should not block all errors. The ball should still be able to fail 
 
 </details>
 
+<details>
+<summary><strong>Exploration prompt</strong></summary>
+
+````markdown
+The star power should be called as is in all
+Languages. 
+
+And I still had collisions with an object from the decors. It totallly hid the road for a while. It should not occur. 
+
+Nb: the final video generation should not start automatically but be triggered by the button instead. 
+
+Also, on the menu screen, if the gyroscope is activated, it should control the camera to be able to see around. 
+
+And the scene should be where we last lost. And we should continue with the same “scene” for the next game in random so that we can explore further more easily. 
+
+Of course daily challenge start over every time.
+````
+
+</details>

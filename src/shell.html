@@ -157,6 +157,7 @@ body.star #starGlow{opacity:1}
 #modeSeg{margin-top:20px}
 #modeSeg button{min-width:128px;min-height:44px;font-size:13px}
 #tgKid{margin-top:10px}
+.linkBtn{background:none;border:0;padding:6px 4px;margin-left:4px;font:inherit;font-weight:900;letter-spacing:.08em;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 #tgKid:not(.off){color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold));border-color:transparent}
 #ovRails{margin-top:10px;padding:6px 14px;border-radius:12px;font-size:13px;font-weight:800;letter-spacing:.06em;color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold))}
 #modeInfo{margin-top:8px;font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.04em;min-height:16px;text-shadow:0 2px 6px #000}
@@ -173,6 +174,8 @@ body.star #starGlow{opacity:1}
 .shareBtn{position:relative;overflow:hidden}
 .shareBtn .prog{position:absolute;left:0;bottom:0;height:3px;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .2s}
 .shareBtn.busy{opacity:.75}
+.shareBtn.ready{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 0 18px rgba(78,242,255,.35);animation:shReady 1s ease-in-out infinite alternate}
+@keyframes shReady{from{box-shadow:0 0 0 1px var(--accent),0 0 8px rgba(78,242,255,.25)}to{box-shadow:0 0 0 2px var(--accent),0 0 24px rgba(78,242,255,.6)}}
 #ovMode{margin-top:6px;font-size:12px;font-weight:800;letter-spacing:.2em;color:var(--accent)}
 #pause .skins{margin-top:16px}
 #pause .volRow .tg{width:130px;justify-content:center}
@@ -284,7 +287,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     <div id="title">GYROLL</div>
     <div id="tagline">How far can you go?</div>
     <div class="seg" id="modeSeg"><button data-mode="random" data-i18n="modeRandom"></button><button data-mode="daily" data-i18n="modeDaily"></button></div>
-    <div id="modeInfo"></div>
+    <div id="modeInfo"><span id="modeTxt"></span> <button class="linkBtn hidden" id="btnNewTrack" data-i18n="newTrack"></button></div>
     <button class="tg" id="tgKid"><span class="ic">🛡</span><span data-i18n="kid"></span></button>
     <div id="menuBest">BEST <span class="num" id="mBest">0 m</span></div>
   </div>

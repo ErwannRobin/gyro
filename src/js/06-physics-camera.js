@@ -163,6 +163,8 @@ class CameraRig {
     this.pos = [0, 3, -6]; this.look = [0, 0, 0]; this.yaw = 0; this.roll = 0; this.fov = 1.2;
     this.shake = 0; this.kick = 0; this.mode = 'orbit'; this.t = 0; this.prevYaw = 0; this.yawRate = 0;
     this.eye = [0, 0, 0]; this.tgt = [0, 0, 0]; this.tmp = [0, 0, 0, 0];
+    this.gyroLook = null;                           // menu look-around from the phone: { yaw, pitch }
+    this.orbA = null; this.orbH = 2.3;
   }
   params(aspect, speed) {
     const portrait = aspect < 0.9;
@@ -211,11 +213,17 @@ class CameraRig {
       this.fov = lerp(this.fov, P.fov * 0.8, damp(1.5, dt));
     } else {                                          // attract mode: slow swing behind the ball, looking down the track
       T.pointAt(ball.s + 2, 0, 0, this.tmp);
-      const th = this.tmp[3], a = th + Math.PI + Math.sin(this.t * 0.13) * 0.95, r = 6.4;
-      const tx = ball.p[0] + Math.sin(a) * r, tz = ball.p[2] + Math.cos(a) * r;
-      const k = damp(1.6, dt);
-      this.pos[0] = lerp(this.pos[0], tx, k); this.pos[1] = lerp(this.pos[1], ball.p[1] + 2.3 + Math.sin(this.t * 0.21) * 0.6, k); this.pos[2] = lerp(this.pos[2], tz, k);
-      const lx = ball.p[0] + Math.sin(th) * 5, ly = ball.p[1] + 1.7, lz = ball.p[2] + Math.cos(th) * 5;
+      // with the phone's motion, turning / tilting it walks the camera around the ball instead
+      const th = this.tmp[3], L = this.gyroLook, r = 6.4;
+      const ta = th + Math.PI + (L ? -L.yaw : Math.sin(this.t * 0.13) * 0.95);
+      const th2 = L ? clamp(2.3 - L.pitch * 7, 0.5, 11) : 2.3 + Math.sin(this.t * 0.21) * 0.6;
+      if (this.orbA === null) this.orbA = ta;
+      this.orbA += wrapAngle(ta - this.orbA) * damp(L ? 6 : 1.6, dt); this.orbH = lerp(this.orbH, th2, damp(L ? 5 : 1.6, dt));
+      const a = this.orbA, tx = ball.p[0] + Math.sin(a) * r, tz = ball.p[2] + Math.cos(a) * r;
+      const k = damp(L ? 8 : 1.6, dt);
+      this.pos[0] = lerp(this.pos[0], tx, k); this.pos[1] = lerp(this.pos[1], ball.p[1] + this.orbH, k); this.pos[2] = lerp(this.pos[2], tz, k);
+      const vd = L ? a + Math.PI : th;               // look past the ball, the way the camera faces
+      const lx = ball.p[0] + Math.sin(vd) * 5, ly = ball.p[1] + 1.7 - (L ? clamp(this.orbH - 2.3, -2, 6) * 0.5 : 0), lz = ball.p[2] + Math.cos(vd) * 5;
       this.look[0] = lerp(this.look[0], lx, k); this.look[1] = lerp(this.look[1], ly, k); this.look[2] = lerp(this.look[2], lz, k);
       this.yaw = th; this.prevYaw = th;
       this.roll = lerp(this.roll, Math.sin(this.t * 0.13) * 0.06, k); this.fov = lerp(this.fov, P.fov, k);

@@ -153,28 +153,52 @@ test('speed keeps growing past 50 km/h with full forward tilt', async ({ page })
   expect(v).toBeGreaterThan(65);
 });
 
-test('the chase camera never ends up inside roadside scenery', async ({ page }) => {
+test('scenery never enters the track corridor nor hides the ball', async ({ page }) => {
   await openGame(page);
   await startRun(page);
-  let bad = 0;
+  let bad = 0, count = 0;
   for (const d of [60, 560, 1060, 1560, 2060]) {
     await page.evaluate(teleport, d);
-    bad += await page.evaluate(() => {
-      const g = window.__game, b = g.ball, T = g.track;
-      let n = 0;
+    const r = await page.evaluate(() => {
+      const g = window.__game, b = g.ball, T = g.track, E = g.env;
+      let n = 0, seen = 0;
       g.physics.kid = true;                                     // keep the ball on the track so the camera can travel
       g.input.update = function () { const L = T.locate(b.p[0], b.p[2], b.hint); this.x = Math.max(-1, Math.min(1, L.u * 1.5)); this.y = 0.4; };
       for (let k = 0; k < 60 * 5 && g.state === 'play'; k++) {
         g.tick(1 / 60, false);
-        const e = g.cam.eye;
-        for (const it of g.env.side) {
-          if (it.occ === 'ring' || it.occ === 'plane') continue;   // arches the track runs through: hidden by their own test
-          const inside = Math.hypot(e[0] - it.x, e[1] - it.y, e[2] - it.z) < it.cr * 0.8;
-          if (inside && !Environment.occludes(it, e, b.p, g.time)) n++;
+        const e = g.cam.eye, i0 = Math.floor((b.s - 40) / CFG.DS);
+        const all = [...E.side, ...E.mid, ...E.heroes.flatMap((h) => h.items)];
+        seen = Math.max(seen, all.length);
+        for (const it of all) {
+          if (it.dying || it.occ === 'ring' || it.occ === 'plane') continue;   // arches the track runs through
+          if (Environment.near(T, it, i0, T.n - 1, 0.5)) n++;                  // inside the keep-out zone
+          const inside = Math.hypot(e[0] - it.x, e[2] - it.z) < it.hr && e[1] > it.y - it.down && e[1] < it.y + it.up;
+          if (inside && !Environment.occludes(it, e, b.p, g.time)) n++;        // camera inside a drawn object
         }
       }
-      return n;
+      return { n, seen };
     });
+    bad += r.n; count = Math.min(count || 1e9, r.seen);
   }
   expect(bad).toBe(0);
+  expect(count).toBeGreaterThan(15);                            // the worlds are still furnished
+});
+
+test('a giant object that ends up on the track is hidden and removed', async ({ page }) => {
+  await openGame(page);
+  await startRun(page);
+  await page.evaluate(teleport, 1100);
+  const r = await page.evaluate(() => {
+    const g = window.__game, E = g.env, b = g.ball, p = [0, 0, 0, 0];
+    g.track.pointAt(b.s + 30, 0, 0, p);
+    const h = { z: zoneAt(b.s), s: b.s, items: [] }; E.heroes.push(h);
+    const T = E.T; E.T = null;                                  // skip the keep-out check to force it there
+    E.item(h.items, b.s, g.R.meshes.sphere, p[0], p[1], p[2], 42, 42, 42, [1, 1, 1], { fogK: 0.5 });
+    E.T = T;
+    const it = h.items[0], hiddenInside = Environment.occludes(it, [p[0], p[1] + 3, p[2]], b.p, 0);
+    g.input.update = function () { this.x = 0; this.y = 0; };
+    for (let k = 0; k < 60; k++) g.tick(1 / 60, false);
+    return { hiddenInside, gone: !h.items.includes(it) || it.dying > 0 };
+  });
+  expect(r).toEqual({ hiddenInside: true, gone: true });
 });

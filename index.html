@@ -157,6 +157,7 @@ body.star #starGlow{opacity:1}
 #modeSeg{margin-top:20px}
 #modeSeg button{min-width:128px;min-height:44px;font-size:13px}
 #tgKid{margin-top:10px}
+.linkBtn{background:none;border:0;padding:6px 4px;margin-left:4px;font:inherit;font-weight:900;letter-spacing:.08em;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 #tgKid:not(.off){color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold));border-color:transparent}
 #ovRails{margin-top:10px;padding:6px 14px;border-radius:12px;font-size:13px;font-weight:800;letter-spacing:.06em;color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold))}
 #modeInfo{margin-top:8px;font-size:12px;font-weight:700;color:var(--dim);letter-spacing:.04em;min-height:16px;text-shadow:0 2px 6px #000}
@@ -173,6 +174,8 @@ body.star #starGlow{opacity:1}
 .shareBtn{position:relative;overflow:hidden}
 .shareBtn .prog{position:absolute;left:0;bottom:0;height:3px;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .2s}
 .shareBtn.busy{opacity:.75}
+.shareBtn.ready{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 0 18px rgba(78,242,255,.35);animation:shReady 1s ease-in-out infinite alternate}
+@keyframes shReady{from{box-shadow:0 0 0 1px var(--accent),0 0 8px rgba(78,242,255,.25)}to{box-shadow:0 0 0 2px var(--accent),0 0 24px rgba(78,242,255,.6)}}
 #ovMode{margin-top:6px;font-size:12px;font-weight:800;letter-spacing:.2em;color:var(--accent)}
 #pause .skins{margin-top:16px}
 #pause .volRow .tg{width:130px;justify-content:center}
@@ -284,7 +287,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     <div id="title">GYROLL</div>
     <div id="tagline">How far can you go?</div>
     <div class="seg" id="modeSeg"><button data-mode="random" data-i18n="modeRandom"></button><button data-mode="daily" data-i18n="modeDaily"></button></div>
-    <div id="modeInfo"></div>
+    <div id="modeInfo"><span id="modeTxt"></span> <button class="linkBtn hidden" id="btnNewTrack" data-i18n="newTrack"></button></div>
     <button class="tg" id="tgKid"><span class="ic">🛡</span><span data-i18n="kid"></span></button>
     <div id="menuBest">BEST <span class="num" id="mBest">0 m</span></div>
   </div>
@@ -512,27 +515,27 @@ const ZONES = [
 const I18N = {
   fr: {
     playGyro: 'JOUER AVEC LE GYROSCOPE', play: 'JOUER', playTouch: 'JOUER AU TACTILE', music: 'MUSIQUE', sfx: 'EFFETS',
-    modeRandom: 'ALÉATOIRE', modeDaily: 'DÉFI DU JOUR', infoRandom: 'Un nouveau parcours à chaque partie', infoDaily: 'Même parcours pour tous · {date}',
+    modeRandom: 'ALÉATOIRE', modeDaily: 'DÉFI DU JOUR', infoRandom: 'Parcours sans fin · vous repartez là où vous tombez', infoContinue: 'Reprise du parcours à {d} m', newTrack: '↻ NOUVEAU PARCOURS', infoDaily: 'Même parcours pour tous · {date}',
     track: 'PISTE', ball: 'BILLE', pause: 'PAUSE', resume: 'REPRENDRE', recal: 'RECALIBRER LE GYROSCOPE', mainMenu: 'MENU PRINCIPAL',
     gameOver: 'GAME OVER', newRecord: 'NOUVEAU RECORD', retry: 'REJOUER', menu: 'MENU',
-    share: 'PARTAGER MON SCORE', shareBusy: 'PRÉPARATION DE LA VIDÉO…', shareSaved: 'VIDÉO ENREGISTRÉE ✓', shareImg: 'PARTAGER MON SCORE',
+    share: 'PARTAGER MON SCORE', shareBusy: 'PRÉPARATION DE LA VIDÉO…', shareSaved: 'VIDÉO ENREGISTRÉE ✓', shareReady: 'PARTAGER LA VIDÉO ▶', shareImg: 'PARTAGER MON SCORE',
     shareText: 'J’ai roulé {d} m sur GYROLL (score {s}) ! Tu fais mieux ?', shareDaily: 'Défi du jour {date}',
     calib: 'CALIBRATION', calibSub: 'Tenez le téléphone dans une position naturelle', ready: 'PRÊT ?',
     touchHint: 'Glissez le doigt pour guider la bille', keysHint: 'Flèches / WASD / ZQSD · ou glisser à la souris',
     permDenied: 'Accès au gyroscope refusé — contrôle tactile activé.', permNone: 'Gyroscope indisponible — contrôle tactile activé.',
     ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TACTILE', ctrlKeys: 'CLAVIER', record: 'NOUVEAU RECORD !', dailyTag: 'DÉFI DU JOUR · {date}', randomTag: 'PARTIE ALÉATOIRE',
     kid: 'MODE ENFANT · RAILS LATÉRAUX', kidInfo: 'Des petits rails rattrapent la bille sur les côtés', kidBadge: '🛡 Réalisé avec les rails latéraux', kidShare: 'avec les rails latéraux', kidTag: 'RAILS', tooFast: 'TROP VITE !',
-    star: 'POUVOIR ÉTOILE', starGo: 'LEVEZ D’UN COUP ↑', starGoTouch: 'TAPEZ 2 FOIS', starGoKeys: 'ESPACE', starReady: 'ÉTOILE PRÊTE !',
-    starOn: '★ ÉTOILE ★', starActive: '★ SCORE ×2', starEnd: 'FIN DE L’ÉTOILE', combo: 'PIÈCES ×{n}', comboLost: 'SÉRIE PERDUE',
+    star: 'STAR POWER', starGo: 'LEVEZ D’UN COUP ↑', starGoTouch: 'TAPEZ 2 FOIS', starGoKeys: 'ESPACE', starReady: 'STAR POWER PRÊT !',
+    starOn: '★ STAR POWER ★', starActive: '★ SCORE ×2', starEnd: 'FIN DU STAR POWER', combo: 'PIÈCES ×{n}', comboLost: 'SÉRIE PERDUE',
     install: 'INSTALLER L’APPLI', iosInstall: 'Touchez Partager ⎋ puis « Sur l’écran d’accueil ».',
     noGL: 'WebGL est indisponible sur cet appareil / navigateur. Activez l’accélération matérielle ou essayez un Chrome / Safari récent.',
   },
   en: {
     playGyro: 'PLAY WITH GYROSCOPE', play: 'PLAY', playTouch: 'PLAY WITH TOUCH', music: 'MUSIC', sfx: 'SFX',
-    modeRandom: 'RANDOM', modeDaily: 'DAILY RUN', infoRandom: 'A new track every run', infoDaily: 'Same track for everyone · {date}',
+    modeRandom: 'RANDOM', modeDaily: 'DAILY RUN', infoRandom: 'Endless track · you restart where you fell', infoContinue: 'Back on the track at {d} m', newTrack: '↻ NEW TRACK', infoDaily: 'Same track for everyone · {date}',
     track: 'TRACK', ball: 'BALL', pause: 'PAUSE', resume: 'RESUME', recal: 'RECALIBRATE GYROSCOPE', mainMenu: 'MAIN MENU',
     gameOver: 'GAME OVER', newRecord: 'NEW RECORD', retry: 'PLAY AGAIN', menu: 'MENU',
-    share: 'SHARE MY SCORE', shareBusy: 'PREPARING VIDEO…', shareSaved: 'VIDEO SAVED ✓', shareImg: 'SHARE MY SCORE',
+    share: 'SHARE MY SCORE', shareBusy: 'PREPARING VIDEO…', shareSaved: 'VIDEO SAVED ✓', shareReady: 'SHARE THE VIDEO ▶', shareImg: 'SHARE MY SCORE',
     shareText: 'I rolled {d} m in GYROLL (score {s})! Can you beat it?', shareDaily: 'Daily run {date}',
     calib: 'CALIBRATION', calibSub: 'Hold your phone in a natural position', ready: 'READY?',
     touchHint: 'Drag your finger to steer the ball', keysHint: 'Arrows / WASD · or drag with the mouse',
@@ -2449,6 +2452,8 @@ class CameraRig {
     this.pos = [0, 3, -6]; this.look = [0, 0, 0]; this.yaw = 0; this.roll = 0; this.fov = 1.2;
     this.shake = 0; this.kick = 0; this.mode = 'orbit'; this.t = 0; this.prevYaw = 0; this.yawRate = 0;
     this.eye = [0, 0, 0]; this.tgt = [0, 0, 0]; this.tmp = [0, 0, 0, 0];
+    this.gyroLook = null;                           // menu look-around from the phone: { yaw, pitch }
+    this.orbA = null; this.orbH = 2.3;
   }
   params(aspect, speed) {
     const portrait = aspect < 0.9;
@@ -2497,11 +2502,17 @@ class CameraRig {
       this.fov = lerp(this.fov, P.fov * 0.8, damp(1.5, dt));
     } else {                                          // attract mode: slow swing behind the ball, looking down the track
       T.pointAt(ball.s + 2, 0, 0, this.tmp);
-      const th = this.tmp[3], a = th + Math.PI + Math.sin(this.t * 0.13) * 0.95, r = 6.4;
-      const tx = ball.p[0] + Math.sin(a) * r, tz = ball.p[2] + Math.cos(a) * r;
-      const k = damp(1.6, dt);
-      this.pos[0] = lerp(this.pos[0], tx, k); this.pos[1] = lerp(this.pos[1], ball.p[1] + 2.3 + Math.sin(this.t * 0.21) * 0.6, k); this.pos[2] = lerp(this.pos[2], tz, k);
-      const lx = ball.p[0] + Math.sin(th) * 5, ly = ball.p[1] + 1.7, lz = ball.p[2] + Math.cos(th) * 5;
+      // with the phone's motion, turning / tilting it walks the camera around the ball instead
+      const th = this.tmp[3], L = this.gyroLook, r = 6.4;
+      const ta = th + Math.PI + (L ? -L.yaw : Math.sin(this.t * 0.13) * 0.95);
+      const th2 = L ? clamp(2.3 - L.pitch * 7, 0.5, 11) : 2.3 + Math.sin(this.t * 0.21) * 0.6;
+      if (this.orbA === null) this.orbA = ta;
+      this.orbA += wrapAngle(ta - this.orbA) * damp(L ? 6 : 1.6, dt); this.orbH = lerp(this.orbH, th2, damp(L ? 5 : 1.6, dt));
+      const a = this.orbA, tx = ball.p[0] + Math.sin(a) * r, tz = ball.p[2] + Math.cos(a) * r;
+      const k = damp(L ? 8 : 1.6, dt);
+      this.pos[0] = lerp(this.pos[0], tx, k); this.pos[1] = lerp(this.pos[1], ball.p[1] + this.orbH, k); this.pos[2] = lerp(this.pos[2], tz, k);
+      const vd = L ? a + Math.PI : th;               // look past the ball, the way the camera faces
+      const lx = ball.p[0] + Math.sin(vd) * 5, ly = ball.p[1] + 1.7 - (L ? clamp(this.orbH - 2.3, -2, 6) * 0.5 : 0), lz = ball.p[2] + Math.cos(vd) * 5;
       this.look[0] = lerp(this.look[0], lx, k); this.look[1] = lerp(this.look[1], ly, k); this.look[2] = lerp(this.look[2], lz, k);
       this.yaw = th; this.prevYaw = th;
       this.roll = lerp(this.roll, Math.sin(this.t * 0.13) * 0.06, k); this.fov = lerp(this.fov, P.fov, k);
@@ -2534,6 +2545,18 @@ class InputManager {
     this.joyEl = document.getElementById('joy'); this.knob = this.joyEl.firstElementChild;
     this.onOrient = this.onOrient.bind(this);
     this.angle = this.screenAngle();
+    this.heading = null; this.pitch = 0;
+    // Motion data for the menu camera. Without a permission prompt (Android…) listen right away;
+    // on iOS only once the player has granted it before, from their first tap.
+    const DOE = window.DeviceOrientationEvent;
+    if (DOE && typeof DOE.requestPermission !== 'function') window.addEventListener('deviceorientation', this.onOrient);
+    else if (DOE && Store.get('tiltOK', false) === true) {
+      const once = () => {
+        document.removeEventListener('touchend', once, true); document.removeEventListener('click', once, true);
+        try { Promise.resolve(DOE.requestPermission()).then((r) => { if (r === 'granted') window.addEventListener('deviceorientation', this.onOrient); }).catch(() => {}); } catch (e) { /* ignore */ }
+      };
+      document.addEventListener('touchend', once, true); document.addEventListener('click', once, true);
+    }
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
@@ -2589,6 +2612,7 @@ class InputManager {
   requestTilt() {
     const DOE = window.DeviceOrientationEvent;
     if (!DOE) return Promise.resolve({ ok: false, reason: 'unsupported' });
+    const ok = (r) => { if (r.ok) Store.set('tiltOK', true); return r; };
     const listen = () => new Promise((res) => {
       window.addEventListener('deviceorientation', this.onOrient);
       const t0 = performance.now();
@@ -2602,9 +2626,9 @@ class InputManager {
     if (typeof DOE.requestPermission === 'function') {
       let p;
       try { p = DOE.requestPermission(); } catch (e) { return Promise.resolve({ ok: false, reason: 'denied' }); }
-      return Promise.resolve(p).then((r) => (r === 'granted' ? listen() : { ok: false, reason: 'denied' })).catch(() => ({ ok: false, reason: 'denied' }));
+      return Promise.resolve(p).then((r) => (r === 'granted' ? listen() : { ok: false, reason: 'denied' })).then(ok).catch(() => ({ ok: false, reason: 'denied' }));
     }
-    return listen();
+    return listen().then(ok);
   }
   onOrient(e) {
     if (e.beta === null || e.gamma === null || e.beta === undefined) return;
@@ -2623,6 +2647,13 @@ class InputManager {
     // quick "tilt up" (top edge raised towards you): the screen pitch grows by ~20° in a quarter second.
     // An angle, not sy, so it still works when the phone is held almost upright.
     const now = this.lastEvt, H = this.hist, pitch = Math.atan2(-sy, -dz);
+    this.pitch = pitch; this.sx = sx;
+    // compass-like heading of the phone (of its top edge plus its back), stable both flat and upright
+    if (typeof e.alpha === 'number' && Number.isFinite(e.alpha)) {
+      const a = e.alpha * Math.PI / 180, sg = Math.sin(g), cg = Math.cos(g), sb = Math.sin(b), cb = Math.cos(b);
+      const vx = -sg, vy = cb + sb * cg, X = Math.cos(a) * vx - Math.sin(a) * vy, Y = Math.sin(a) * vx + Math.cos(a) * vy;
+      this.heading = Math.atan2(X, Y);
+    } else this.heading = null;
     H.push(now, pitch);
     while (H.length > 2 && now - H[0] > 250) H.splice(0, 2);
     let low = 9; for (let k = 1; k < H.length; k += 2) low = Math.min(low, H[k]);
@@ -2945,6 +2976,7 @@ class Environment {
     this.dust = null; this.dustN = 0; this.density = 1; this.sideS = 0; this.midS = 0; this.boltT = 3;
   }
   reset(T, s0, envQ, dustN, M) {
+    this.T = T; this.checkedN = T.n - 1; this.heroT = 0; this.ballS = s0;
     this.side.length = 0; this.mid.length = 0; this.heroes.length = 0; this.shafts.length = 0; this.bolts.length = 0;
     this.density = clamp(envQ / 22, 0.4, 1.2);
     this.sideS = s0 - 14; this.midS = s0 - 80; this.boltT = 3;
@@ -2961,11 +2993,45 @@ class Environment {
     T.pointAt(sc, 0, 0, this.tmp); const t = this.tmp;
     return { x: t[0], y: t[1], z: t[2], th: t[3], rx: -Math.cos(t[3]), rz: Math.sin(t[3]), fx: Math.sin(t[3]), fz: Math.cos(t[3]), w: T.w[Math.floor(sc / CFG.DS) & T.mask] };
   }
+  // Rough extent of each mesh at scale 1: [horizontal radius, height above, depth below].
+  extOf(mesh) {
+    const M = this.M;
+    if (this.extFor !== M) {
+      const E = this.ext = new Map(), set = (list, e) => { for (const m of list) E.set(m, e); };
+      set([M.cube, M.tower, M.mono, M.box16, M.box17, M.glow, M.slider], [0.71, 0.5, 0.5]); set([M.sphere], [1, 1, 1]); set(M.rocks, [1.25, 1.25, 1.25]);
+      set([M.pyramid], [1.42, 1.5, 0.05]); set(M.shards, [0.6, 2.2, 1.4]); set([M.ring, M.ringGlow, M.torus16, M.ring17], [1.25, 0.3, 0.3]);
+      this.extFor = M;
+    }
+    return this.ext.get(mesh) || [1.3, 1.3, 1.3];
+  }
+  // Adds an object unless it would sit in the track's keep-out zone. Each object is also given a
+  // bounding cylinder (hr, up, down) used to hide it whenever it gets between the camera and the ball.
   item(list, s, mesh, x, y, z, sx, sy, sz, col, o = {}) {
-    list.push({ s, mesh, x, y, z, sx, sy, sz, col, emis: o.emis === undefined ? 1 : o.emis, yaw: o.yaw || 0, spin: o.spin || 0, tilt: o.tilt || 0,
-      tumble: o.tumble || 0, bob: o.bob || 0, blink: !!o.blink, q: o.q || null, fogK: o.fogK || 1, drift: o.drift || null, r: o.r || Math.max(sx, sy, sz),
-      // occluder shape used to hide the object when the camera gets inside it or behind it
-      occ: o.occ || 'sphere', cr: o.cr || Math.max(sx, sy, sz) * 0.9, nx: o.nx || 0, nz: o.nz || 0, R: o.R || 0 });
+    const e = this.extOf(mesh), bob = o.bob || 0, rot = !!(o.q || o.tilt || o.tumble);
+    let hr = e[0] * Math.max(sx, sz), up = e[1] * sy + bob, down = e[2] * sy + bob;
+    if (rot) { hr = Math.max(e[0], e[1], e[2]) * Math.max(sx, sy, sz); up = down = hr + bob; }
+    const it = { s, mesh, x, y, z, sx, sy, sz, col, emis: o.emis === undefined ? 1 : o.emis, yaw: o.yaw || 0, spin: o.spin || 0, tilt: o.tilt || 0,
+      tumble: o.tumble || 0, bob, blink: !!o.blink, q: o.q || null, fogK: o.fogK || 1, drift: o.drift || null, r: o.r || Math.max(sx, sy, sz),
+      occ: o.occ || 'box', hr, up, down, nx: o.nx || 0, nz: o.nz || 0, R: o.R || 0, dying: 0 };
+    const T = this.T;
+    if (T && Environment.near(T, it, Math.floor((this.ballS - 80) / CFG.DS), T.n - 1, this.padOf(list))) return false;
+    list.push(it); return true;
+  }
+  padOf(list) { return list === this.side ? 1 : list === this.mid ? 7 : 12; }
+  // Keep-out test against track rows [i0, i1): true when the object reaches within `pad` of the
+  // track corridor, in a height band the chase camera can see through (2 m below to 8 m above).
+  // Arches the track runs through ('plane', 'ring') ignore the rows around their own position.
+  static near(T, it, i0, i1, pad) {
+    const M = T.mask, hr = it.hr + pad, top = it.y + it.up, bot = it.y - it.down, arch = it.occ === 'plane' || it.occ === 'ring';
+    for (let i = Math.max(i0, T.minIndex()); i < i1; i += 2) {
+      const m = i & M, ty = T.y[m];
+      if (bot > ty + 8 || top < ty - 2) continue;
+      const dx = it.x - T.x[m], dz = it.z - T.z[m], h = T.w[m] * 0.5 + hr;
+      if (dx * dx + dz * dz > h * h) continue;
+      if (arch && Math.abs(i * CFG.DS - it.s) < 10) continue;
+      return true;
+    }
+    return false;
   }
 
   // ------------------------------------------------------------- foreground
@@ -2982,39 +3048,43 @@ class Environment {
       if (r.chance(0.16)) { this.item(this.side, s, M.gate, f.x, f.y, f.z, 2.0, 1.7, 1, Z.c1, { yaw: f.th, emis: 1.2, ...plane }); step = 14; }
       else {
         const p = at(lat(0.3, 3), r.range(0.8, 3.6));
-        this.item(this.side, s, M.cube, p[0], p[1] - 20.2, p[2], 0.2, 40, 0.2, Z.c1, { occ: 'cyl', cr: 0.3 });
-        this.item(this.side, s, M.glow, p[0], p[1], p[2], 0.34, 0.34, 0.34, r.chance(0.3) ? [1, 0.25, 0.3] : Z.c1, { blink: true, emis: 1.6, cr: 0.4 });
+        this.item(this.side, s, M.cube, p[0], p[1] - 20.2, p[2], 0.2, 40, 0.2, Z.c1);
+        this.item(this.side, s, M.glow, p[0], p[1], p[2], 0.34, 0.34, 0.34, r.chance(0.3) ? [1, 0.25, 0.3] : Z.c1, { blink: true, emis: 1.6 });
         step = r.range(8, 13);
       }
     } else if (z === 1) {
       const n = r.chance(0.3) ? 2 : 1;
       for (let k = 0; k < n; k++) {
         const sc = r.range(0.6, 2.4), p = at(lat(sc * 1.3, 5), r.range(-3.5, 3));
-        this.item(this.side, s, M.rocks[r.int(0, 2)], p[0], p[1], p[2], sc, sc * r.range(0.7, 1.1), sc, [0.62, 0.5, 0.44], { yaw: r.range(0, TAU), spin: r.range(-0.1, 0.1), bob: r.range(0.1, 0.35), cr: sc * 1.5 });
+        this.item(this.side, s, M.rocks[r.int(0, 2)], p[0], p[1], p[2], sc, sc * r.range(0.7, 1.1), sc, [0.62, 0.5, 0.44], { yaw: r.range(0, TAU), spin: r.range(-0.1, 0.1), bob: r.range(0.1, 0.35) });
       }
       step = r.range(6, 11);
     } else if (z === 2) {
       Q.yaw(this.q, f.th); Q.fromAxisAngle(this.qx, 1, 0, 0, Math.PI / 2);
       const q = Q.mul([0, 0, 0, 1], this.q, this.qx), RR = 4.8;
       this.item(this.side, s, M.ringGlow, f.x, f.y + 1.2, f.z, RR, RR, RR, (Math.floor(s / 18) & 1) ? Z.c1 : Z.c2, { q, emis: 1.4, r: RR + 0.3, occ: 'ring', R: RR, nx: f.fx, nz: f.fz });
-      if (r.chance(0.5)) { const p = at(lat(0.2, 2.5), 0); this.item(this.side, s, M.glow, p[0], p[1] - 1, p[2], 0.1, 9, 0.1, Z.c2, { emis: 1.3, occ: 'cyl', cr: 0.25 }); }
+      if (r.chance(0.5)) { const p = at(lat(0.2, 2.5), 0); this.item(this.side, s, M.glow, p[0], p[1] - 1, p[2], 0.1, 9, 0.1, Z.c2, { emis: 1.3 }); }
       step = r.range(15, 21);
     } else if (z === 3) {
       const sc = r.range(0.45, 1.3), p = at(lat(sc * 1.4, 4), r.range(-2.5, 3.2)), kind = r.int(0, 2);
       const col = Z.neb[r.int(0, 3)], mesh = kind === 0 ? M.sphere : kind === 1 ? M.box16 : M.torus16;
-      this.item(this.side, s, mesh, p[0], p[1], p[2], sc, sc, sc, col, { yaw: r.range(0, TAU), spin: r.range(-0.8, 0.8), tumble: r.range(-0.6, 0.6), bob: r.range(0.1, 0.4), cr: sc * 1.4 });
+      this.item(this.side, s, mesh, p[0], p[1], p[2], sc, sc, sc, col, { yaw: r.range(0, TAU), spin: r.range(-0.8, 0.8), tumble: r.range(-0.6, 0.6), bob: r.range(0.1, 0.4) });
       step = r.range(6, 10);
     } else {
       const sc = r.range(0.5, 1.5), p = at(lat(sc * 2.2, 3), r.range(-2, 3));
-      this.item(this.side, s, M.shards[r.int(0, 2)], p[0], p[1], p[2], sc, sc, sc, Z.c1, { yaw: r.range(0, TAU), spin: r.range(-2, 2), tumble: r.range(-1.5, 1.5), bob: 0.3, cr: sc * 2.3 });
-      if (r.chance(0.3)) { const b = at(lat(0.3, 2, -sg), r.range(1, 3)); this.item(this.side, s, M.glow, b[0], b[1], b[2], 0.3, 0.3, 0.3, [1, 0.2, 0.1], { blink: true, emis: 1.8, cr: 0.4 }); }
+      this.item(this.side, s, M.shards[r.int(0, 2)], p[0], p[1], p[2], sc, sc, sc, Z.c1, { yaw: r.range(0, TAU), spin: r.range(-2, 2), tumble: r.range(-1.5, 1.5), bob: 0.3 });
+      if (r.chance(0.3)) { const b = at(lat(0.3, 2, -sg), r.range(1, 3)); this.item(this.side, s, M.glow, b[0], b[1], b[2], 0.3, 0.3, 0.3, [1, 0.2, 0.1], { blink: true, emis: 1.8 }); }
       step = r.range(5, 9);
     }
     return step / Math.max(0.6, this.density);
   }
   // ------------------------------------------------------------- midground
   spawnMid(T, s, M) {
-    const r = this.rng, z = zoneAt(s), Z = ZONES[z], f = this.frame(T, s), sg = r.sign();
+    for (let k = 0; k < 3; k++) if (this.midOne(T, s, M)) break;       // retry elsewhere if it would touch the track
+    return this.rng.range(9, 16) / this.density;
+  }
+  midOne(T, s, M) {
+    const r = this.rng, z = zoneAt(s), Z = ZONES[z], f = this.frame(T, s), sg = r.sign(), n0 = this.mid.length;
     const lat = sg * r.range(30, 150), fo = r.range(-15, 15);
     const x = f.x + f.rx * lat + f.fx * fo, zz = f.z + f.rz * lat + f.fz * fo, floor = f.y - 62;
     if (z === 0) {
@@ -3034,11 +3104,15 @@ class Environment {
       if (r.chance(0.5)) { const H = r.range(25, 60); this.item(this.mid, s, M.box17, x, floor + H / 2 + r.range(0, 20), zz, r.range(2.5, 5), H, r.range(2.5, 5), Z.c1, { yaw: r.range(0, TAU), tilt: r.range(-0.45, 0.45) }); }
       else { const sc = r.range(3, 9); this.item(this.mid, s, M.shards[r.int(0, 2)], x, f.y + r.range(-20, 20), zz, sc, sc, sc, Z.c2, { yaw: r.range(0, TAU), spin: r.range(-0.5, 0.5), tumble: r.range(-0.4, 0.4) }); }
     }
-    return r.range(9, 16) / this.density;
+    return this.mid.length > n0;
   }
   // ------------------------------------------------------------- background giants (drift slowly)
   spawnHero(T, z, s, M) {
-    const r = this.rng, Z = ZONES[z], f = this.frame(T, s), sg = r.sign(), lat = sg * r.range(170, 240);
+    for (let k = 0; k < 4; k++) if (this.heroOne(T, z, s, M, k)) return;
+    this.heroes.push({ z, s, items: [] });                             // nowhere clear: skip this zone's giant
+  }
+  heroOne(T, z, s, M, k) {
+    const r = this.rng, Z = ZONES[z], f = this.frame(T, s), sg = r.sign(), lat = sg * (r.range(170, 240) + k * 60);
     const x = f.x + f.rx * lat, y = f.y + r.range(15, 55), zz = f.z + f.rz * lat;
     const drift = [f.fx * r.range(1.5, 3), 0, f.fz * r.range(1.5, 3)], o = { drift, fogK: 0.5 };
     const list = [];
@@ -3047,7 +3121,8 @@ class Environment {
     else if (z === 2) this.item(list, s, M.pyramid, x, y - 50, zz, 85, 85, 85, Z.c1, { ...o, spin: 0.04, emis: 1.5 });
     else if (z === 3) { this.item(list, s, M.sphere, x, y, zz, 42, 42, 42, [0.95, 0.95, 1], o); this.item(list, s, M.torus16, x, y, zz, 72, 72, 72, Z.c2, { ...o, tilt: 1.2, spin: 0.12 }); }
     else this.item(list, s, M.ring17, x, y, zz, 90, 90, 90, Z.c1, { ...o, tilt: 1.3, spin: 0.09, emis: 1.5 });
-    this.heroes.push({ z, s, items: list });
+    if (!list.length) return false;
+    this.heroes.push({ z, s, items: list }); return true;
   }
   spawnShaft(T, s) {
     const r = this.rng, f = this.frame(T, s), lat = r.range(15, 70) * r.sign();
@@ -3056,7 +3131,25 @@ class Environment {
 
   update(T, ballS, dt, M, onBolt) {
     if (!M) return;
+    this.T = T; this.M = M; this.ballS = ballS;
     const lim = Math.max(0, T.length - 2);
+    // New track may bend back towards older objects: those shrink away. Drifting giants are
+    // re-checked against the track around the ball twice a second.
+    if (this.checkedN === undefined || this.checkedN > T.n - 1) this.checkedN = T.n - 1;
+    if (T.n - 1 > this.checkedN) {
+      const i0 = this.checkedN - 1, i1 = T.n - 1;
+      for (const it of this.side) if (!it.dying && Environment.near(T, it, i0, i1, 1)) it.dying = 1;
+      for (const it of this.mid) if (!it.dying && Environment.near(T, it, i0, i1, 7)) it.dying = 1;
+      for (const h of this.heroes) for (const it of h.items) if (!it.dying && Environment.near(T, it, i0, i1, 12)) it.dying = 1;
+      this.checkedN = i1;
+    }
+    this.heroT = (this.heroT || 0) - dt;
+    if (this.heroT <= 0) {
+      this.heroT = 0.5; const a = Math.floor((ballS - 20) / CFG.DS), b = Math.min(T.n - 1, Math.floor((ballS + 240) / CFG.DS));
+      for (const h of this.heroes) for (const it of h.items) if (!it.dying && Environment.near(T, it, a, b, 12)) it.dying = 1;
+    }
+    const shrink = (a) => { let w = 0; for (let k = 0; k < a.length; k++) { const it = a[k]; if (it.dying) it.dying -= dt * 2.5; if (it.dying >= 0) a[w++] = it; } a.length = w; };
+    shrink(this.side); shrink(this.mid); for (const h of this.heroes) shrink(h.items);
     while (this.sideS < Math.min(ballS + 170, lim)) this.sideS += this.spawnSide(T, this.sideS, M);
     while (this.midS < Math.min(ballS + 340, lim)) this.midS += this.spawnMid(T, this.midS, M);
     const prune = (a, cut) => { let w = 0; for (let k = 0; k < a.length; k++) if (a[k].s > cut) a[w++] = a[k]; a.length = w; };
@@ -3085,10 +3178,10 @@ class Environment {
   }
   draw(R, time, focus) {
     const cam = R.cam, F = R.camF;
-    const one = (it, near) => {
+    const one = (it) => {
       const dx = it.x - cam[0], dy = it.y - cam[1], dz = it.z - cam[2];
       if (dx * F[0] + dy * F[1] + dz * F[2] < -it.r * 1.5) return;          // behind the camera
-      if (near && focus && Environment.occludes(it, cam, focus, time)) return;
+      if (focus && Environment.occludes(it, cam, focus, time)) return;
       let q = it.q;
       if (!q) {
         Q.yaw(this.q, it.yaw + time * it.spin); q = this.q;
@@ -3096,14 +3189,15 @@ class Environment {
         if (tl) { Q.fromAxisAngle(this.qx, 1, 0, 0, tl); q = Q.mul(this.qx, this.q, this.qx); }
       }
       const by = it.bob ? Math.sin(time * 0.7 + it.s) * it.bob : 0;
-      M4.fromTRS(this.model, it.x, it.y + by, it.z, q, it.sx, it.sy, it.sz);
+      const k = it.dying ? Math.max(0, it.dying) : 1;
+      M4.fromTRS(this.model, it.x, it.y + by, it.z, q, it.sx * k, it.sy * k, it.sz * k);
       const e = it.blink ? it.emis * (Math.sin(time * 5 + it.s) > 0.2 ? 1 : 0.15) : it.emis;
       if (it.fogK !== 1) { R.setFogK(it.fogK); R.drawProp(it.mesh, this.model, it.col, e); R.setFogK(1); }   // far giants: own fog
       else R.addInst(it.mesh, this.model, it.col, e);
     };
     for (const h of this.heroes) for (const it of h.items) one(it);
     for (const it of this.mid) one(it);
-    for (const it of this.side) one(it, true);
+    for (const it of this.side) one(it);
   }
   // True when the camera is inside the object, or the object sits between the camera and the ball.
   static occludes(it, cam, focus, time) {
@@ -3114,13 +3208,13 @@ class Environment {
       const dn = dx * it.nx + dz * it.nz, rx = dx - it.nx * dn, rz = dz - it.nz * dn;
       return Math.abs(dn) < 1.1 && Math.abs(Math.hypot(rx, dy, rz) - it.R) < 1.1;
     }
-    // distance from the object centre to the camera→ball segment (in 3D, or top view for poles)
-    const cyl = it.occ === 'cyl';
-    const sx = focus[0] - cam[0], sy = cyl ? 0 : focus[1] - cam[1], sz = focus[2] - cam[2];
-    const px = -dx, py = cyl ? 0 : -dy, pz = -dz;
-    const t = clamp((px * sx + py * sy + pz * sz) / (sx * sx + sy * sy + sz * sz || 1), 0, 1);
-    const d = Math.hypot(px - sx * t, py - sy * t, pz - sz * t);
-    return d < it.cr + (t < 0.05 ? 0.7 : 0.25);
+    // bounding cylinder: the camera is inside it (with a margin), or the camera→ball line passes through it
+    const top = y + it.up, bot = y - it.down;
+    if (dx * dx + dz * dz < (it.hr + 0.8) ** 2 && cam[1] > bot - 0.8 && cam[1] < top + 0.8) return true;
+    const sx = focus[0] - cam[0], sz = focus[2] - cam[2];
+    const t = clamp((-dx * sx - dz * sz) / (sx * sx + sz * sz || 1), 0, 1);
+    const ex = dx + sx * t, ez = dz + sz * t, ly = cam[1] + (focus[1] - cam[1]) * t;
+    return ex * ex + ez * ez < (it.hr + 0.3) ** 2 && ly > bot - 0.3 && ly < top + 0.3;
   }
   writeDust(out, off, cam, time, col, drift) {
     let o = off * 8; const B = 26;
@@ -3270,7 +3364,7 @@ class UI {
       ctrl: $('ctrlTag'), toasts: $('toasts'), danger: $('danger'), flash: $('flash'), menu: $('menu'), calib: $('calib'),
       calibNum: $('calibNum'), calibTxt: $('calibTxt'), calibSub: $('calibSub'), go: $('go'), pause: $('pause'), over: $('over'),
       record: $('record'), ovDist: $('ovDist'), ovScore: $('ovScore'), ovBest: $('ovBest'), ovMode: $('ovMode'), ovRails: $('ovRails'), mBest: $('mBest'), perm: $('permMsg'),
-      btnTilt: $('btnTilt'), btnTouch: $('btnTouch'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), share: $('btnShare'), recal: $('btnRecal'),
+      btnTilt: $('btnTilt'), btnTouch: $('btnTouch'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), modeTxt: $('modeTxt'), newTrack: $('btnNewTrack'), share: $('btnShare'), recal: $('btnRecal'),
       power: $('power'), pwCoin: $('pwCoin'), pwTxt: $('pwTxt'), pwFill: $('pwFill'),
     };
     this.cache = {};
@@ -3302,7 +3396,7 @@ class UI {
   }
   setMode(mode, info) {
     for (const b of document.querySelectorAll('#modeSeg button')) b.classList.toggle('on', b.dataset.mode === mode);
-    this.el.modeInfo.textContent = info;
+    this.el.modeTxt.textContent = info;
   }
 
   updateHud(dist, score, best, speed, mult) {
@@ -3391,7 +3485,8 @@ class UI {
     if (this.cache.share !== key) {
       this.cache.share = key;
       b.classList.toggle('busy', state === 'busy'); b.disabled = state === 'busy';
-      b.querySelector('.lbl').textContent = state === 'busy' ? tr('shareBusy') : state === 'saved' ? tr('shareSaved') : tr('share');
+      b.classList.toggle('ready', state === 'ready');
+      b.querySelector('.lbl').textContent = tr({ busy: 'shareBusy', saved: 'shareSaved', ready: 'shareReady' }[state] || 'share');
       b.classList.toggle('hidden', state === 'none');
     }
     const w = state === 'busy' ? Math.round(p * 20) * 5 + '%' : '0';          // 5 % steps: few DOM writes
@@ -3589,6 +3684,9 @@ class Game {
     try { qm = new URLSearchParams(location.search).get('mode'); } catch (e) { qm = null; }
     this.gameMode = (qm === 'daily' || qm === 'random' ? qm : Store.get('mode', 'random')) === 'daily' ? 'daily' : 'random';
     this.kid = Store.get('kid', false) === true;
+    // Random mode is one endless track per player: after a fall the next run starts again near that spot.
+    this.rSeed = (Store.get('rseed', 0) | 0) || this.newSeed();
+    this.contS = Math.max(CFG.START_S, +Store.get('rpos', 0) || 0);
     this.best = this.modeBest();
     this.bestScore = Math.max(0, +Store.get('bestScore', 0) || 0);
     this.state = 'menu'; this.time = 0; this.timeScale = 1; this.acc = 0; this.used = false; this.mode = 'touch';
@@ -3617,6 +3715,7 @@ class Game {
     const tap = (el, fn) => el.addEventListener('click', (e) => { e.preventDefault(); fn(e); });
     for (const b of document.querySelectorAll('#langSeg button')) tap(b, () => { LANG = b.dataset.lang; Store.set('lang', LANG); this.refreshTexts(); this.audio.tick(); });
     tap($('tgKid'), () => { if (this.state === 'menu') { this.setKid(!this.kid); this.audio.tick(); } });
+    tap(E.newTrack, () => { if (this.state === 'menu') { this.newTrack(); this.audio.tick(); } });
     for (const b of document.querySelectorAll('#modeSeg button')) tap(b, () => { if (this.state === 'menu' && b.dataset.mode !== this.gameMode) { this.setGameMode(b.dataset.mode); this.audio.tick(); } });
     const toggles = () => U.setToggles(this.audio.musicOn, this.audio.sfxOn);
     for (const b of document.querySelectorAll('.tgMusic')) tap(b, () => { this.audio.init(); this.audio.setMusic(!this.audio.musicOn); toggles(); });
@@ -3675,10 +3774,12 @@ class Game {
     const U = this.ui, E = U.el;
     U.applyLang();
     E.btnTilt.textContent = tr(this.mobile ? 'playGyro' : 'play');
-    U.setMode(this.gameMode, this.gameMode === 'daily' ? tr('infoDaily', { date: dayLabel(dayKey()) }) : tr('infoRandom'));
+    const cont = this.gameMode === 'random' && this.contS > CFG.START_S + 5;
+    U.setMode(this.gameMode, (this.gameMode === 'daily' ? tr('infoDaily', { date: dayLabel(dayKey()) }) : cont ? tr('infoContinue', { d: fmt(this.contS - CFG.START_S) }) : tr('infoRandom'))
+      + (this.kid ? ' · ' + tr('kidInfo') : ''));
+    E.newTrack.classList.toggle('hidden', !cont);
     E.mBest.textContent = fmt(this.modeBest()) + ' m';
     const kb = U.$('tgKid'); kb.classList.toggle('off', !this.kid); kb.title = tr('kidInfo');
-    if (this.kid) E.modeInfo.textContent += ' · ' + tr('kidInfo');
     if (this.shareSt) U.shareState(this.shareSt, this.shareP || 0);
   }
   // ------------------------------------------------------------- game modes
@@ -3705,7 +3806,24 @@ class Game {
   }
   runSeed() {
     if (this.gameMode === 'daily') { this.runDay = dayKey(); return dailySeed(this.runDay); }
-    return (Math.random() * 1e9) | 0;
+    return this.rSeed;
+  }
+  newSeed() { const s = ((Math.random() * 1e9) | 0) || 1; Store.set('rseed', s); return s; }
+  newTrack() {
+    this.rSeed = this.newSeed(); this.contS = CFG.START_S; Store.set('rpos', this.contS);
+    this.refreshTexts(); this.newWorld(); this.used = false;
+  }
+  // Restart point after a fall in random mode: a plain full-width stretch shortly before the spot,
+  // without holes, boosters or obstacles, so the next run does not start in trouble.
+  safeStart(s) {
+    const T = this.track, M = T.mask, lo = Math.max(this.startS, s - 55);
+    const ok = (i) => { const m = i & M; return i >= T.minIndex() && i < T.n - 1 && T.rowN[m] === 1 && T.rowAO[m * 3] && T.rowBO[m * 3] && !(T.rowF[m] & RF.BOOST); };
+    for (let t = Math.floor(s - 4); t >= lo; t -= 1) {
+      const i = Math.floor(t / CFG.DS); let good = true;
+      for (let j = i - 6; j <= i + 20 && good; j++) good = ok(j);
+      if (good && !T.objects.some((o) => (o.kind === 'post' || o.kind === 'slider') && Math.abs(o.s - t) < 10)) return t;
+    }
+    return this.startS;
   }
   bindWindow() {
     const onResize = () => { clearTimeout(this.rt); this.rt = setTimeout(() => this.resize(), 80); };
@@ -3744,18 +3862,20 @@ class Game {
   }
 
   // ------------------------------------------------------------- world
-  newWorld(seed) {
-    seed = seed === undefined ? this.runSeed() : seed;
+  newWorld(seed, s0 = CFG.START_S) {
+    if (seed === undefined) { seed = this.runSeed(); if (this.gameMode === 'random') s0 = this.contS; }
     for (const ch of this.chunks.values()) this.R.free(ch.mesh);
-    this.chunks.clear(); this.nextChunk = 0;
+    this.chunks.clear(); this.nextChunk = Math.max(0, Math.floor((s0 - CFG.BEHIND) / (CFG.CHUNK_ROWS * CFG.DS)) - 1);
     this.track.reset();
     this.gen = new TrackGenerator(this.track, seed);
-    this.gen.fill(CFG.AHEAD + 40);
+    this.gen.fill(s0 + CFG.AHEAD + 40);
+    const O = this.track.objects; let w = 0; for (let k = 0; k < O.length; k++) if (O[k].s > s0 - 60) O[w++] = O[k]; O.length = w;
     const b = this.ball; b.reset();
-    this.track.pointAt(CFG.START_S, 0, CFG.R, this.tmp);
-    b.p[0] = this.tmp[0]; b.p[1] = this.tmp[1]; b.p[2] = this.tmp[2]; b.hint = Math.floor(CFG.START_S / CFG.DS);
+    this.track.pointAt(s0, 0, CFG.R, this.tmp);
+    b.p[0] = this.tmp[0]; b.p[1] = this.tmp[1]; b.p[2] = this.tmp[2]; b.hint = Math.floor(s0 / CFG.DS);
     const L = this.track.locate(b.p[0], b.p[2], b.hint); b.s = L.s; b.u = L.u; b.surfY = this.tmp[1] - CFG.R;
     this.physics.collapseS = this.collapseS = -1e9; this.physics.kid = this.kid; this.physics.time = 0;
+    this.lostS = 0; this.lookRef = null;
     this.startS = b.s; this.maxS = b.s; this.score = 0; this.dist = 0; this.mult = 1; this.recordShown = false;
     this.danger = 0; this.timeScale = 1; this.acc = 0; this.runT = 0;
     // star power: coins fill the gauge, a streak of coins raises the coin multiplier
@@ -3865,12 +3985,13 @@ class Game {
     if (beat) { this.best = dist; this.saveBest(dist); }
     const record = beat && dist >= 10;                 // no fanfare for trivial distances
     if (score > this.bestScore) { this.bestScore = score; Store.set('bestScore', score); }
+    if (this.gameMode === 'random') { this.contS = this.safeStart(Math.min(this.lostS || this.ball.s, this.maxS)); Store.set('rpos', this.contS); }
     const U = this.ui, E = U.el;
     E.ovDist.textContent = fmt(dist); const sm = document.createElement('small'); sm.textContent = 'm'; E.ovDist.appendChild(sm);
     E.ovScore.textContent = 'SCORE ' + fmt(score);
     E.ovBest.textContent = 'BEST '; const bb = document.createElement('b'); bb.textContent = fmt(this.best) + ' m'; E.ovBest.appendChild(bb);
     this.prepareShare(record);
-    Analytics.event('game_over', { mode: this.gameMode, control: this.mode, zone: ZONES[zoneAt(CFG.START_S + dist)].id, meters: Math.floor(dist / 50) * 50, record: !!record, kid: this.kid, stars: this.starN });
+    Analytics.event('game_over', { mode: this.gameMode, control: this.mode, zone: ZONES[zoneAt(this.maxS)].id, from: Math.floor((this.startS - CFG.START_S) / 100) * 100, meters: Math.floor(dist / 50) * 50, record: !!record, kid: this.kid, stars: this.starN });
     E.ovRails.textContent = tr('kidBadge'); E.ovRails.classList.toggle('hidden', !this.kid);
     E.ovMode.textContent = this.gameMode === 'daily' ? tr('dailyTag', { date: dayLabel(this.runDay || dayKey()) }) : tr('randomTag');
     E.record.classList.add('hidden');
@@ -3916,7 +4037,7 @@ class Game {
   }
   lost(b, reason) {
     if (this.state !== 'play') return;
-    this.state = 'falling'; this.fallT = 0; this.timeScale = 0.3;
+    this.state = 'falling'; this.fallT = 0; this.timeScale = 0.3; this.lostS = b.s;
     this.endStar(true);
     this.cam.mode = 'fall';
     this.audio.fall(); this.audio.setRoll(0, false);
@@ -3969,6 +4090,7 @@ class Game {
       while (this.acc >= h && n < 10) { this.physics.step(b, ix, iy, this.cam.yaw, h); this.acc -= h; n++; }
       if (n >= 10) this.acc = 0;
     }
+    if (st === 'menu') this.menuLook(); else this.cam.gyroLook = this.lookRef = null;
     if (st === 'play') { this.progress(dt); this.updateStar(dt); }
     else this.input.flick = this.input.doubleTap = this.starKey = false;
     this.starK += ((this.star ? 1 : 0) - this.starK) * damp(7, dtR);
@@ -4043,6 +4165,18 @@ class Game {
           bo ? 0.5 : 0.35, col, bo ? 0.1 : 0.06, 7, 2);
       }
     }
+  }
+
+  // Phone motion on the menu: turning the phone walks the camera around the ball, tilting it
+  // raises or lowers the camera. The way the phone is held when the menu opens is the reference.
+  menuLook() {
+    const I = this.input;
+    if (!I.raw || performance.now() - I.lastEvt > 600) { this.cam.gyroLook = this.lookRef = null; return; }
+    if (!this.lookRef) this.lookRef = { h: I.heading, p: I.pitch, x: I.sx };
+    const R = this.lookRef, L = this.lookV || (this.lookV = { yaw: 0, pitch: 0 });
+    L.yaw = I.heading !== null && R.h !== null ? wrapAngle(I.heading - R.h) : clamp((I.sx - R.x) * 2.2, -1.6, 1.6);
+    L.pitch = I.pitch - R.p;
+    this.cam.gyroLook = L;
   }
 
   // ------------------------------------------------------------- coins & star power
@@ -4130,7 +4264,7 @@ class Game {
       }
     }
     // previous-best marker
-    const sb = CFG.START_S + this.best;
+    const sb = this.startS + this.best;
     if (this.best >= 30 && sb > s0 && sb < s1 && this.state !== 'menu') {
       T.pointAt(sb, 0, this.fallOffset(sb), this.tmp);
       if (!this.camCrossing(this.tmp)) {
@@ -4212,8 +4346,9 @@ class Game {
   // Zone follows distance; the last 14 % of each zone cross-fades into the next.
   updateZones(dt) {
     const R = this.R;
-    for (let i = 0; i < ZONES.length; i++) if (!R.zoneTex[i]) { if (this.state === 'menu' || this.state === 'calib' || this.dist > (i - 1) * ZONE_LEN + 300) R.ensureZone(i); break; }
-    const zf = clamp(this.dist / ZONE_LEN, 0, ZONES.length - 1), zA = Math.min(ZONES.length - 1, Math.floor(zf));
+    const pos = Math.max(0, this.maxS - CFG.START_S);                    // worlds follow the position on the track
+    for (let i = 0; i < ZONES.length; i++) if (!R.zoneTex[i]) { if (this.state === 'menu' || this.state === 'calib' || pos > (i - 1) * ZONE_LEN + 300) R.ensureZone(i); break; }
+    const zf = clamp(pos / ZONE_LEN, 0, ZONES.length - 1), zA = Math.min(ZONES.length - 1, Math.floor(zf));
     const fr = zf - zA, k = zA < ZONES.length - 1 ? clamp((fr - 0.86) / 0.14, 0, 1) : 0, kk = k * k * (3 - 2 * k);
     R.setZones(zA, Math.min(ZONES.length - 1, zA + 1), kk);
     const cur = kk > 0.5 ? zA + 1 : zA;
@@ -4256,19 +4391,32 @@ class Game {
       tag: [this.gameMode === 'daily' ? tr('dailyTag', { date: dayLabel(this.runDay || dayKey()) }) : '', this.kid ? '🛡 ' + tr('kidShare').toUpperCase() : ''].filter(Boolean).join(' · '),
       accent: css(th.accent), accent2: css(th.accent2), portrait: this.R.h >= this.R.w,
     };
-    this.shareInfo = info; this.shareFile = null; this.setShare('busy', 0);
-    const token = this.shareToken = (this.shareToken || 0) + 1;
-    setTimeout(() => {                                   // let the last falling snapshots finish encoding
+    this.shareInfo = info; this.shareFile = null; this.shareToken = (this.shareToken || 0) + 1;
+    this.setShare('idle');
+  }
+  // The video is only made when asked for (first tap). Making it takes longer than the browser
+  // keeps the tap "active", so sharing it needs a second tap unless it was quick (image fallback).
+  makeShare() {
+    const token = this.shareToken, t0 = performance.now();
+    this.setShare('busy', 0);
+    const done = (f) => {
       if (token !== this.shareToken) return;
-      this.replay.make(info, (p) => { if (token === this.shareToken) this.setShare('busy', p); })
-        .then((f) => { if (token === this.shareToken) { this.shareFile = f; this.setShare('ready'); } })
-        .catch((e) => { if (token === this.shareToken) { this.shareFile = null; this.setShare('ready'); } });
-    }, 600);
+      this.shareFile = f;
+      if (performance.now() - t0 < 900) this.share(); else this.setShare('ready');
+    };
+    const go = () => {
+      if (token !== this.shareToken) return;
+      if (this.replay.pending > 0) { setTimeout(go, 100); return; }          // last snapshots still encoding
+      this.replay.make(this.shareInfo, (p) => { if (token === this.shareToken) this.setShare('busy', p); })
+        .then(done).catch(() => done(null));
+    };
+    go();
   }
   setShare(st, p = 0) { this.shareSt = st; this.shareP = p; this.ui.shareState(st, p); }
   share() {
     const f = this.shareFile, info = this.shareInfo;
     if (!info || this.shareSt === 'busy') return;
+    if (this.shareSt === 'idle') { this.makeShare(); return; }
     const url = PROD_URL + (this.gameMode === 'daily' ? '?mode=daily' : '');
     let text = tr('shareText', { d: fmt(info.dist), s: fmt(info.score) });
     if (this.gameMode === 'daily') text += ' — ' + tr('shareDaily', { date: dayLabel(this.runDay || dayKey()) });

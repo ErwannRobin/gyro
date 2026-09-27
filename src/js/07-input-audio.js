@@ -17,6 +17,18 @@ class InputManager {
     this.joyEl = document.getElementById('joy'); this.knob = this.joyEl.firstElementChild;
     this.onOrient = this.onOrient.bind(this);
     this.angle = this.screenAngle();
+    this.heading = null; this.pitch = 0;
+    // Motion data for the menu camera. Without a permission prompt (Android…) listen right away;
+    // on iOS only once the player has granted it before, from their first tap.
+    const DOE = window.DeviceOrientationEvent;
+    if (DOE && typeof DOE.requestPermission !== 'function') window.addEventListener('deviceorientation', this.onOrient);
+    else if (DOE && Store.get('tiltOK', false) === true) {
+      const once = () => {
+        document.removeEventListener('touchend', once, true); document.removeEventListener('click', once, true);
+        try { Promise.resolve(DOE.requestPermission()).then((r) => { if (r === 'granted') window.addEventListener('deviceorientation', this.onOrient); }).catch(() => {}); } catch (e) { /* ignore */ }
+      };
+      document.addEventListener('touchend', once, true); document.addEventListener('click', once, true);
+    }
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) e.preventDefault();
@@ -72,6 +84,7 @@ class InputManager {
   requestTilt() {
     const DOE = window.DeviceOrientationEvent;
     if (!DOE) return Promise.resolve({ ok: false, reason: 'unsupported' });
+    const ok = (r) => { if (r.ok) Store.set('tiltOK', true); return r; };
     const listen = () => new Promise((res) => {
       window.addEventListener('deviceorientation', this.onOrient);
       const t0 = performance.now();
@@ -85,9 +98,9 @@ class InputManager {
     if (typeof DOE.requestPermission === 'function') {
       let p;
       try { p = DOE.requestPermission(); } catch (e) { return Promise.resolve({ ok: false, reason: 'denied' }); }
-      return Promise.resolve(p).then((r) => (r === 'granted' ? listen() : { ok: false, reason: 'denied' })).catch(() => ({ ok: false, reason: 'denied' }));
+      return Promise.resolve(p).then((r) => (r === 'granted' ? listen() : { ok: false, reason: 'denied' })).then(ok).catch(() => ({ ok: false, reason: 'denied' }));
     }
-    return listen();
+    return listen().then(ok);
   }
   onOrient(e) {
     if (e.beta === null || e.gamma === null || e.beta === undefined) return;
@@ -106,6 +119,13 @@ class InputManager {
     // quick "tilt up" (top edge raised towards you): the screen pitch grows by ~20° in a quarter second.
     // An angle, not sy, so it still works when the phone is held almost upright.
     const now = this.lastEvt, H = this.hist, pitch = Math.atan2(-sy, -dz);
+    this.pitch = pitch; this.sx = sx;
+    // compass-like heading of the phone (of its top edge plus its back), stable both flat and upright
+    if (typeof e.alpha === 'number' && Number.isFinite(e.alpha)) {
+      const a = e.alpha * Math.PI / 180, sg = Math.sin(g), cg = Math.cos(g), sb = Math.sin(b), cb = Math.cos(b);
+      const vx = -sg, vy = cb + sb * cg, X = Math.cos(a) * vx - Math.sin(a) * vy, Y = Math.sin(a) * vx + Math.cos(a) * vy;
+      this.heading = Math.atan2(X, Y);
+    } else this.heading = null;
     H.push(now, pitch);
     while (H.length > 2 && now - H[0] > 250) H.splice(0, 2);
     let low = 9; for (let k = 1; k < H.length; k += 2) low = Math.min(low, H[k]);

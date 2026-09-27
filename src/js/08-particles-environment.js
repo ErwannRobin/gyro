@@ -71,6 +71,7 @@ class Environment {
     this.dust = null; this.dustN = 0; this.density = 1; this.sideS = 0; this.midS = 0; this.boltT = 3;
   }
   reset(T, s0, envQ, dustN, M) {
+    this.T = T; this.checkedN = T.n - 1; this.heroT = 0; this.ballS = s0;
     this.side.length = 0; this.mid.length = 0; this.heroes.length = 0; this.shafts.length = 0; this.bolts.length = 0;
     this.density = clamp(envQ / 22, 0.4, 1.2);
     this.sideS = s0 - 14; this.midS = s0 - 80; this.boltT = 3;
@@ -87,11 +88,45 @@ class Environment {
     T.pointAt(sc, 0, 0, this.tmp); const t = this.tmp;
     return { x: t[0], y: t[1], z: t[2], th: t[3], rx: -Math.cos(t[3]), rz: Math.sin(t[3]), fx: Math.sin(t[3]), fz: Math.cos(t[3]), w: T.w[Math.floor(sc / CFG.DS) & T.mask] };
   }
+  // Rough extent of each mesh at scale 1: [horizontal radius, height above, depth below].
+  extOf(mesh) {
+    const M = this.M;
+    if (this.extFor !== M) {
+      const E = this.ext = new Map(), set = (list, e) => { for (const m of list) E.set(m, e); };
+      set([M.cube, M.tower, M.mono, M.box16, M.box17, M.glow, M.slider], [0.71, 0.5, 0.5]); set([M.sphere], [1, 1, 1]); set(M.rocks, [1.25, 1.25, 1.25]);
+      set([M.pyramid], [1.42, 1.5, 0.05]); set(M.shards, [0.6, 2.2, 1.4]); set([M.ring, M.ringGlow, M.torus16, M.ring17], [1.25, 0.3, 0.3]);
+      this.extFor = M;
+    }
+    return this.ext.get(mesh) || [1.3, 1.3, 1.3];
+  }
+  // Adds an object unless it would sit in the track's keep-out zone. Each object is also given a
+  // bounding cylinder (hr, up, down) used to hide it whenever it gets between the camera and the ball.
   item(list, s, mesh, x, y, z, sx, sy, sz, col, o = {}) {
-    list.push({ s, mesh, x, y, z, sx, sy, sz, col, emis: o.emis === undefined ? 1 : o.emis, yaw: o.yaw || 0, spin: o.spin || 0, tilt: o.tilt || 0,
-      tumble: o.tumble || 0, bob: o.bob || 0, blink: !!o.blink, q: o.q || null, fogK: o.fogK || 1, drift: o.drift || null, r: o.r || Math.max(sx, sy, sz),
-      // occluder shape used to hide the object when the camera gets inside it or behind it
-      occ: o.occ || 'sphere', cr: o.cr || Math.max(sx, sy, sz) * 0.9, nx: o.nx || 0, nz: o.nz || 0, R: o.R || 0 });
+    const e = this.extOf(mesh), bob = o.bob || 0, rot = !!(o.q || o.tilt || o.tumble);
+    let hr = e[0] * Math.max(sx, sz), up = e[1] * sy + bob, down = e[2] * sy + bob;
+    if (rot) { hr = Math.max(e[0], e[1], e[2]) * Math.max(sx, sy, sz); up = down = hr + bob; }
+    const it = { s, mesh, x, y, z, sx, sy, sz, col, emis: o.emis === undefined ? 1 : o.emis, yaw: o.yaw || 0, spin: o.spin || 0, tilt: o.tilt || 0,
+      tumble: o.tumble || 0, bob, blink: !!o.blink, q: o.q || null, fogK: o.fogK || 1, drift: o.drift || null, r: o.r || Math.max(sx, sy, sz),
+      occ: o.occ || 'box', hr, up, down, nx: o.nx || 0, nz: o.nz || 0, R: o.R || 0, dying: 0 };
+    const T = this.T;
+    if (T && Environment.near(T, it, Math.floor((this.ballS - 80) / CFG.DS), T.n - 1, this.padOf(list))) return false;
+    list.push(it); return true;
+  }
+  padOf(list) { return list === this.side ? 1 : list === this.mid ? 7 : 12; }
+  // Keep-out test against track rows [i0, i1): true when the object reaches within `pad` of the
+  // track corridor, in a height band the chase camera can see through (2 m below to 8 m above).
+  // Arches the track runs through ('plane', 'ring') ignore the rows around their own position.
+  static near(T, it, i0, i1, pad) {
+    const M = T.mask, hr = it.hr + pad, top = it.y + it.up, bot = it.y - it.down, arch = it.occ === 'plane' || it.occ === 'ring';
+    for (let i = Math.max(i0, T.minIndex()); i < i1; i += 2) {
+      const m = i & M, ty = T.y[m];
+      if (bot > ty + 8 || top < ty - 2) continue;
+      const dx = it.x - T.x[m], dz = it.z - T.z[m], h = T.w[m] * 0.5 + hr;
+      if (dx * dx + dz * dz > h * h) continue;
+      if (arch && Math.abs(i * CFG.DS - it.s) < 10) continue;
+      return true;
+    }
+    return false;
   }
 
   // ------------------------------------------------------------- foreground
@@ -108,39 +143,43 @@ class Environment {
       if (r.chance(0.16)) { this.item(this.side, s, M.gate, f.x, f.y, f.z, 2.0, 1.7, 1, Z.c1, { yaw: f.th, emis: 1.2, ...plane }); step = 14; }
       else {
         const p = at(lat(0.3, 3), r.range(0.8, 3.6));
-        this.item(this.side, s, M.cube, p[0], p[1] - 20.2, p[2], 0.2, 40, 0.2, Z.c1, { occ: 'cyl', cr: 0.3 });
-        this.item(this.side, s, M.glow, p[0], p[1], p[2], 0.34, 0.34, 0.34, r.chance(0.3) ? [1, 0.25, 0.3] : Z.c1, { blink: true, emis: 1.6, cr: 0.4 });
+        this.item(this.side, s, M.cube, p[0], p[1] - 20.2, p[2], 0.2, 40, 0.2, Z.c1);
+        this.item(this.side, s, M.glow, p[0], p[1], p[2], 0.34, 0.34, 0.34, r.chance(0.3) ? [1, 0.25, 0.3] : Z.c1, { blink: true, emis: 1.6 });
         step = r.range(8, 13);
       }
     } else if (z === 1) {
       const n = r.chance(0.3) ? 2 : 1;
       for (let k = 0; k < n; k++) {
         const sc = r.range(0.6, 2.4), p = at(lat(sc * 1.3, 5), r.range(-3.5, 3));
-        this.item(this.side, s, M.rocks[r.int(0, 2)], p[0], p[1], p[2], sc, sc * r.range(0.7, 1.1), sc, [0.62, 0.5, 0.44], { yaw: r.range(0, TAU), spin: r.range(-0.1, 0.1), bob: r.range(0.1, 0.35), cr: sc * 1.5 });
+        this.item(this.side, s, M.rocks[r.int(0, 2)], p[0], p[1], p[2], sc, sc * r.range(0.7, 1.1), sc, [0.62, 0.5, 0.44], { yaw: r.range(0, TAU), spin: r.range(-0.1, 0.1), bob: r.range(0.1, 0.35) });
       }
       step = r.range(6, 11);
     } else if (z === 2) {
       Q.yaw(this.q, f.th); Q.fromAxisAngle(this.qx, 1, 0, 0, Math.PI / 2);
       const q = Q.mul([0, 0, 0, 1], this.q, this.qx), RR = 4.8;
       this.item(this.side, s, M.ringGlow, f.x, f.y + 1.2, f.z, RR, RR, RR, (Math.floor(s / 18) & 1) ? Z.c1 : Z.c2, { q, emis: 1.4, r: RR + 0.3, occ: 'ring', R: RR, nx: f.fx, nz: f.fz });
-      if (r.chance(0.5)) { const p = at(lat(0.2, 2.5), 0); this.item(this.side, s, M.glow, p[0], p[1] - 1, p[2], 0.1, 9, 0.1, Z.c2, { emis: 1.3, occ: 'cyl', cr: 0.25 }); }
+      if (r.chance(0.5)) { const p = at(lat(0.2, 2.5), 0); this.item(this.side, s, M.glow, p[0], p[1] - 1, p[2], 0.1, 9, 0.1, Z.c2, { emis: 1.3 }); }
       step = r.range(15, 21);
     } else if (z === 3) {
       const sc = r.range(0.45, 1.3), p = at(lat(sc * 1.4, 4), r.range(-2.5, 3.2)), kind = r.int(0, 2);
       const col = Z.neb[r.int(0, 3)], mesh = kind === 0 ? M.sphere : kind === 1 ? M.box16 : M.torus16;
-      this.item(this.side, s, mesh, p[0], p[1], p[2], sc, sc, sc, col, { yaw: r.range(0, TAU), spin: r.range(-0.8, 0.8), tumble: r.range(-0.6, 0.6), bob: r.range(0.1, 0.4), cr: sc * 1.4 });
+      this.item(this.side, s, mesh, p[0], p[1], p[2], sc, sc, sc, col, { yaw: r.range(0, TAU), spin: r.range(-0.8, 0.8), tumble: r.range(-0.6, 0.6), bob: r.range(0.1, 0.4) });
       step = r.range(6, 10);
     } else {
       const sc = r.range(0.5, 1.5), p = at(lat(sc * 2.2, 3), r.range(-2, 3));
-      this.item(this.side, s, M.shards[r.int(0, 2)], p[0], p[1], p[2], sc, sc, sc, Z.c1, { yaw: r.range(0, TAU), spin: r.range(-2, 2), tumble: r.range(-1.5, 1.5), bob: 0.3, cr: sc * 2.3 });
-      if (r.chance(0.3)) { const b = at(lat(0.3, 2, -sg), r.range(1, 3)); this.item(this.side, s, M.glow, b[0], b[1], b[2], 0.3, 0.3, 0.3, [1, 0.2, 0.1], { blink: true, emis: 1.8, cr: 0.4 }); }
+      this.item(this.side, s, M.shards[r.int(0, 2)], p[0], p[1], p[2], sc, sc, sc, Z.c1, { yaw: r.range(0, TAU), spin: r.range(-2, 2), tumble: r.range(-1.5, 1.5), bob: 0.3 });
+      if (r.chance(0.3)) { const b = at(lat(0.3, 2, -sg), r.range(1, 3)); this.item(this.side, s, M.glow, b[0], b[1], b[2], 0.3, 0.3, 0.3, [1, 0.2, 0.1], { blink: true, emis: 1.8 }); }
       step = r.range(5, 9);
     }
     return step / Math.max(0.6, this.density);
   }
   // ------------------------------------------------------------- midground
   spawnMid(T, s, M) {
-    const r = this.rng, z = zoneAt(s), Z = ZONES[z], f = this.frame(T, s), sg = r.sign();
+    for (let k = 0; k < 3; k++) if (this.midOne(T, s, M)) break;       // retry elsewhere if it would touch the track
+    return this.rng.range(9, 16) / this.density;
+  }
+  midOne(T, s, M) {
+    const r = this.rng, z = zoneAt(s), Z = ZONES[z], f = this.frame(T, s), sg = r.sign(), n0 = this.mid.length;
     const lat = sg * r.range(30, 150), fo = r.range(-15, 15);
     const x = f.x + f.rx * lat + f.fx * fo, zz = f.z + f.rz * lat + f.fz * fo, floor = f.y - 62;
     if (z === 0) {
@@ -160,11 +199,15 @@ class Environment {
       if (r.chance(0.5)) { const H = r.range(25, 60); this.item(this.mid, s, M.box17, x, floor + H / 2 + r.range(0, 20), zz, r.range(2.5, 5), H, r.range(2.5, 5), Z.c1, { yaw: r.range(0, TAU), tilt: r.range(-0.45, 0.45) }); }
       else { const sc = r.range(3, 9); this.item(this.mid, s, M.shards[r.int(0, 2)], x, f.y + r.range(-20, 20), zz, sc, sc, sc, Z.c2, { yaw: r.range(0, TAU), spin: r.range(-0.5, 0.5), tumble: r.range(-0.4, 0.4) }); }
     }
-    return r.range(9, 16) / this.density;
+    return this.mid.length > n0;
   }
   // ------------------------------------------------------------- background giants (drift slowly)
   spawnHero(T, z, s, M) {
-    const r = this.rng, Z = ZONES[z], f = this.frame(T, s), sg = r.sign(), lat = sg * r.range(170, 240);
+    for (let k = 0; k < 4; k++) if (this.heroOne(T, z, s, M, k)) return;
+    this.heroes.push({ z, s, items: [] });                             // nowhere clear: skip this zone's giant
+  }
+  heroOne(T, z, s, M, k) {
+    const r = this.rng, Z = ZONES[z], f = this.frame(T, s), sg = r.sign(), lat = sg * (r.range(170, 240) + k * 60);
     const x = f.x + f.rx * lat, y = f.y + r.range(15, 55), zz = f.z + f.rz * lat;
     const drift = [f.fx * r.range(1.5, 3), 0, f.fz * r.range(1.5, 3)], o = { drift, fogK: 0.5 };
     const list = [];
@@ -173,7 +216,8 @@ class Environment {
     else if (z === 2) this.item(list, s, M.pyramid, x, y - 50, zz, 85, 85, 85, Z.c1, { ...o, spin: 0.04, emis: 1.5 });
     else if (z === 3) { this.item(list, s, M.sphere, x, y, zz, 42, 42, 42, [0.95, 0.95, 1], o); this.item(list, s, M.torus16, x, y, zz, 72, 72, 72, Z.c2, { ...o, tilt: 1.2, spin: 0.12 }); }
     else this.item(list, s, M.ring17, x, y, zz, 90, 90, 90, Z.c1, { ...o, tilt: 1.3, spin: 0.09, emis: 1.5 });
-    this.heroes.push({ z, s, items: list });
+    if (!list.length) return false;
+    this.heroes.push({ z, s, items: list }); return true;
   }
   spawnShaft(T, s) {
     const r = this.rng, f = this.frame(T, s), lat = r.range(15, 70) * r.sign();
@@ -182,7 +226,25 @@ class Environment {
 
   update(T, ballS, dt, M, onBolt) {
     if (!M) return;
+    this.T = T; this.M = M; this.ballS = ballS;
     const lim = Math.max(0, T.length - 2);
+    // New track may bend back towards older objects: those shrink away. Drifting giants are
+    // re-checked against the track around the ball twice a second.
+    if (this.checkedN === undefined || this.checkedN > T.n - 1) this.checkedN = T.n - 1;
+    if (T.n - 1 > this.checkedN) {
+      const i0 = this.checkedN - 1, i1 = T.n - 1;
+      for (const it of this.side) if (!it.dying && Environment.near(T, it, i0, i1, 1)) it.dying = 1;
+      for (const it of this.mid) if (!it.dying && Environment.near(T, it, i0, i1, 7)) it.dying = 1;
+      for (const h of this.heroes) for (const it of h.items) if (!it.dying && Environment.near(T, it, i0, i1, 12)) it.dying = 1;
+      this.checkedN = i1;
+    }
+    this.heroT = (this.heroT || 0) - dt;
+    if (this.heroT <= 0) {
+      this.heroT = 0.5; const a = Math.floor((ballS - 20) / CFG.DS), b = Math.min(T.n - 1, Math.floor((ballS + 240) / CFG.DS));
+      for (const h of this.heroes) for (const it of h.items) if (!it.dying && Environment.near(T, it, a, b, 12)) it.dying = 1;
+    }
+    const shrink = (a) => { let w = 0; for (let k = 0; k < a.length; k++) { const it = a[k]; if (it.dying) it.dying -= dt * 2.5; if (it.dying >= 0) a[w++] = it; } a.length = w; };
+    shrink(this.side); shrink(this.mid); for (const h of this.heroes) shrink(h.items);
     while (this.sideS < Math.min(ballS + 170, lim)) this.sideS += this.spawnSide(T, this.sideS, M);
     while (this.midS < Math.min(ballS + 340, lim)) this.midS += this.spawnMid(T, this.midS, M);
     const prune = (a, cut) => { let w = 0; for (let k = 0; k < a.length; k++) if (a[k].s > cut) a[w++] = a[k]; a.length = w; };
@@ -211,10 +273,10 @@ class Environment {
   }
   draw(R, time, focus) {
     const cam = R.cam, F = R.camF;
-    const one = (it, near) => {
+    const one = (it) => {
       const dx = it.x - cam[0], dy = it.y - cam[1], dz = it.z - cam[2];
       if (dx * F[0] + dy * F[1] + dz * F[2] < -it.r * 1.5) return;          // behind the camera
-      if (near && focus && Environment.occludes(it, cam, focus, time)) return;
+      if (focus && Environment.occludes(it, cam, focus, time)) return;
       let q = it.q;
       if (!q) {
         Q.yaw(this.q, it.yaw + time * it.spin); q = this.q;
@@ -222,14 +284,15 @@ class Environment {
         if (tl) { Q.fromAxisAngle(this.qx, 1, 0, 0, tl); q = Q.mul(this.qx, this.q, this.qx); }
       }
       const by = it.bob ? Math.sin(time * 0.7 + it.s) * it.bob : 0;
-      M4.fromTRS(this.model, it.x, it.y + by, it.z, q, it.sx, it.sy, it.sz);
+      const k = it.dying ? Math.max(0, it.dying) : 1;
+      M4.fromTRS(this.model, it.x, it.y + by, it.z, q, it.sx * k, it.sy * k, it.sz * k);
       const e = it.blink ? it.emis * (Math.sin(time * 5 + it.s) > 0.2 ? 1 : 0.15) : it.emis;
       if (it.fogK !== 1) { R.setFogK(it.fogK); R.drawProp(it.mesh, this.model, it.col, e); R.setFogK(1); }   // far giants: own fog
       else R.addInst(it.mesh, this.model, it.col, e);
     };
     for (const h of this.heroes) for (const it of h.items) one(it);
     for (const it of this.mid) one(it);
-    for (const it of this.side) one(it, true);
+    for (const it of this.side) one(it);
   }
   // True when the camera is inside the object, or the object sits between the camera and the ball.
   static occludes(it, cam, focus, time) {
@@ -240,13 +303,13 @@ class Environment {
       const dn = dx * it.nx + dz * it.nz, rx = dx - it.nx * dn, rz = dz - it.nz * dn;
       return Math.abs(dn) < 1.1 && Math.abs(Math.hypot(rx, dy, rz) - it.R) < 1.1;
     }
-    // distance from the object centre to the camera→ball segment (in 3D, or top view for poles)
-    const cyl = it.occ === 'cyl';
-    const sx = focus[0] - cam[0], sy = cyl ? 0 : focus[1] - cam[1], sz = focus[2] - cam[2];
-    const px = -dx, py = cyl ? 0 : -dy, pz = -dz;
-    const t = clamp((px * sx + py * sy + pz * sz) / (sx * sx + sy * sy + sz * sz || 1), 0, 1);
-    const d = Math.hypot(px - sx * t, py - sy * t, pz - sz * t);
-    return d < it.cr + (t < 0.05 ? 0.7 : 0.25);
+    // bounding cylinder: the camera is inside it (with a margin), or the camera→ball line passes through it
+    const top = y + it.up, bot = y - it.down;
+    if (dx * dx + dz * dz < (it.hr + 0.8) ** 2 && cam[1] > bot - 0.8 && cam[1] < top + 0.8) return true;
+    const sx = focus[0] - cam[0], sz = focus[2] - cam[2];
+    const t = clamp((-dx * sx - dz * sz) / (sx * sx + sz * sz || 1), 0, 1);
+    const ex = dx + sx * t, ez = dz + sz * t, ly = cam[1] + (focus[1] - cam[1]) * t;
+    return ex * ex + ez * ez < (it.hr + 0.3) ** 2 && ly > bot - 0.3 && ly < top + 0.3;
   }
   writeDust(out, off, cam, time, col, drift) {
     let o = off * 8; const B = 26;
