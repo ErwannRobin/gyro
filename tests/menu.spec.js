@@ -120,6 +120,7 @@ test('kid mode on the menu keeps the same world and only adds the rails', async 
 });
 
 test('ball and track pickers show pictures drawn by the game', async ({ page }) => {
+  test.slow();                                                    // 20 pictures rendered in software: slow on CI machines
   const errors = await openGame(page);
   await tickN(page, 90, true);
   const bg = () => page.evaluate(() => [...document.querySelectorAll('#skinsMenu .sw, #skinsPause .sw')].map((b) => b.style.backgroundImage.slice(0, 27)));

@@ -4,6 +4,7 @@ import { openGame, openOptions, play } from './helpers.js';
 test.describe('French browser', () => {
   test.use({ locale: 'fr-FR', hasTouch: true, isMobile: true });
   test('language is detected and can be switched on the menu', async ({ page }) => {
+    test.slow();                                                  // the game boots twice
     await openGame(page);
     await expect(page.locator('#btnPlay')).toHaveText('JOUER');
     await expect(page.locator('#modeSeg button[data-mode=random]')).toHaveText('ENTRAÎNEMENT');
@@ -11,7 +12,8 @@ test.describe('French browser', () => {
     await page.tap('#langSeg button[data-lang="en"]');
     await expect(page.locator('#btnPlay')).toHaveText('PLAY');
     await expect(page.locator('#modeSeg button[data-mode=random]')).toHaveText('TRAINING');
-    await page.reload(); await page.waitForFunction(() => window.__game);
+    await page.reload(); await page.waitForFunction(() => window.__game && window.__game.R);
+    await page.evaluate(() => { window.__game.halt = true; });
     await expect(page.locator('#btnPlay')).toHaveText('PLAY');   // choice is remembered
   });
 });
