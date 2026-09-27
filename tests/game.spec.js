@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { openGame } from './helpers.js';
+import { openGame, play } from './helpers.js';
 
 test('boots to the menu without errors', async ({ page }) => {
   const errors = await openGame(page);
   await expect(page.locator('#title')).toHaveText('GYROLL');
-  await expect(page.locator('#btnTilt')).toBeVisible();
+  await expect(page.locator('#btnPlay')).toBeVisible();
   const st = await page.evaluate(() => ({ state: window.__game.state, chunks: window.__game.chunks.size }));
   expect(st.state).toBe('menu');
   expect(st.chunks).toBeGreaterThan(3);
@@ -14,7 +14,7 @@ test('boots to the menu without errors', async ({ page }) => {
 
 test('full run with the keyboard: play, pause, resume, fall, game over, retry, menu', async ({ page }) => {
   const errors = await openGame(page);
-  await page.click('#btnTilt');                                     // desktop: keyboard control
+  await play(page);                                     // desktop: keyboard control
   const tick = (n, draw = false) => page.evaluate(([n, draw]) => { const g = window.__game; g.halt = true; for (let k = 0; k < n; k++) g.tick(1 / 30, draw); return g.state; }, [n, draw]);
   expect(await tick(40)).toBe('play');
 

@@ -37,7 +37,7 @@ class InputManager {
     window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
     window.addEventListener('blur', () => { this.keys.clear(); this.release(); });
     canvas.addEventListener('pointerdown', (e) => {
-      if (!this.enabled || this.ptr !== null) return;
+      if (!this.enabled || this.ptr !== null || this.tilt) return;     // with the gyroscope, fingers move the camera (CamGestures)
       e.preventDefault();
       const now = performance.now();
       if (now - this.lastTap < 320) this.doubleTap = true;
@@ -157,6 +157,56 @@ class InputManager {
     x = clamp(x + this.keyX, -1, 1); y = clamp(y + this.keyY, -1, 1);
     this.x = fin(x); this.y = fin(y);
   }
+}
+
+// =====================================================================
+// CamGestures — one finger (or the mouse) drags the camera, two fingers pinch to zoom, the wheel
+// zooms. `accept(target, event)` says whether a press belongs to the camera; the game takes the
+// totals every frame. Quick taps are counted (two in a row make a double tap).
+// =====================================================================
+class CamGestures {
+  constructor(accept) {
+    this.accept = accept; this.pts = new Map(); this.pinchD = 0; this.lastTap = -1e4; this.onTap = null;
+    this.take();
+    window.addEventListener('pointerdown', (e) => {
+      if (!this.accept(e.target, e)) return;
+      const multi = this.pts.size > 0;
+      for (const p of this.pts.values()) p.multi = true;
+      this.pts.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t: performance.now(), multi });
+      this.pinchD = this.spread();
+    });
+    window.addEventListener('pointermove', (e) => {
+      const p = this.pts.get(e.pointerId);
+      if (!p) return;
+      if (this.pts.size === 1) { this.dx += e.clientX - p.x; this.dy += e.clientY - p.y; }
+      p.x = e.clientX; p.y = e.clientY;
+      if (this.pts.size > 1) { const d = this.spread(); if (this.pinchD > 0 && d > 0) this.zoom *= this.pinchD / d; this.pinchD = d; }
+    });
+    const up = (e) => {
+      const p = this.pts.get(e.pointerId);
+      if (!p) return;
+      this.pts.delete(e.pointerId); this.pinchD = this.spread();
+      const now = performance.now();
+      if (e.type === 'pointerup' && !p.multi && now - p.t < 280 && Math.hypot(p.x - p.x0, p.y - p.y0) < 12) {
+        this.taps++; if (now - this.lastTap < 350) this.double = true;
+        this.lastTap = now;
+        if (this.onTap) this.onTap();
+      }
+    };
+    window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up); window.addEventListener('blur', () => this.reset());
+    window.addEventListener('wheel', (e) => {
+      if (!this.accept(e.target, e)) return;
+      e.preventDefault(); this.zoom *= Math.exp(clamp(e.deltaY, -120, 120) * 0.0016);
+    }, { passive: false });
+  }
+  spread() { if (this.pts.size < 2) return 0; const [a, b] = this.pts.values(); return Math.hypot(a.x - b.x, a.y - b.y); }
+  get held() { return this.pts.size > 0; }
+  take() {
+    const o = { dx: this.dx || 0, dy: this.dy || 0, zoom: this.zoom || 1, taps: this.taps || 0, double: !!this.double };
+    this.dx = this.dy = 0; this.zoom = 1; this.taps = 0; this.double = false;
+    return o;
+  }
+  reset() { this.pts.clear(); this.pinchD = 0; this.take(); }
 }
 
 // =====================================================================

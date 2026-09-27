@@ -3,9 +3,26 @@ export async function openGame(page, url = '/') {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  // the sky follows the real clock by default; tests use the fixed daytime sky unless they choose one
+  await page.addInitScript(() => { if (localStorage.getItem('gyroll.tod') === null) localStorage.setItem('gyroll.tod', '"day"'); });
   await page.goto(url);
   await page.waitForFunction(() => window.__game && window.__game.R);
   return errors;
+}
+
+// Presses PLAY on the menu (closing the options sheet first if it is open).
+export async function play(page) {
+  if (await page.evaluate(() => document.getElementById('menu').classList.contains('opts'))) await page.click('#btnOpts');
+  await page.click('#btnPlay');
+}
+
+// Opens the options sheet of the menu (kid mode, controls, time of day, pickers, language, sound).
+// The live game loop is stopped first (tests drive it by hand): with software rendering each frame
+// is slow, and clicks wait for steady frames.
+export async function openOptions(page) {
+  await page.evaluate(() => { window.__game.halt = true; });
+  if (!(await page.evaluate(() => document.getElementById('menu').classList.contains('opts')))) await page.click('#btnOpts');
+  await page.waitForFunction(() => getComputedStyle(document.getElementById('sheet')).visibility === 'visible');
 }
 
 // Runs inside the page: puts the ball at `dist` meters and prepares a playable frame there.

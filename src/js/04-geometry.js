@@ -482,7 +482,8 @@ TrackMesher.preview = () => {
 
 // ---------------------------------------------------------------- sky panoramas (Canvas 2D → textures)
 // One equirect panorama per world zone; far silhouettes are painted in, so they act as the
-// infinitely distant background layer of the parallax.
+// infinitely distant background layer of the parallax. Z may carry a time of day (see skyZone):
+// a moved sun, a warm glow for a low sun, or a night (dimmed, with stars and the moon's glow).
 function makeSkyCanvases(Z, seed) {
   const W = 1024, H = 512, HZ = H / 2, r = RNG(seed);
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -608,9 +609,11 @@ function makeSkyCanvases(Z, seed) {
     sg.fillStyle = lg; sg.beginPath(); sg.arc(R + 2, R + 2, R, 0, TAU); sg.fill();
     sg.globalCompositeOperation = 'destination-out';
     for (let k = 0; k < 7; k++) { const y = R + 8 + k * 11; sg.fillRect(0, y, R * 2 + 4, 2 + k * 0.9); }
-    g.globalCompositeOperation = 'lighter'; blob(sunX, sunY - 20, 190, [1, 0.2, 0.6], 0.35);
-    g.globalCompositeOperation = 'source-over';
-    g.drawImage(sc, sunX - R - 2, sunY - R - 30);
+    if (!Z.moon) {                                   // the striped sunset sun (the moon takes its place at night)
+      g.globalCompositeOperation = 'lighter'; blob(sunX, sunY - 20, 190, [1, 0.2, 0.6], 0.35);
+      g.globalCompositeOperation = 'source-over';
+      g.drawImage(sc, sunX - R - 2, sunY - R - 30);
+    }
     const f = ridge(14, 30);
     g.fillStyle = css(Z.skyTop, 1); g.strokeStyle = css(Z.c2, 0.9); g.lineWidth = 1.5;
     g.beginPath(); g.moveTo(0, H * 0.6);
@@ -739,6 +742,28 @@ function makeSkyCanvases(Z, seed) {
     hg.addColorStop(0, css(Z.horizon, 0)); hg.addColorStop(0.7, css(Z.abyss, 0.45)); hg.addColorStop(1, css(Z.horizon, 0));
     g.fillStyle = hg; g.fillRect(0, HZ - 50, W, 80);
     for (let k = 0; k < 500; k++) { g.fillStyle = css(Z.c2, r.range(0.2, 0.7)); g.fillRect(r.range(0, W), r.range(HZ - 120, HZ + 60), 1, 1); }
+  }
+  if (Z.dusk > 0) {                                // low sun: the horizon glows warm around it
+    g.globalCompositeOperation = 'lighter';
+    blob(sunX, HZ - 8, 260, [1, 0.42, 0.18], 0.16 * Z.dusk); blob(sunX, HZ - 4, 90, [1, 0.62, 0.35], 0.12 * Z.dusk);
+    g.globalCompositeOperation = 'source-over';
+  }
+  const nk = Z.nightK || 0;
+  if (nk > 0 || Z.moon) {
+    // night: the whole painting dims to a moonlit blue, then stars, a faint Milky Way and the moon's glow on top
+    if (nk > 0) { g.globalCompositeOperation = 'multiply'; g.fillStyle = css(NIGHT_TINT.map((v) => lerp(1, v, nk))); g.fillRect(0, 0, W, H); }
+    g.globalCompositeOperation = 'lighter';
+    const tilt = r.range(0, TAU);
+    for (let k = 0; k < 90 * nk; k++) {
+      const x = r.range(0, W), y = H * 0.22 + Math.sin(x / W * TAU + tilt) * H * 0.13 + r.range(-18, 18);
+      blob(x, y, r.range(18, 60), [0.72, 0.78, 1], r.range(0.02, 0.05) * nk);
+    }
+    for (let k = 0; k < 1800 * nk; k++) {
+      const y = Math.pow(r.next(), 1.3) * H * 0.5, a = r.range(0.1, 0.75) * (1 - y / H * 1.2);
+      g.fillStyle = `rgba(${r.chance(0.2) ? '255,236,210' : '225,235,255'},${a})`; g.fillRect(r.range(0, W), y, r.chance(0.08) ? 2 : 1, 1);
+    }
+    if (Z.moon) { blob(sunX, sunY, 150, [0.62, 0.72, 1], 0.14); blob(sunX, sunY, 48, [0.85, 0.9, 1], 0.2); }
+    g.globalCompositeOperation = 'source-over';
   }
   const down = (src, w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = true; x.drawImage(src, 0, 0, w, h); return c; };
   const midC = down(down(cv, 512, 256), 256, 128);

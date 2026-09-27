@@ -33,6 +33,12 @@ class Game {
     try { qm = new URLSearchParams(location.search).get('mode'); } catch (e) { qm = null; }
     this.gameMode = (qm === 'daily' || qm === 'random' ? qm : Store.get('mode', 'random')) === 'daily' ? 'daily' : 'random';
     this.kid = Store.get('kid', false) === true;
+    this.ctrl = this.mobile && Store.get('ctrl', 'tilt') !== 'touch' ? 'tilt' : 'touch';   // the control PLAY starts with
+    const tod = Store.get('tod', 'real'); this.tod = TOD_MODES.includes(tod) ? tod : 'real';
+    this.darkMQ = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
+    this.cam.zoom = clamp(+Store.get('zoom', 1) || 1, 0.6, 1.8);
+    this.gest = new CamGestures((t, e) => this.camTarget(t, e));
+    this.gest.onTap = () => { if (this.state === 'menu' && this.ui.el.menu.classList.contains('opts')) this.setOpts(false); };
     // Random mode is one endless track per player: after a fall the next run starts again at the last checkpoint.
     this.rSeed = (Store.get('rseed', 0) | 0) || this.newSeed();
     this.contS = Math.max(CFG.START_S, +Store.get('rpos', 0) || 0);
@@ -46,6 +52,7 @@ class Game {
     this.collapseS = -1e9; this.danger = 0; this.warnT = 0; this.pruneT = 0; this.emitAcc = 0;
     this.R.setTheme(TRACK_THEMES[this.themeIdx]); this.physics.roll = TRACK_THEMES[this.themeIdx].roll || null;
     this.debris = []; this.bobY = 0; this.bobV = 0; this.bobP = [0, 0, 0];
+    this.R.setSky(this.skyNow());
     this.R.setZones(0, 0, 0); this.zoneIdx = 0; this.floorY = 0;
     this.ui.setAccent(TRACK_THEMES[this.themeIdx]);
     this.bindUI();
@@ -54,6 +61,7 @@ class Game {
     this.bindWindow();
     this.setupPWA();
     Analytics.init();
+    this.introMenu();
     this.last = performance.now();
     this.frame = this.frame.bind(this);
     requestAnimationFrame(this.frame);
@@ -64,12 +72,12 @@ class Game {
     const U = this.ui, E = U.el, $ = U.$;
     const tap = (el, fn) => el.addEventListener('click', (e) => { e.preventDefault(); fn(e); });
     for (const b of document.querySelectorAll('#langSeg button')) tap(b, () => { LANG = b.dataset.lang; Store.set('lang', LANG); this.refreshTexts(); this.audio.tick(); });
-    // a tap on the menu background shows only the title, the play buttons (moved to the middle) and
-    // the world; another tap brings the rest back
-    E.menu.addEventListener('click', (e) => {
-      if (this.state !== 'menu' || e.target.closest('button,input,a,.seg,.skinRow,.tgRow')) return;
-      U.centerCta(); E.menu.classList.toggle('clean');
-    });
+    // the options toggle raises the settings sheet (and hides PLAY); a tap outside the sheet closes it
+    tap(E.btnOpts, () => { if (this.state === 'menu') { this.setOpts(!E.menu.classList.contains('opts')); this.audio.tick(); } });
+    for (const b of document.querySelectorAll('#ctrlSeg button')) tap(b, () => { if (b.dataset.ctrl !== this.ctrl) { this.setCtrl(b.dataset.ctrl); this.audio.tick(); } });
+    for (const b of document.querySelectorAll('#todSeg button')) tap(b, () => { if (b.dataset.tod !== this.tod) { this.setTod(b.dataset.tod); this.audio.tick(); } });
+    if (!this.mobile) $('ctrlRow').classList.add('hidden');                 // keyboard and mouse only
+    if (this.darkMQ && this.darkMQ.addEventListener) this.darkMQ.addEventListener('change', () => { if (this.tod === 'system' && this.state === 'menu') this.updateSky(true); });
     tap($('tgKid'), () => { if (this.state === 'menu') { this.setKid(!this.kid); this.audio.tick(); } });
     tap(E.newTrack, () => { if (this.state === 'menu') { this.newTrack(); this.audio.tick(); } });
     for (const b of document.querySelectorAll('#modeSeg button')) tap(b, () => { if (this.state === 'menu' && b.dataset.mode !== this.gameMode) { this.setGameMode(b.dataset.mode); this.audio.tick(); } });
@@ -77,24 +85,7 @@ class Game {
     for (const b of document.querySelectorAll('.tgMusic')) tap(b, () => { this.audio.init(); this.audio.setMusic(!this.audio.musicOn); toggles(); });
     for (const b of document.querySelectorAll('.tgSfx')) tap(b, () => { this.audio.init(); this.audio.setSfx(!this.audio.sfxOn); toggles(); this.audio.tick(); });
     toggles();
-    if (!this.mobile) E.btnTouch.classList.add('hidden');
-    tap(E.btnTilt, () => {
-      if (this.state !== 'menu' || this.busy) return;
-      this.audio.init();
-      if (!this.mobile) { this.input.tilt = false; this.startRun('keys'); return; }
-      this.busy = true; E.btnTilt.style.opacity = 0.6;
-      this.input.requestTilt().then((r) => {
-        this.busy = false; E.btnTilt.style.opacity = '';
-        if (r.ok) { this.input.tilt = true; E.perm.classList.add('hidden'); this.startRun('tilt'); }
-        else {
-          this.input.tilt = false;
-          E.perm.textContent = tr(r.reason === 'denied' ? 'permDenied' : 'permNone');
-          E.perm.classList.remove('hidden');
-          setTimeout(() => this.startRun('touch'), 900);
-        }
-      });
-    });
-    tap(E.btnTouch, () => { if (this.state !== 'menu') return; this.audio.init(); this.input.tilt = false; this.startRun('touch'); });
+    tap(E.btnPlay, () => this.play());
     tap($('btnPause'), () => this.pause());
     tap($('btnResume'), () => this.resume(false));
     tap(E.recal, () => this.resume(true));
@@ -120,6 +111,7 @@ class Game {
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
       if ((k === 'escape' || k === 'p') && (this.state === 'play' || this.state === 'calib')) this.pause();
+      else if (k === 'escape' && this.state === 'menu') this.setOpts(false);
       else if (k === ' ' && this.state === 'play') this.starKey = true;
       else if ((k === 'escape' || k === 'p' || k === 'enter') && this.state === 'paused') this.resume(false);
       else if ((k === ' ' || k === 'enter') && this.state === 'menu' && !this.mobile) { this.audio.init(); this.input.tilt = false; this.startRun('keys'); }
@@ -129,13 +121,58 @@ class Game {
   refreshTexts() {
     const U = this.ui, E = U.el;
     U.applyLang();
-    E.btnTilt.textContent = tr(this.mobile ? 'playGyro' : 'play');
+    U.setSeg('ctrlSeg', 'ctrl', this.ctrl); U.setSeg('todSeg', 'tod', this.tod);
     const cont = this.gameMode === 'random' && this.contS > CFG.START_S + 5;
     U.setMode(this.gameMode, this.gameMode === 'daily' ? tr('infoDaily', { date: dayLabel(dayKey()) }) : cont ? tr('infoContinue', { d: fmt(this.contS - CFG.START_S) }) : tr('infoRandom'));
     E.newTrack.classList.toggle('hidden', !cont);
     E.mBest.textContent = fmt(this.modeBest()) + ' m';
     const kb = U.$('tgKid'); kb.classList.toggle('off', !this.kid); kb.title = tr('kidInfo');
     if (this.shareSt) U.shareState(this.shareSt, this.shareP || 0);
+    U.pills();
+  }
+  // PLAY starts with the chosen control; the gyroscope asks for permission first (iOS) and falls
+  // back to touch (and becomes the setting) when it is refused or missing.
+  play() {
+    const E = this.ui.el;
+    if (this.state !== 'menu' || this.busy) return;
+    this.audio.init();
+    if (!this.mobile || this.ctrl !== 'tilt') { this.input.tilt = false; this.startRun(this.mobile ? 'touch' : 'keys'); return; }
+    this.busy = true; E.btnPlay.style.opacity = 0.6;
+    this.input.requestTilt().then((r) => {
+      this.busy = false; E.btnPlay.style.opacity = '';
+      if (r.ok) { this.input.tilt = true; E.perm.classList.add('hidden'); this.startRun('tilt'); return; }
+      this.input.tilt = false; this.setCtrl('touch');
+      E.perm.textContent = tr(r.reason === 'denied' ? 'permDenied' : 'permNone');
+      E.perm.classList.remove('hidden');
+      setTimeout(() => { if (this.state === 'menu') this.startRun('touch'); }, 900);
+    });
+  }
+  setOpts(on) { this.ui.setOpts(!!on && this.state === 'menu'); }
+  setCtrl(c) { this.ctrl = c === 'touch' ? 'touch' : 'tilt'; Store.set('ctrl', this.ctrl); this.ui.setSeg('ctrlSeg', 'ctrl', this.ctrl); }
+  setTod(m) { this.tod = TOD_MODES.includes(m) ? m : 'real'; Store.set('tod', this.tod); this.ui.setSeg('todSeg', 'tod', this.tod); this.updateSky(true); }
+  skyNow() { return skyState(this.tod, new Date(), !!(this.darkMQ && this.darkMQ.matches)); }
+  // Time of day: the skies are painted again when the sun or the moon has moved enough. Only checked
+  // on the menu, so a run keeps its sky.
+  updateSky(fade) {
+    const S = this.skyNow();
+    if (S.key === this.R.sky.key) return false;
+    if (fade) this.crossfade();
+    this.R.setSky(S); this.pvKey = null;
+    return true;
+  }
+  // The menu rises into place, part after part (on start and on every return to it).
+  introMenu() {
+    const m = this.ui.el.menu;
+    m.classList.remove('intro'); void m.offsetWidth; m.classList.add('intro');
+    clearTimeout(this.introT); this.introT = setTimeout(() => m.classList.remove('intro'), 1600);
+  }
+  // Presses that move the camera: the menu background, or the game itself in gyroscope play
+  // (the wheel zooms in every kind of play).
+  camTarget(t, e) {
+    const st = this.state;
+    if (st === 'menu') return !!(t && t.closest && t.closest('#menu') && !t.closest('button,input,a,.seg,.skinRow,.tgRow,#sheet'));
+    if (st === 'play' || st === 'calib' || st === 'falling') return t === this.canvas && (this.mode === 'tilt' || e.type === 'wheel');
+    return false;
   }
   // ------------------------------------------------------------- game modes
   setGameMode(m) {
@@ -210,11 +247,11 @@ class Game {
     window.addEventListener('resize', onResize); window.addEventListener('orientationchange', onResize);
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) { if (this.state === 'play' || this.state === 'calib') this.pause(); this.audio.suspend(); }
-      else { if (this.state !== 'paused') this.audio.resume(); if (this.state === 'play') this.lockWake(); }
+      else { if (this.state !== 'paused') this.audio.resume(); if (this.state === 'play') this.lockWake(); if (this.state === 'menu') this.updateSky(true); }
     });
     window.addEventListener('blur', () => { if (this.state === 'play' && !this.mobile) this.pause(); });
     window.addEventListener('pagehide', () => this.audio.suspend());
-    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement)) e.preventDefault(); }, { passive: false });
+    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement) && !e.target.closest('#sheet')) e.preventDefault(); }, { passive: false });
     document.addEventListener('gesturestart', (e) => e.preventDefault());
     document.addEventListener('dblclick', (e) => e.preventDefault());
     this.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.glLost = true; if (this.state === 'play') this.pause(); });
@@ -233,7 +270,7 @@ class Game {
     if (force || this.R.post !== q.post || this.R.bloomDiv !== q.bloomDiv) { this.R.freeFBO(); this.R.w = 0; }
     this.R.post = q.post; this.R.bloomDiv = q.bloomDiv;
     this.R.resize(w, h, this.quality.pixelScale(w, h));
-    this.ui.centerCta();
+    this.ui.layoutMenu(); this.ui.pills();
   }
   applyQuality() {
     const q = this.quality.cur;
@@ -303,18 +340,17 @@ class Game {
     const U = this.ui, E = U.el;
     if (this.gameMode === 'daily' && this.runDay !== dayKey()) this.newWorld();   // the day changed
     this.best = this.modeBest();
-    U.show('menu', false); U.show('over', false); U.show('pause', false); E.menu.classList.remove('clean');
+    U.show('menu', false); U.show('over', false); U.show('pause', false); U.setOpts(false);
     U.hud(true);
     U.el.ctrl.textContent = tr(mode === 'tilt' ? 'ctrlTilt' : mode === 'keys' ? 'ctrlKeys' : 'ctrlTouch') + (this.kid ? ' · 🛡 ' + tr('kidTag') : '');
     E.recal.classList.toggle('hidden', mode !== 'tilt');
     this.input.enabled = true; this.input.release();
     this.cam.mode = 'follow';
     this.beginCountdown(mode === 'tilt', mode === 'tilt' ? 1.5 : 0.7);
-    if (mode !== 'tilt') {
-      U.el.touchHint.textContent = tr(mode === 'keys' ? 'keysHint' : 'touchHint');
-      U.el.touchHint.classList.remove('hidden'); U.el.touchHint.style.opacity = 1;
-      clearTimeout(this.hintT); this.hintT = setTimeout(() => { U.el.touchHint.style.opacity = 0; }, 3500);
-    } else U.el.touchHint.classList.add('hidden');
+    U.el.touchHint.textContent = tr(mode === 'keys' ? 'keysHint' : mode === 'tilt' ? 'camHint' : 'touchHint');
+    U.el.touchHint.classList.remove('hidden'); U.el.touchHint.style.opacity = 1;
+    clearTimeout(this.hintT); this.hintT = setTimeout(() => { U.el.touchHint.style.opacity = 0; }, 3500);
+    this.gest.reset(); this.cam.offYaw = this.cam.offPitch = 0;
     this.lockWake();
     Analytics.event('run_start', { mode: this.gameMode, control: mode, kid: this.kid });
   }
@@ -361,16 +397,19 @@ class Game {
   goMenu() {
     this.state = 'menu'; this.input.enabled = false; this.input.release();
     const U = this.ui;
-    U.show('pause', false); U.show('over', false); U.show('calib', false); U.el.menu.classList.remove('clean'); U.show('menu', true); U.hud(false);
+    U.show('pause', false); U.show('over', false); U.show('calib', false); U.setOpts(false); U.show('menu', true); U.hud(false); U.layoutMenu();
+    this.introMenu(); this.saveZoom(); this.gest.reset();
     U.el.touchHint.classList.add('hidden');
     this.best = this.modeBest(); this.refreshTexts();
     this.audio.resume();
+    this.updateSky(false);
     this.newWorld(); this.used = false; this.cam.mode = 'orbit';
     this.unlockWake();
   }
+  saveZoom() { if (this.zoomDirty) { this.zoomDirty = false; Store.set('zoom', +this.cam.zoom.toFixed(3)); } }
   finishRun() {
     this.state = 'over'; this.overT = 0;
-    this.input.enabled = false; this.input.release(); this.unlockWake();
+    this.input.enabled = false; this.input.release(); this.unlockWake(); this.saveZoom();
     const dist = Math.floor(this.dist), score = Math.floor(this.score);
     const beat = dist > Math.floor(this.best);
     if (beat) { this.best = dist; this.saveBest(dist); }
@@ -498,6 +537,17 @@ class Game {
     this.time += dtR;
     this.input.update(dtR);
     const st = this.state, b = this.ball;
+    // finger camera: drag and pinch on the menu, or during gyroscope play (a double tap there fires star power)
+    const G = this.gest.take(); this.cam.held = this.gest.held;
+    if (st === 'menu') {
+      if (G.dx || G.dy) this.cam.menuDrag(G.dx, G.dy);
+      if (G.zoom !== 1) this.cam.zoomBy(G.zoom, true);
+      if ((this.skyT = (this.skyT || 0) + dtR) > 30) { this.skyT = 0; this.updateSky(true); }
+    } else if (st === 'play' || st === 'calib' || st === 'falling') {
+      if (G.dx || G.dy) this.cam.lookDrag(G.dx, G.dy);
+      if (G.zoom !== 1) { this.cam.zoomBy(G.zoom, false); this.zoomDirty = true; }
+      if (G.double && st === 'play') this.input.doubleTap = true;
+    }
     if (st === 'calib') this.updateCountdown(dtR);
     if (st === 'falling') {
       this.fallT += dtR;
@@ -783,7 +833,7 @@ class Game {
   // Picker thumbnails drawn with the game's own shaders: every ball as it looks right here (it
   // mirrors the same world), every track theme on a short bend. Redrawn when the world or the theme changes.
   previews(dt) {
-    const key = this.themeIdx + ':' + this.zoneIdx + ':' + (this.R.probeReady ? 1 : 0);
+    const key = this.themeIdx + ':' + this.zoneIdx + ':' + (this.R.probeReady ? 1 : 0) + ':' + this.R.sky.key;
     if (key !== this.pvKey) {
       this.pvWait = (this.pvWait || 0) + dt;
       if (this.pvWait < 0.3) return;

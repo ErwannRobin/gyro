@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { openGame } from './helpers.js';
+import { openGame, openOptions, play } from './helpers.js';
 
 // Runs inside the page: a long straight flat track (no generator) and a physics world on it.
 function lab() {
@@ -94,9 +94,10 @@ test('tufts sit on safe ground, the same for everyone, and never change the trac
 
 test('choosing the grass track changes how the ball rolls; tufts show and the ball bounces over them', async ({ page }) => {
   const errors = await openGame(page);
+  await openOptions(page);
   await page.click('#skinsMenu .skinRow:nth-child(1) .sw >> nth=4');
   expect(await page.evaluate(() => [window.__game.themeIdx, !!window.__game.physics.roll])).toEqual([4, true]);
-  await page.click('#btnTilt');
+  await play(page);
   const r = await page.evaluate(() => {
     const g = window.__game, b = g.ball, T = g.track; g.halt = true;
     for (let k = 0; k < 40; k++) g.tick(1 / 30, false);

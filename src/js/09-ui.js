@@ -45,7 +45,7 @@ class UI {
       ctrl: $('ctrlTag'), toasts: $('toasts'), danger: $('danger'), flash: $('flash'), menu: $('menu'), calib: $('calib'),
       calibNum: $('calibNum'), calibTxt: $('calibTxt'), calibSub: $('calibSub'), go: $('go'), pause: $('pause'), over: $('over'),
       record: $('record'), ovDist: $('ovDist'), ovScore: $('ovScore'), ovBest: $('ovBest'), ovMode: $('ovMode'), ovRails: $('ovRails'), mBest: $('mBest'), perm: $('permMsg'),
-      btnTilt: $('btnTilt'), btnTouch: $('btnTouch'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), modeTxt: $('modeTxt'), newTrack: $('btnNewTrack'), share: $('btnShare'), recal: $('btnRecal'),
+      btnPlay: $('btnPlay'), btnOpts: $('btnOpts'), sheet: $('sheet'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), modeTxt: $('modeTxt'), newTrack: $('btnNewTrack'), share: $('btnShare'), recal: $('btnRecal'),
       power: $('power'), pwCoin: $('pwCoin'), pwTxt: $('pwTxt'), pwFill: $('pwFill'),
     };
     this.cache = {};
@@ -61,13 +61,38 @@ class UI {
       clearTimeout(e._t); e._t = setTimeout(() => { if (e.classList.contains('fade')) e.classList.add('hidden'); }, 450);
     }
   }
-  // Clean menu: how far the play buttons slide to sit in the middle of the screen. Layout offsets
-  // ignore that slide, so the value holds while it plays.
-  centerCta() {
-    const m = this.el.menu, bs = [this.el.btnTilt, this.el.btnTouch].filter((b) => b.offsetParent === m);
-    if (!bs.length) return;
-    const top = Math.min(...bs.map((b) => b.offsetTop)), bot = Math.max(...bs.map((b) => b.offsetTop + b.offsetHeight));
-    m.style.setProperty('--cleanY', Math.round(m.clientHeight / 2 - (top + bot) / 2) + 'px');
+  // Menu offsets (portrait): PLAY in the middle of the screen (lower if the header needs the room),
+  // and for options mode the title's move into the top bar, the mode switch's move under it and the
+  // top of the sheet. Layout offsets ignore transforms, so the values hold while the animations play.
+  layoutMenu() {
+    const m = this.el.menu, $ = this.$, H = m.clientHeight;
+    if (!H) return;
+    const top = (el) => { let y = 0; for (let e = el; e && e !== m; e = e.offsetParent) y += e.offsetTop; return y; };
+    const set = (k, v) => m.style.setProperty(k, Math.round(v) + 'px');
+    if (matchMedia('(orientation: landscape) and (max-height: 560px)').matches) { for (const k of ['--playY', '--tY', '--hY', '--sheetTop']) set(k, 0); return; }
+    const title = $('title'), seg = $('modeSeg'), info = this.el.modeInfo, bar = $('menuTop'), head = top(info) + info.offsetHeight;
+    set('--playY', Math.max(H / 2 - this.el.btnPlay.offsetHeight / 2, head + 14));
+    set('--tY', top(bar) + bar.offsetHeight / 2 - top(title) - title.offsetHeight / 2);
+    const hY = top(bar) + bar.offsetHeight + 12 - top(seg);
+    set('--hY', hY); set('--sheetTop', head + hY + 10);
+  }
+  setOpts(on) {
+    this.layoutMenu();
+    this.el.menu.classList.toggle('opts', on); this.el.btnOpts.setAttribute('aria-expanded', String(on));
+    if (on) this.el.sheet.scrollTop = 0;
+  }
+  // Marks the chosen button of a segmented control; its pill slides under it.
+  setSeg(id, key, val) {
+    for (const b of this.$(id).querySelectorAll('button')) b.classList.toggle('on', b.dataset[key] === val);
+    this.pills();
+  }
+  pills() {
+    for (const seg of document.querySelectorAll('.seg')) {
+      const pill = seg.querySelector('.pill'), on = seg.querySelector('button.on');
+      if (!pill) continue;
+      pill.style.width = on ? on.offsetWidth + 'px' : '0';
+      if (on) pill.style.transform = `translateX(${on.offsetLeft}px)`;
+    }
   }
   hideNow(name) { const e = this.el[name]; e.classList.add('hidden', 'fade'); }
   hud(on) { this.el.hud.classList.toggle('on', on); }
@@ -77,7 +102,7 @@ class UI {
     document.documentElement.lang = LANG;
     for (const e of document.querySelectorAll('[data-i18n]')) e.textContent = tr(e.dataset.i18n);
     for (const e of document.querySelectorAll('[data-i18n-aria]')) { const t = tr(e.dataset.i18nAria); e.setAttribute('aria-label', t); e.title = t; }
-    for (const b of document.querySelectorAll('#langSeg button')) b.classList.toggle('on', b.dataset.lang === LANG);
+    this.setSeg('langSeg', 'lang', LANG);
     this.refreshSkinLabels();
   }
   setToggles(musicOn, sfxOn) {
@@ -85,7 +110,7 @@ class UI {
     for (const b of document.querySelectorAll('.tgSfx')) b.classList.toggle('off', !sfxOn);
   }
   setMode(mode, info) {
-    for (const b of document.querySelectorAll('#modeSeg button')) b.classList.toggle('on', b.dataset.mode === mode);
+    this.setSeg('modeSeg', 'mode', mode);
     this.el.modeTxt.textContent = info;
   }
 

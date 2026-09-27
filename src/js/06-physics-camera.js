@@ -183,7 +183,9 @@ class Physics {
 }
 
 // =====================================================================
-// CameraRig — smoothed chase cam with anticipation, roll and FOV kick.
+// CameraRig — smoothed chase cam with anticipation, roll and FOV kick. Fingers can move it: on the
+// menu a drag walks it around the ball and a pinch zooms; in gyroscope play a drag swings it around
+// the ball (it eases back behind once the finger lifts) and a pinch sets the chase distance.
 // =====================================================================
 class CameraRig {
   constructor() {
@@ -192,6 +194,24 @@ class CameraRig {
     this.eye = [0, 0, 0]; this.tgt = [0, 0, 0]; this.tmp = [0, 0, 0, 0];
     this.gyroLook = null;                           // menu look-around from the phone: { yaw, pitch }
     this.orbA = null; this.orbH = 2.3;
+    this.zoom = 1; this.zoomM = 1;                 // chase distance factor (play) and orbit distance factor (menu)
+    this.offYaw = 0; this.offPitch = 0; this.held = false; this.relT = 9;   // play look-around
+    this.mYaw = 0; this.mH = 0; this.swingK = 1;   // menu: drag offsets; the slow automatic swing stops once dragged
+  }
+  menuDrag(dx, dy) {
+    if (this.swingK > 0 && !this.gyroLook) {       // keep the view where the swing had taken it
+      this.mYaw += Math.sin(this.t * 0.13) * 0.95 * this.swingK; this.mH += Math.sin(this.t * 0.21) * 0.6 * this.swingK;
+    }
+    this.swingK = 0;
+    this.mYaw -= dx * 0.007; this.mH = clamp(this.mH + dy * 0.018, -2, 8.7);
+  }
+  lookDrag(dx, dy) {
+    this.offYaw = clamp(this.offYaw - dx * 0.007, -Math.PI, Math.PI); this.offPitch = clamp(this.offPitch + dy * 0.006, -0.45, 1.1);
+    this.relT = 0;
+  }
+  zoomBy(f, menu) {
+    if (menu) this.zoomM = clamp(this.zoomM * f, 0.38, 2.2);
+    else this.zoom = clamp(this.zoom * f, 0.6, 1.8);
   }
   params(aspect, speed) {
     const portrait = aspect < 0.9;
@@ -224,11 +244,14 @@ class CameraRig {
       this.yawRate = lerp(this.yawRate, yr, damp(6, dt));
       this.roll = lerp(this.roll, clamp(-this.yawRate * 0.09 * (0.4 + sp / 14), -0.16, 0.16), damp(4, dt));
       const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
-      const tx = ball.p[0] - fx * P.dist, ty2 = ball.p[1] + P.height, tz = ball.p[2] - fz * P.dist;
+      if (this.held) this.relT = 0; else if ((this.relT += dt) > 0.8) { const k = damp(2.4, dt); this.offYaw -= this.offYaw * k; this.offPitch -= this.offPitch * k; }
+      const D = Math.hypot(P.dist, P.height) * this.zoom, e = clamp(Math.atan2(P.height, P.dist) + this.offPitch, 0.05, 1.35), a = this.yaw + this.offYaw;
+      const tx = ball.p[0] - Math.sin(a) * Math.cos(e) * D, ty2 = ball.p[1] + Math.sin(e) * D, tz = ball.p[2] - Math.cos(a) * Math.cos(e) * D;
       const kxz = damp(7.5, dt), ky = damp(4.2, dt);
       this.pos[0] = lerp(this.pos[0], tx, kxz); this.pos[2] = lerp(this.pos[2], tz, kxz); this.pos[1] = lerp(this.pos[1], ty2, ky);
-      const la = 3 + sp * 0.28;
-      const lx = ball.p[0] + fx * la, ly = ball.p[1] + 0.2, lz = ball.p[2] + fz * la;
+      // look down the track; the further the camera swings away, the more it looks at the ball itself
+      const la = 3 + sp * 0.28, lk = clamp(Math.abs(this.offYaw) / 0.9 + Math.abs(this.offPitch) / 1.1, 0, 1);
+      const lx = ball.p[0] + fx * la * (1 - lk), ly = ball.p[1] + 0.2, lz = ball.p[2] + fz * la * (1 - lk);
       const kl = damp(10, dt);
       this.look[0] = lerp(this.look[0], lx, kl); this.look[1] = lerp(this.look[1], ly, kl); this.look[2] = lerp(this.look[2], lz, kl);
       this.fov = lerp(this.fov, P.fov + this.kick * 0.16, damp(3, dt));
@@ -241,16 +264,16 @@ class CameraRig {
     } else {                                          // attract mode: slow swing behind the ball, looking down the track
       T.pointAt(ball.s + 2, 0, 0, this.tmp);
       // with the phone's motion, turning / tilting it walks the camera around the ball instead
-      const th = this.tmp[3], L = this.gyroLook, r = 6.4;
-      const ta = th + Math.PI + (L ? -L.yaw : Math.sin(this.t * 0.13) * 0.95);
-      const th2 = L ? clamp(2.3 - L.pitch * 7, 0.5, 11) : 2.3 + Math.sin(this.t * 0.21) * 0.6;
+      const th = this.tmp[3], L = this.gyroLook, zm = this.zoomM, r = 6.4 * zm, sw = this.swingK, fast = L || this.held;
+      const ta = th + Math.PI + (L ? -L.yaw : Math.sin(this.t * 0.13) * 0.95 * sw) + this.mYaw;
+      const th2 = clamp((L ? clamp(2.3 - L.pitch * 7, 0.5, 11) : 2.3 + Math.sin(this.t * 0.21) * 0.6 * sw) + this.mH, 0.3, 11);
       if (this.orbA === null) this.orbA = ta;
-      this.orbA += wrapAngle(ta - this.orbA) * damp(L ? 6 : 1.6, dt); this.orbH = lerp(this.orbH, th2, damp(L ? 5 : 1.6, dt));
+      this.orbA += wrapAngle(ta - this.orbA) * damp(fast ? 6 : 1.6, dt); this.orbH = lerp(this.orbH, th2, damp(fast ? 5 : 1.6, dt));
       const a = this.orbA, tx = ball.p[0] + Math.sin(a) * r, tz = ball.p[2] + Math.cos(a) * r;
-      const k = damp(L ? 8 : 1.6, dt);
-      this.pos[0] = lerp(this.pos[0], tx, k); this.pos[1] = lerp(this.pos[1], ball.p[1] + this.orbH, k); this.pos[2] = lerp(this.pos[2], tz, k);
-      const vd = L ? a + Math.PI : th;               // look past the ball, the way the camera faces
-      const lx = ball.p[0] + Math.sin(vd) * 5, ly = ball.p[1] + 1.7 - (L ? clamp(this.orbH - 2.3, -2, 6) * 0.5 : 0), lz = ball.p[2] + Math.cos(vd) * 5;
+      const k = damp(fast ? 8 : 1.6, dt);
+      this.pos[0] = lerp(this.pos[0], tx, k); this.pos[1] = lerp(this.pos[1], ball.p[1] + this.orbH * zm, k); this.pos[2] = lerp(this.pos[2], tz, k);
+      const vd = L || !sw ? a + Math.PI : th, lo = L || !sw ? clamp(this.orbH - 2.3, -2, 6) * 0.5 : 0;   // look past the ball, the way the camera faces
+      const lx = ball.p[0] + Math.sin(vd) * 5 * zm, ly = ball.p[1] + (1.7 - lo) * zm, lz = ball.p[2] + Math.cos(vd) * 5 * zm;
       this.look[0] = lerp(this.look[0], lx, k); this.look[1] = lerp(this.look[1], ly, k); this.look[2] = lerp(this.look[2], lz, k);
       this.yaw = th; this.prevYaw = th;
       this.roll = lerp(this.roll, Math.sin(this.t * 0.13) * 0.06, k); this.fov = lerp(this.fov, P.fov, k);

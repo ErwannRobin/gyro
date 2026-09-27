@@ -123,17 +123,55 @@ body.star #starGlow{opacity:1}
   background:radial-gradient(140% 90% at 50% 40%,rgba(5,6,13,0) 0%,rgba(5,6,13,.55) 70%,rgba(5,6,13,.85) 100%);
   transition:opacity .45s;overflow:hidden}
 .screen.fade{opacity:0;pointer-events:none}
-/* menu: a tap on the background hides everything but the title and the play buttons; the play
-   buttons glide to the middle of the screen (--cleanY, set by the game) so the ball below shows */
-#menu{background:none}
-#menu::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;transition:opacity .4s;
-  background:radial-gradient(140% 90% at 50% 40%,rgba(5,6,13,0) 0%,rgba(5,6,13,.55) 70%,rgba(5,6,13,.85) 100%)}
-#menuTop,#menu .mcol > *{transition:opacity .35s,visibility .35s}
-#menu #btnTilt,#menu #btnTouch{transition:opacity .35s,visibility .35s,transform .45s cubic-bezier(.2,.8,.25,1)}
-#menu.clean::before{opacity:0}
-#menu.clean #menuTop,#menu.clean .mcol > :not(#title):not(#btnTilt):not(#btnTouch){opacity:0;visibility:hidden;pointer-events:none}
-#menu.clean #btnTilt,#menu.clean #btnTouch{transform:translateY(var(--cleanY,0px))}
-#menu.clean #btnTilt:active,#menu.clean #btnTouch:active{transform:translateY(var(--cleanY,0px)) scale(.97)}
+/* menu: a light screen over the live world (title, mode switch, PLAY in the middle of the screen,
+   the options toggle at the bottom). The toggle raises a glass sheet with the settings, shrinks the
+   title into the top bar and hides PLAY. Offsets (--playY, --tY, --hY, --sheetTop) come from the game. */
+#menu{display:block;padding:0;background:none}
+#menu::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .5s;
+  background:radial-gradient(140% 90% at 50% 40%,rgba(5,6,13,.15) 0%,rgba(5,6,13,.6) 70%,rgba(5,6,13,.85) 100%)}
+#menu.opts::before{opacity:1}
+#mLeft{position:absolute;left:calc(var(--sal) + 22px);right:calc(var(--sar) + 22px);top:calc(var(--sat) + clamp(34px,7vh,76px))}
+#mRight{position:absolute;left:calc(var(--sal) + 22px);right:calc(var(--sar) + 22px);top:var(--playY,50%)}
+#title,#tagline,#modeSeg,#modeInfo,#mRight,#menuTop{transition:transform .6s cubic-bezier(.3,1.2,.4,1),opacity .35s,visibility .35s}
+#menu.opts #title{transform:translateY(var(--tY,0px)) scale(.42)}
+#menu.opts #tagline{opacity:0;visibility:hidden;transform:translateY(calc(var(--tY,0px) * .6)) scale(.7)}
+#menu.opts #modeSeg,#menu.opts #modeInfo{transform:translateY(var(--hY,0px))}
+#menu.opts #mRight{opacity:0;visibility:hidden;pointer-events:none;transform:scale(.9)}
+#menuTop{opacity:0;visibility:hidden;transform:translateY(-12px)}
+#menu.opts #menuTop{opacity:1;visibility:visible;transform:none}
+#sheet{position:absolute;left:0;right:0;bottom:0;z-index:2;max-height:calc(100% - var(--sheetTop,180px));overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
+  padding:18px calc(var(--sar) + 18px) calc(var(--sab) + 84px) calc(var(--sal) + 18px);border-radius:30px 30px 0 0;
+  background:rgba(9,12,26,.7);backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);
+  border-top:1px solid rgba(255,255,255,.14);box-shadow:0 -24px 60px rgba(0,0,0,.4);
+  transform:translateY(106%);visibility:hidden;transition:transform .55s cubic-bezier(.32,.72,0,1),visibility .55s}
+#sheet::before{content:"";position:absolute;top:8px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:rgba(255,255,255,.3)}
+#menu.opts #sheet{transform:none;visibility:visible}
+.sheetIn{max-width:420px;margin:0 auto;display:flex;flex-direction:column;align-items:center}
+.optRow{width:100%;display:flex;flex-direction:column;align-items:center;gap:7px;margin-top:14px;opacity:0;transform:translateY(22px);
+  transition:opacity .3s,transform .55s cubic-bezier(.3,1.25,.4,1)}
+#menu.opts .optRow{opacity:1;transform:none;transition-delay:calc(var(--i) * 45ms + 90ms)}
+.optLbl{font-size:10px;font-weight:800;letter-spacing:.24em;color:rgba(235,242,255,.6)}
+.optRow .seg{max-width:100%}
+#btnOpts{position:absolute;left:50%;bottom:calc(var(--sab) + 18px);z-index:3;height:48px;min-width:136px;padding:0 22px 0 16px;border-radius:24px;transform:translateX(-50%);
+  display:flex;align-items:center;justify-content:center;gap:9px;font-size:13px;font-weight:900;letter-spacing:.14em;white-space:nowrap;
+  background:var(--glass);border:1px solid var(--glass-brd);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 6px 24px rgba(0,0,0,.35);
+  transition:background .3s,color .3s,transform .3s cubic-bezier(.3,1.3,.4,1)}
+#btnOpts:active{transform:translateX(-50%) scale(.94)}
+#btnOpts .ic circle{transition:transform .5s cubic-bezier(.3,1.4,.4,1)}
+#btnOpts .lb2,#menu.opts #btnOpts .lb1{display:none}
+#menu.opts #btnOpts .lb2{display:inline}
+#menu.opts #btnOpts{background:#fff;color:#0a0e1c;border-color:#fff}
+#menu.opts #btnOpts .k1{transform:translateX(-7px)}
+#menu.opts #btnOpts .k2{transform:translateX(7px)}
+/* first appearance: every part rises into place, one after the other */
+@keyframes rise{from{opacity:0;transform:translateY(26px) scale(.94);filter:blur(8px)}to{opacity:1;transform:none;filter:none}}
+@keyframes riseBtn{from{opacity:0;transform:translateX(-50%) translateY(26px)}to{opacity:1;transform:translateX(-50%)}}
+#menu.intro #title{animation:rise 1s cubic-bezier(.2,.9,.3,1) backwards}
+#menu.intro #tagline{animation:rise .9s .14s cubic-bezier(.2,.9,.3,1) backwards}
+#menu.intro #modeSeg{animation:rise .9s .24s cubic-bezier(.2,.9,.3,1) backwards}
+#menu.intro #modeInfo{animation:rise .9s .3s cubic-bezier(.2,.9,.3,1) backwards}
+#menu.intro #mRight{animation:rise .9s .4s cubic-bezier(.2,.9,.3,1) backwards}
+#menu.intro #btnOpts{animation:riseBtn .9s .52s cubic-bezier(.2,.9,.3,1) backwards}
 #xfade{position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:0}
 #title{font-size:clamp(62px,19vw,150px);font-weight:900;letter-spacing:.04em;line-height:.9;margin-right:-.06em;
   background:linear-gradient(100deg,#fff 0%,#d9fbff 30%,var(--accent) 45%,#fff 52%,var(--accent2) 70%,#fff 100%);background-size:250% 100%;
@@ -155,20 +193,27 @@ body.star #starGlow{opacity:1}
 .ghostBtn:active{transform:scale(.97)}
 .hint{margin-top:14px;font-size:14px;font-weight:600;color:var(--dim);letter-spacing:.02em;text-shadow:0 2px 6px #000;max-width:420px}
 .hint b{color:#fff}
-#menuBest{margin-top:22px;font-size:12px;font-weight:800;letter-spacing:.26em;color:rgba(235,242,255,.8);text-shadow:0 0 3px rgba(0,0,0,.8),0 1px 6px rgba(0,0,0,.7)}
+#menuBest{margin-top:16px;font-size:12px;font-weight:800;letter-spacing:.26em;color:rgba(235,242,255,.8);text-shadow:0 0 3px rgba(0,0,0,.8),0 1px 6px rgba(0,0,0,.7)}
 #menuBest span{color:var(--gold);font-size:15px;letter-spacing:.06em}
 .skinRow{display:flex;align-items:center;gap:10px;width:100%;justify-content:center}
 .skinRow .lbl{font-size:11px;font-weight:800;letter-spacing:.2em;color:rgba(235,242,255,.8);width:54px;text-align:right;text-shadow:0 0 3px rgba(0,0,0,.8),0 1px 6px rgba(0,0,0,.7)}
 .sw{width:44px;height:44px;border-radius:13px;border:2px solid rgba(255,255,255,.18);position:relative;box-shadow:0 4px 14px rgba(0,0,0,.4)}
 .sw.round{border-radius:50%}
 .sw.sel{border-color:#fff;box-shadow:0 0 0 3px rgba(78,242,255,.5),0 4px 14px rgba(0,0,0,.4)}
-#menuTop{position:absolute;top:calc(var(--sat) + 10px);left:calc(var(--sal) + 12px);right:calc(var(--sar) + 12px);display:flex;justify-content:space-between;align-items:center;gap:8px;z-index:2}
-.seg{display:inline-flex;padding:4px;border-radius:15px;background:var(--glass);border:1px solid var(--glass-brd);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);gap:4px}
-.seg button{min-height:38px;padding:6px 12px;border-radius:11px;font-size:12px;font-weight:900;letter-spacing:.12em;color:var(--dim);transition:background .2s,color .2s}
-.seg button.on{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
+#menuTop{position:absolute;top:calc(var(--sat) + 10px);left:calc(var(--sal) + 12px);right:calc(var(--sar) + 12px);display:flex;justify-content:space-between;align-items:center;gap:8px;z-index:3}
+/* segmented controls: a glass pill (placed by the game) slides under the chosen option */
+.seg{position:relative;display:inline-flex;padding:4px;border-radius:15px;background:var(--glass);border:1px solid var(--glass-brd);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);gap:4px}
+.seg .pill{position:absolute;top:4px;bottom:4px;left:0;width:0;border-radius:11px;pointer-events:none;background:rgba(255,255,255,.17);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.3),0 2px 10px rgba(0,0,0,.25);transition:transform .5s cubic-bezier(.3,1.3,.4,1),width .5s cubic-bezier(.3,1.3,.4,1)}
+.seg button{position:relative;min-height:38px;padding:6px 12px;border-radius:11px;font-size:12px;font-weight:900;letter-spacing:.12em;color:var(--dim);transition:color .3s}
+.seg button.on{color:#fff}
+.seg button:active{transform:scale(.95)}
 #modeSeg{margin-top:20px}
+#ctrlSeg button{min-width:128px}
+#todSeg{gap:2px;width:300px}
+#todSeg button{flex:1 1 auto;padding:6px 8px;font-size:11px;letter-spacing:.08em;white-space:nowrap}
 #modeSeg button{width:142px;min-height:44px;padding:6px 4px;font-size:13px;white-space:nowrap}
-#tgKid{margin-top:10px;width:290px;max-width:100%;justify-content:center;white-space:nowrap}
+#tgKid{width:290px;max-width:100%;justify-content:center;white-space:nowrap}
 .linkBtn{background:none;border:0;padding:2px 6px;font:inherit;font-weight:900;letter-spacing:.08em;line-height:16px;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 #tgKid:not(.off){color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold));border-color:transparent}
 #ovRails{margin-top:10px;padding:6px 14px;border-radius:12px;font-size:13px;font-weight:800;letter-spacing:.06em;color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold))}
@@ -197,6 +242,8 @@ body.star #starGlow{opacity:1}
 @keyframes shReady{from{box-shadow:0 0 0 1px var(--accent),0 0 8px rgba(78,242,255,.25)}to{box-shadow:0 0 0 2px var(--accent),0 0 24px rgba(78,242,255,.6)}}
 #ovMode{margin-top:6px;font-size:12px;font-weight:800;letter-spacing:.2em;color:var(--accent)}
 #pause .skins{margin-top:16px}
+#sheet .skins{margin-top:0}
+#permMsg{margin-left:auto;margin-right:auto}
 #permMsg{margin-top:14px;font-size:13px;font-weight:700;color:#ffb3c7;max-width:380px;text-shadow:0 2px 6px #000}
 
 #calib{background:rgba(5,6,13,.25)}
@@ -240,13 +287,23 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 .row2{display:flex;gap:10px;width:100%;max-width:420px}
 .row2 .ghostBtn{flex:1}
 #noGL{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:30px;text-align:center;z-index:99;background:#05060d;font-weight:700}
-.mcol{display:flex;flex-direction:column;align-items:center;width:100%}
-#mLeft #menuBest{order:3}
-@media (orientation:portrait){ #menuBest{margin-top:12px} #mRight{margin-top:0} #menu .bigBtn{margin-top:22px} }
-@media (orientation:portrait) and (max-height:700px){ #tagline{margin-top:4px} #modeSeg{margin-top:12px} #menu .bigBtn{margin-top:14px;height:56px} .skins{margin-top:12px} .sw{width:40px;height:40px} #menuBest{margin-top:8px} }
+#mLeft,#mRight{display:flex;flex-direction:column;align-items:center}
+#menu .bigBtn{margin:0 auto}
+@media (orientation:portrait) and (max-height:700px){ #tagline{margin-top:4px} #modeSeg{margin-top:12px} #menu .bigBtn{height:56px} .skins{gap:8px} .sw{width:40px;height:40px} .optRow{margin-top:10px} .optRow .seg button{min-height:34px} }
 @media (orientation:landscape) and (max-height:560px){
-  #menu{flex-direction:row;gap:4vw}
-  .mcol{flex:1;max-width:440px}
+  #mLeft{top:0;bottom:0;right:52%;left:calc(var(--sal) + 24px);display:flex;flex-direction:column;justify-content:center}
+  #mRight{top:0;bottom:0;left:52%;right:calc(var(--sar) + 24px);display:flex;flex-direction:column;justify-content:center}
+  #btnOpts{left:76%;transition:background .3s,color .3s,transform .55s cubic-bezier(.3,1.15,.4,1)}
+  #menu.opts #btnOpts{transform:translate(calc(-50% - 26vw),calc(74px + var(--sab) + var(--sat) - 100vh))}   /* DONE glides to the middle of the top bar */
+  #sheet{left:50%;top:calc(var(--sat) + 62px);max-height:none;border-radius:26px 0 0 0;padding:12px calc(var(--sar) + 16px) calc(var(--sab) + 12px) 16px;transform:translateX(106%)}
+  #sheet::before{display:none}
+  .optRow{flex-direction:row;justify-content:space-between;margin-top:8px}
+  .optRow .skins{gap:6px}
+  .optLbl{width:74px;text-align:left;line-height:1.4}
+  #todSeg{width:284px}
+  #todSeg button{padding:6px 6px}
+  #menu.opts #title,#menu.opts #modeSeg,#menu.opts #modeInfo{transform:none}
+  #menu.opts #tagline{opacity:1;visibility:visible;transform:none}
   #title{font-size:clamp(52px,18vh,110px)}
   .bigBtn{margin-top:0;height:52px;font-size:14px}
   .ghostBtn{min-height:44px;margin-top:10px;padding:8px 18px}
@@ -264,6 +321,10 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   #over .bigBtn,#pause .bigBtn{margin-top:14px}
   #record{margin-top:6px}
   .volRow{margin-top:12px}
+}
+@media (orientation:landscape) and (max-height:560px) and (max-width:700px){
+  #sheet{left:36%}
+  .optRow{flex-direction:column;gap:4px}
 }
 </style>
 </head>
@@ -296,26 +357,32 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   <div id="toasts"></div>
 </div>
 
-<div class="screen" id="menu">
+<div class="screen intro" id="menu">
   <div id="menuTop">
-    <div class="seg" id="langSeg"><button data-lang="fr">FR</button><button data-lang="en">EN</button></div>
+    <div class="seg" id="langSeg"><i class="pill"></i><button data-lang="fr">FR</button><button data-lang="en">EN</button></div>
     <div class="tgRow"><button class="tg icon tgMusic" data-i18n-aria="music"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M8.6 17.4V6.2l11.2-2.7v11.4M8.6 9.6l11.2-2.7"/><ellipse cx="6" cy="17.6" rx="2.9" ry="2.3" transform="rotate(-18 6 17.6)"/><ellipse cx="17.2" cy="15" rx="2.9" ry="2.3" transform="rotate(-18 17.2 15)"/><path class="cut" d="M3.5 3.5l17 17"/><path class="stk slash" d="M3.5 3.5l17 17"/></svg></button><button class="tg icon tgSfx" data-i18n-aria="sfx"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 9h3.7l4.7-4c.6-.5 1.5-.1 1.5.7v12.6c0 .8-.9 1.2-1.5.7l-4.7-4H3.4c-.6 0-1-.4-1-1V10c0-.6.4-1 1-1z"/><path class="stk wave" d="M16.3 9.3a3.8 3.8 0 0 1 0 5.4"/><path class="stk wave" d="M19 6.6a7.6 7.6 0 0 1 0 10.8"/><path class="stk mute" d="M16.6 9.6l4.8 4.8M21.4 9.6l-4.8 4.8"/></svg></button></div>
   </div>
-  <div class="mcol" id="mLeft">
+  <div id="mLeft">
     <div id="title">GYROLL</div>
     <div id="tagline">How far can you go?</div>
-    <div class="seg" id="modeSeg"><button data-mode="random" data-i18n="modeRandom"></button><button data-mode="daily" data-i18n="modeDaily"></button></div>
+    <div class="seg" id="modeSeg"><i class="pill"></i><button data-mode="random" data-i18n="modeRandom"></button><button data-mode="daily" data-i18n="modeDaily"></button></div>
     <div id="modeInfo"><span id="modeTxt"></span><button class="linkBtn hidden" id="btnNewTrack" data-i18n="newTrack"></button></div>
-    <button class="tg" id="tgKid"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 2.9l7.4 2.8v5.5c0 4.6-3 8.5-7.4 9.9-4.4-1.4-7.4-5.3-7.4-9.9V5.7z"/><path class="stk" d="M8.6 12.1l2.4 2.4 4.5-4.6"/></svg><span data-i18n="kid"></span></button>
+  </div>
+  <div id="mRight">
+    <button class="bigBtn" id="btnPlay" data-i18n="play"></button>
     <div id="menuBest">BEST <span class="num" id="mBest">0 m</span></div>
-  </div>
-  <div class="mcol" id="mRight">
-    <button class="bigBtn" id="btnTilt"></button>
-    <button class="ghostBtn" id="btnTouch" data-i18n="playTouch"></button>
     <div id="permMsg" class="hidden"></div>
-    <div class="skins" id="skinsMenu"></div>
-    <button class="ghostBtn small hidden" id="btnInstall" data-i18n="install"></button>
   </div>
+  <div id="sheet">
+    <div class="sheetIn">
+      <div class="optRow" style="--i:0"><button class="tg" id="tgKid"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 2.9l7.4 2.8v5.5c0 4.6-3 8.5-7.4 9.9-4.4-1.4-7.4-5.3-7.4-9.9V5.7z"/><path class="stk" d="M8.6 12.1l2.4 2.4 4.5-4.6"/></svg><span data-i18n="kid"></span></button></div>
+      <div class="optRow" id="ctrlRow" style="--i:1"><span class="optLbl" data-i18n="control"></span><div class="seg" id="ctrlSeg"><i class="pill"></i><button data-ctrl="tilt" data-i18n="ctrlTilt"></button><button data-ctrl="touch" data-i18n="ctrlTouch"></button></div></div>
+      <div class="optRow" style="--i:2"><span class="optLbl" data-i18n="tod"></span><div class="seg" id="todSeg"><i class="pill"></i><button data-tod="real" data-i18n="todReal"></button><button data-tod="day" data-i18n="todDay"></button><button data-tod="night" data-i18n="todNight"></button><button data-tod="system" data-i18n="todSystem"></button></div></div>
+      <div class="optRow" style="--i:3"><div class="skins" id="skinsMenu"></div></div>
+      <button class="ghostBtn small hidden" id="btnInstall" data-i18n="install"></button>
+    </div>
+  </div>
+  <button id="btnOpts" aria-controls="sheet" aria-expanded="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M3.5 8h17M3.5 16h17"/><circle class="k1" cx="15" cy="8" r="2.8"/><circle class="k2" cx="9" cy="16" r="2.8"/></svg><span class="lb1" data-i18n="options"></span><span class="lb2" data-i18n="done"></span></button>
 </div>
 
 <div class="screen hidden" id="calib">

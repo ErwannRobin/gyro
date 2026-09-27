@@ -22,6 +22,7 @@ class Renderer {
     this.Z = { fog: [0, 0, 0], abyss: [0, 0, 0], skyMid: [0, 0, 0], sun: [1, 1, 1], stars: 1, haze: 1, dust: [1, 1, 1], c1: [1, 1, 1], c2: [1, 1, 1],
       floorA: [0, 0, 0], floorB: [1, 1, 1], shafts: 1, drift: [0, 0] };
     this.sunDir = new Float32Array([0, 1, 0]);
+    this.sky = skyState('day'); this.zones = ZONES.map((z) => skyZone(z, this.sky));   // world palettes under the time of day
     this.initGL();
   }
 
@@ -153,7 +154,7 @@ class Renderer {
   // Zone panoramas are built lazily (one per call) so start-up stays fast.
   ensureZone(i) {
     if (this.zoneTex[i]) return false;
-    const c = makeSkyCanvases(ZONES[i], 11 + i * 7);
+    const c = makeSkyCanvases(this.zones[i].paint, 11 + i * 7);
     this.zoneTex[i] = { sky: this.makeTex(c.sky, true), mid: this.makeTex(c.mid, true), blur: this.makeTex(c.blur, true) };
     return true;
   }
@@ -161,7 +162,7 @@ class Renderer {
   setZones(a, b, k) {
     this.ensureZone(a); if (k > 0) this.ensureZone(b);
     this.zA = a; this.zB = k > 0 ? b : a; this.zMix = k > 0 ? k : 0;
-    const A = ZONES[a], B = ZONES[this.zB], Z = this.Z, m = this.zMix;
+    const A = this.zones[a], B = this.zones[this.zB], Z = this.Z, m = this.zMix;
     const mixv = (o, x, y) => { o[0] = lerp(x[0], y[0], m); o[1] = lerp(x[1], y[1], m); o[2] = lerp(x[2], y[2], m); };
     for (const key of ['fog', 'abyss', 'skyMid', 'sun', 'dust', 'c1', 'c2', 'floorA', 'floorB']) mixv(Z[key], A[key], B[key]);
     Z.stars = lerp(A.stars, B.stars, m); Z.shafts = lerp(A.shafts, B.shafts, m); Z.haze = lerp(A.haze || 1, B.haze || 1, m);
@@ -170,6 +171,16 @@ class Renderer {
     const x = lerp(A.sunDir[0] / na, B.sunDir[0] / nb, m), y = lerp(A.sunDir[1] / na, B.sunDir[1] / nb, m), z = lerp(A.sunDir[2] / na, B.sunDir[2] / nb, m);
     const l = Math.hypot(x, y, z) || 1;
     this.sunDir[0] = x / l; this.sunDir[1] = y / l; this.sunDir[2] = z / l;
+  }
+  // New time of day: palettes change and every panorama is painted again (lazily, the current one now).
+  setSky(S) {
+    if (this.sky.key === S.key) return false;
+    this.sky = S; this.zones = ZONES.map((z) => skyZone(z, S));
+    const gl = this.gl;
+    for (const t of this.zoneTex) if (t) { gl.deleteTexture(t.sky); gl.deleteTexture(t.mid); gl.deleteTexture(t.blur); }
+    this.zoneTex = [];
+    this.setZones(this.zA, this.zB, this.zMix);
+    return true;
   }
   bindZoneTex(p, key, uA, uB, unitA, unitB) {
     const gl = this.gl, A = this.zoneTex[this.zA], B = this.zoneTex[this.zB] || A;
@@ -243,6 +254,7 @@ class Renderer {
     const Z = this.Z, p = this.use(this.pSky);
     gl.uniformMatrix4fv(p.u('u_invVP'), false, this.invVP);
     gl.uniform3fv(p.u('u_sunDir'), this.sunDir); gl.uniform3fv(p.u('u_sunCol'), Z.sun);
+    const S = this.sky; gl.uniform4f(p.u('u_orb'), S.moon ? 1 : 0, S.phase, S.side, S.moon ? 0.05 : 0.026);
     gl.uniform1f(p.u('u_time'), time % 100); gl.uniform1f(p.u('u_mix'), this.zMix); gl.uniform1f(p.u('u_flash'), this.flash);
     this.bindZoneTex(p, 'sky', 'u_env', 'u_env2', 0, 1);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.triBuf); this.attribs(1);
@@ -357,7 +369,7 @@ class Renderer {
   }
   freeFB(f) { const gl = this.gl; gl.deleteFramebuffer(f.fb); gl.deleteTexture(f.tex); if (f.rb) gl.deleteRenderbuffer(f.rb); }
   drawFloor(y, time) {
-    const gl = this.gl, Z = this.Z, A = ZONES[this.zA], B = ZONES[this.zB], p = this.use(this.pFloor);
+    const gl = this.gl, Z = this.Z, A = this.zones[this.zA], B = this.zones[this.zB], p = this.use(this.pFloor);
     gl.uniformMatrix4fv(p.u('u_vp'), false, this.vp); gl.uniform3fv(p.u('u_cam'), this.cam); gl.uniform1f(p.u('u_y'), y);
     gl.uniform1f(p.u('u_time'), time % 1000); gl.uniform1f(p.u('u_stA'), A.floor); gl.uniform1f(p.u('u_stB'), B.floor); gl.uniform1f(p.u('u_mix'), this.zMix);
     gl.uniform3fv(p.u('u_aA'), A.floorA); gl.uniform3fv(p.u('u_bA'), A.floorB); gl.uniform3fv(p.u('u_aB'), B.floorA); gl.uniform3fv(p.u('u_bB'), B.floorB);
@@ -529,6 +541,11 @@ class Renderer {
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, A.tex); gl.uniform1i(p.u('u_bloom'), 1); gl.activeTexture(gl.TEXTURE0);
       gl.uniform1f(p.u('u_bloomK'), o.bloom); gl.uniform1f(p.u('u_blur'), o.blur); gl.uniform1f(p.u('u_ca'), o.ca);
       gl.uniform1f(p.u('u_time'), this.time % 100); gl.uniform2f(p.u('u_center'), o.cx, o.cy);
+      // lens flare: where the sun (or, fainter, the moon) lands on the screen, fading at the edges
+      const d = this.sunDir, v = this.vp, x = this.cam[0] + d[0] * 500, y = this.cam[1] + d[1] * 500, z = this.cam[2] + d[2] * 500;
+      const cw = v[3] * x + v[7] * y + v[11] * z + v[15], sx = (v[0] * x + v[4] * y + v[8] * z + v[12]) / cw * 0.5 + 0.5, sy = (v[1] * x + v[5] * y + v[9] * z + v[13]) / cw * 0.5 + 0.5;
+      const fk = cw > 0 ? (this.sky.moon ? 0.3 : 1) * clamp((0.5 - Math.max(Math.abs(sx - 0.5), Math.abs(sy - 0.5))) * 14, 0, 1) * (o.flare === undefined ? 1 : o.flare) : 0;
+      gl.uniform3f(p.u('u_sun'), sx, sy, fk); gl.uniform3fv(p.u('u_sunTint'), this.Z.sun); gl.uniform1f(p.u('u_aspect'), this.w / this.h);
     });
   }
 }

@@ -1,20 +1,24 @@
 import { test, expect } from '@playwright/test';
-import { openGame } from './helpers.js';
+import { openGame, openOptions, play } from './helpers.js';
 
 test.describe('French browser', () => {
   test.use({ locale: 'fr-FR', hasTouch: true, isMobile: true });
   test('language is detected and can be switched on the menu', async ({ page }) => {
     await openGame(page);
-    await expect(page.locator('#btnTilt')).toHaveText('JOUER AVEC LE GYROSCOPE');
+    await expect(page.locator('#btnPlay')).toHaveText('JOUER');
+    await expect(page.locator('#modeSeg button[data-mode=random]')).toHaveText('ENTRAÎNEMENT');
+    await openOptions(page);
     await page.tap('#langSeg button[data-lang="en"]');
-    await expect(page.locator('#btnTilt')).toHaveText('PLAY WITH GYROSCOPE');
+    await expect(page.locator('#btnPlay')).toHaveText('PLAY');
+    await expect(page.locator('#modeSeg button[data-mode=random]')).toHaveText('TRAINING');
     await page.reload(); await page.waitForFunction(() => window.__game);
-    await expect(page.locator('#btnTilt')).toHaveText('PLAY WITH GYROSCOPE');   // choice is remembered
+    await expect(page.locator('#btnPlay')).toHaveText('PLAY');   // choice is remembered
   });
 });
 
 test('music and sound toggles work independently', async ({ page }) => {
   await openGame(page);
+  await openOptions(page);
   await page.click('.tgMusic');
   await page.click('#menu .tgSfx');
   const r = await page.evaluate(() => ({ music: window.__game.audio.musicOn, sfx: window.__game.audio.sfxOn, cls: document.querySelector('#menu .tgMusic').className }));
@@ -25,7 +29,7 @@ test('music and sound toggles work independently', async ({ page }) => {
 
 test('skins can be changed from the pause menu', async ({ page }) => {
   await openGame(page);
-  await page.click('#btnTilt');
+  await play(page);
   await page.evaluate(() => { const g = window.__game; g.halt = true; for (let k = 0; k < 40; k++) g.tick(1 / 30, false); g.pause(); });
   await expect(page.locator('#pause')).toBeVisible();
   await page.click('#skinsPause .skinRow:nth-child(1) .sw >> nth=2');

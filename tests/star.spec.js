@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { openGame, teleport } from './helpers.js';
+import { openGame, teleport, openOptions, play } from './helpers.js';
 
 // Starts a keyboard run and skips the countdown.
 async function startRun(page) {
-  await page.click('#btnTilt');
+  await play(page);
   await page.evaluate(() => { const g = window.__game; g.halt = true; for (let k = 0; k < 40; k++) g.tick(1 / 30, false); });
 }
 
@@ -110,6 +110,7 @@ test('star power cannot start before the gauge is full; Space and a tap on the g
 
 test('safety rails give way to a hard side hit', async ({ page }) => {
   await openGame(page);
+  await openOptions(page);
   await page.click('#tgKid');
   await startRun(page);
   const hit = async (speed) => {
@@ -139,6 +140,7 @@ test('safety rails give way to a hard side hit', async ({ page }) => {
 });
 
 test('star power smashes the obstacles it touches; without it they stop the ball', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('gyroll.rseed', '777'));   // a fixed track: some posts sit on slopes
   const errors = await openGame(page);
   await startRun(page);
   const run = (star) => page.evaluate(([star, tp]) => {
@@ -164,6 +166,7 @@ test('star power smashes the obstacles it touches; without it they stop the ball
 
 test('speed keeps growing past 50 km/h with full forward tilt', async ({ page }) => {
   await openGame(page);
+  await openOptions(page);
   await page.click('#tgKid');
   await startRun(page);
   const v = await page.evaluate(() => {

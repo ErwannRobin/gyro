@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
-import { openGame } from './helpers.js';
+import { openGame, openOptions, play } from './helpers.js';
 
 test('kid mode: side rails catch the ball, separate best, badge at game over', async ({ page }) => {
   const errors = await openGame(page);
+  await openOptions(page);
   await page.click('#tgKid');
   expect(await page.evaluate(() => [window.__game.kid, window.__game.physics.kid])).toEqual([true, true]);
-  await page.click('#btnTilt');
+  await play(page);
   const r = await page.evaluate(() => {
     const g = window.__game; g.halt = true;
     for (let k = 0; k < 40; k++) g.tick(1 / 30, false);
@@ -38,7 +39,7 @@ test('kid mode: side rails catch the ball, separate best, badge at game over', a
 test('normal mode has no rails badge', async ({ page }) => {
   await openGame(page);
   expect(await page.evaluate(() => window.__game.kid)).toBe(false);
-  await page.click('#btnTilt');
+  await play(page);
   await page.evaluate(() => {
     const g = window.__game; g.halt = true;
     for (let k = 0; k < 40; k++) g.tick(1 / 30, false);

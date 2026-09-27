@@ -461,21 +461,39 @@ void main(){
   gl_FragColor = vec4(col * u_fade, clamp(glow + u_speed * fr * 0.5, 0.0, 1.0));
 }`;
 
-// Sky: fullscreen triangle sampling the pre-rendered equirect panorama.
+// Sky: fullscreen triangle sampling the pre-rendered equirect panorama, plus the sun (a disc,
+// darker at its rim, in a halo) or the moon (a lit ball with seas and craters, its phase, a cold
+// halo) at u_sunDir. u_orb: x 1 = moon, y moon phase angle (0 = full), z lit side (+1 right), w radius.
 const VS_SKY = `attribute vec2 a_pos; varying vec2 v_p; void main(){ v_p = a_pos; gl_Position = vec4(a_pos, 0.9999, 1.0); }`;
 const FS_SKY = GLSL_COMMON + `
 varying vec2 v_p; uniform mat4 u_invVP; uniform sampler2D u_env; uniform sampler2D u_env2; uniform float u_mix; uniform float u_flash;
-uniform vec3 u_sunDir; uniform vec3 u_sunCol; uniform float u_time;
+uniform vec3 u_sunDir; uniform vec3 u_sunCol; uniform float u_time; uniform vec4 u_orb;
 void main(){
   vec4 a = u_invVP * vec4(v_p, -1.0, 1.0); vec4 b = u_invVP * vec4(v_p, 1.0, 1.0);
   vec3 d = normalize(b.xyz / b.w - a.xyz / a.w);
   vec2 q = equirect(d);
   vec3 col = u_mix < 0.002 ? texture2D(u_env, q).rgb : mix(texture2D(u_env, q).rgb, texture2D(u_env2, q).rgb, u_mix);
   col += vec3(0.75, 0.7, 1.0) * u_flash * (0.35 + 0.65 * smoothstep(-0.1, 0.5, d.y));
-  float sd = max(dot(d, u_sunDir), 0.0);
-  col += u_sunCol * (pow(sd, 900.0) * 3.0 + pow(sd, 60.0) * 0.25);
+  float c = dot(d, u_sunDir), sd = max(c, 0.0), glow;
+  // position on the disc, in radii (x to the right of the screen, y up)
+  vec3 rx = normalize(cross(u_sunDir, vec3(0.0, 1.0, 0.0))), ry = cross(rx, u_sunDir);
+  vec2 p = vec2(dot(d, rx), dot(d, ry)) / u_orb.w;
+  float r2 = c > 0.0 ? dot(p, p) : 9.0, disc = smoothstep(1.0, 0.88, sqrt(r2));
+  if (u_orb.x < 0.5) {
+    col += u_sunCol * (disc * (1.3 + 1.2 * sqrt(max(1.0 - r2, 0.0))) + pow(sd, 2500.0) * 0.5 + pow(sd, 300.0) * 0.1);
+    glow = disc * 0.8 + pow(sd, 2500.0) * 0.5;
+  } else {
+    vec3 n = vec3(p, sqrt(max(1.0 - r2, 0.0)));
+    float lit = smoothstep(-0.08, 0.16, dot(n, normalize(vec3(sin(u_orb.y) * u_orb.z, 0.15 * sin(u_orb.y), cos(u_orb.y)))));
+    vec2 uv = p * 1.7 + 3.0;
+    float seas = smoothstep(0.42, 0.72, fbm(uv * 1.4)), crater = smoothstep(0.78, 0.9, noise(uv * 7.0));
+    vec3 alb = vec3(0.93, 0.95, 1.0) * (1.0 - 0.36 * seas - 0.06 * crater) * (0.92 + 0.08 * noise(uv * 19.0));
+    col = mix(col, alb * (lit * (0.62 + 0.3 * n.z) + 0.05), disc);
+    col += vec3(0.62, 0.72, 1.0) * (pow(sd, 700.0) * 0.28 + pow(sd, 60.0) * 0.1 + pow(sd, 8.0) * 0.03) * (0.4 + 0.6 * cos(u_orb.y * 0.5));
+    glow = disc * lit * 0.16 + pow(sd, 900.0) * 0.12;
+  }
   col += (hash(v_p * 431.0 + u_time) - 0.5) * 0.012;
-  gl_FragColor = vec4(col, clamp(pow(sd, 600.0) * 1.5, 0.0, 1.0));
+  gl_FragColor = vec4(col, clamp(glow, 0.0, 1.0));
 }`;
 
 // Floor far below the track (midground/background parallax layer), one style per zone.
@@ -650,7 +668,9 @@ void main(){
 const FS_COMPOSITE = `
 precision mediump float; varying vec2 v_uv;
 uniform sampler2D u_scene; uniform sampler2D u_bloom; uniform float u_bloomK; uniform float u_blur; uniform float u_ca; uniform float u_time; uniform vec2 u_center;
+uniform vec3 u_sun; uniform vec3 u_sunTint; uniform float u_aspect;
 float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+float ghost(vec2 d, float r){ float l = length(d) / r; return smoothstep(1.0, 0.75, l) * (0.55 + 0.45 * l); }
 void main(){
   vec2 dir = v_uv - u_center; float r = length(dir);
   vec3 c;
@@ -663,6 +683,19 @@ void main(){
     c.r = mix(c.r, texture2D(u_scene, v_uv + o).r, 0.8); c.b = mix(c.b, texture2D(u_scene, v_uv - o).b, 0.8);
   }
   c += texture2D(u_bloom, v_uv).rgb * u_bloomK;
+  // lens flare of the sun (u_sun: its place on the screen, strength): ghosts strung along the line
+  // through the middle of the screen, a halo ring and a thin streak; none when something hides the sun
+  if (u_sun.z > 0.001) {
+    float vis = u_sun.z * smoothstep(0.62, 0.9, dot(texture2D(u_scene, u_sun.xy).rgb, vec3(0.3, 0.55, 0.15)));
+    vec2 A = vec2(u_aspect, 1.0), s = u_sun.xy, ax = vec2(0.5) - s, dv = (v_uv - s) * A;
+    vec3 fl = u_sunTint * ghost((v_uv - s - ax * 0.45) * A, 0.035) * 0.1;
+    fl += vec3(0.5, 0.8, 1.0) * ghost((v_uv - s - ax * 0.9) * A, 0.07) * 0.06;
+    fl += vec3(1.0, 0.6, 0.9) * ghost((v_uv - s - ax * 1.3) * A, 0.025) * 0.12;
+    fl += vec3(0.6, 1.0, 0.7) * ghost((v_uv - s - ax * 1.7) * A, 0.11) * 0.045;
+    fl += u_sunTint * ghost((v_uv - s - ax * 2.1) * A, 0.05) * 0.07;
+    fl += u_sunTint * (smoothstep(0.02, 0.0, abs(length(dv) - 0.16)) * 0.05 + exp(-abs(dv.y) * 160.0) * exp(-abs(dv.x) * 4.0) * 0.22);
+    c += fl * vis;
+  }
   c = c / (1.0 + max(max(c.r, c.g), c.b) * 0.08);     // soft shoulder
   c += (h(v_uv * 731.0 + fract(u_time)) - 0.5) * 0.02;
   gl_FragColor = vec4(c, 1.0);

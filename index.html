@@ -123,17 +123,55 @@ body.star #starGlow{opacity:1}
   background:radial-gradient(140% 90% at 50% 40%,rgba(5,6,13,0) 0%,rgba(5,6,13,.55) 70%,rgba(5,6,13,.85) 100%);
   transition:opacity .45s;overflow:hidden}
 .screen.fade{opacity:0;pointer-events:none}
-/* menu: a tap on the background hides everything but the title and the play buttons; the play
-   buttons glide to the middle of the screen (--cleanY, set by the game) so the ball below shows */
-#menu{background:none}
-#menu::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;transition:opacity .4s;
-  background:radial-gradient(140% 90% at 50% 40%,rgba(5,6,13,0) 0%,rgba(5,6,13,.55) 70%,rgba(5,6,13,.85) 100%)}
-#menuTop,#menu .mcol > *{transition:opacity .35s,visibility .35s}
-#menu #btnTilt,#menu #btnTouch{transition:opacity .35s,visibility .35s,transform .45s cubic-bezier(.2,.8,.25,1)}
-#menu.clean::before{opacity:0}
-#menu.clean #menuTop,#menu.clean .mcol > :not(#title):not(#btnTilt):not(#btnTouch){opacity:0;visibility:hidden;pointer-events:none}
-#menu.clean #btnTilt,#menu.clean #btnTouch{transform:translateY(var(--cleanY,0px))}
-#menu.clean #btnTilt:active,#menu.clean #btnTouch:active{transform:translateY(var(--cleanY,0px)) scale(.97)}
+/* menu: a light screen over the live world (title, mode switch, PLAY in the middle of the screen,
+   the options toggle at the bottom). The toggle raises a glass sheet with the settings, shrinks the
+   title into the top bar and hides PLAY. Offsets (--playY, --tY, --hY, --sheetTop) come from the game. */
+#menu{display:block;padding:0;background:none}
+#menu::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;opacity:0;transition:opacity .5s;
+  background:radial-gradient(140% 90% at 50% 40%,rgba(5,6,13,.15) 0%,rgba(5,6,13,.6) 70%,rgba(5,6,13,.85) 100%)}
+#menu.opts::before{opacity:1}
+#mLeft{position:absolute;left:calc(var(--sal) + 22px);right:calc(var(--sar) + 22px);top:calc(var(--sat) + clamp(34px,7vh,76px))}
+#mRight{position:absolute;left:calc(var(--sal) + 22px);right:calc(var(--sar) + 22px);top:var(--playY,50%)}
+#title,#tagline,#modeSeg,#modeInfo,#mRight,#menuTop{transition:transform .6s cubic-bezier(.3,1.2,.4,1),opacity .35s,visibility .35s}
+#menu.opts #title{transform:translateY(var(--tY,0px)) scale(.42)}
+#menu.opts #tagline{opacity:0;visibility:hidden;transform:translateY(calc(var(--tY,0px) * .6)) scale(.7)}
+#menu.opts #modeSeg,#menu.opts #modeInfo{transform:translateY(var(--hY,0px))}
+#menu.opts #mRight{opacity:0;visibility:hidden;pointer-events:none;transform:scale(.9)}
+#menuTop{opacity:0;visibility:hidden;transform:translateY(-12px)}
+#menu.opts #menuTop{opacity:1;visibility:visible;transform:none}
+#sheet{position:absolute;left:0;right:0;bottom:0;z-index:2;max-height:calc(100% - var(--sheetTop,180px));overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;
+  padding:18px calc(var(--sar) + 18px) calc(var(--sab) + 84px) calc(var(--sal) + 18px);border-radius:30px 30px 0 0;
+  background:rgba(9,12,26,.7);backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);
+  border-top:1px solid rgba(255,255,255,.14);box-shadow:0 -24px 60px rgba(0,0,0,.4);
+  transform:translateY(106%);visibility:hidden;transition:transform .55s cubic-bezier(.32,.72,0,1),visibility .55s}
+#sheet::before{content:"";position:absolute;top:8px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:rgba(255,255,255,.3)}
+#menu.opts #sheet{transform:none;visibility:visible}
+.sheetIn{max-width:420px;margin:0 auto;display:flex;flex-direction:column;align-items:center}
+.optRow{width:100%;display:flex;flex-direction:column;align-items:center;gap:7px;margin-top:14px;opacity:0;transform:translateY(22px);
+  transition:opacity .3s,transform .55s cubic-bezier(.3,1.25,.4,1)}
+#menu.opts .optRow{opacity:1;transform:none;transition-delay:calc(var(--i) * 45ms + 90ms)}
+.optLbl{font-size:10px;font-weight:800;letter-spacing:.24em;color:rgba(235,242,255,.6)}
+.optRow .seg{max-width:100%}
+#btnOpts{position:absolute;left:50%;bottom:calc(var(--sab) + 18px);z-index:3;height:48px;min-width:136px;padding:0 22px 0 16px;border-radius:24px;transform:translateX(-50%);
+  display:flex;align-items:center;justify-content:center;gap:9px;font-size:13px;font-weight:900;letter-spacing:.14em;white-space:nowrap;
+  background:var(--glass);border:1px solid var(--glass-brd);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 6px 24px rgba(0,0,0,.35);
+  transition:background .3s,color .3s,transform .3s cubic-bezier(.3,1.3,.4,1)}
+#btnOpts:active{transform:translateX(-50%) scale(.94)}
+#btnOpts .ic circle{transition:transform .5s cubic-bezier(.3,1.4,.4,1)}
+#btnOpts .lb2,#menu.opts #btnOpts .lb1{display:none}
+#menu.opts #btnOpts .lb2{display:inline}
+#menu.opts #btnOpts{background:#fff;color:#0a0e1c;border-color:#fff}
+#menu.opts #btnOpts .k1{transform:translateX(-7px)}
+#menu.opts #btnOpts .k2{transform:translateX(7px)}
+/* first appearance: every part rises into place, one after the other */
+@keyframes rise{from{opacity:0;transform:translateY(26px) scale(.94);filter:blur(8px)}to{opacity:1;transform:none;filter:none}}
+@keyframes riseBtn{from{opacity:0;transform:translateX(-50%) translateY(26px)}to{opacity:1;transform:translateX(-50%)}}
+#menu.intro #title{animation:rise 1s cubic-bezier(.2,.9,.3,1) backwards}
+#menu.intro #tagline{animation:rise .9s .14s cubic-bezier(.2,.9,.3,1) backwards}
+#menu.intro #modeSeg{animation:rise .9s .24s cubic-bezier(.2,.9,.3,1) backwards}
+#menu.intro #modeInfo{animation:rise .9s .3s cubic-bezier(.2,.9,.3,1) backwards}
+#menu.intro #mRight{animation:rise .9s .4s cubic-bezier(.2,.9,.3,1) backwards}
+#menu.intro #btnOpts{animation:riseBtn .9s .52s cubic-bezier(.2,.9,.3,1) backwards}
 #xfade{position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;opacity:0}
 #title{font-size:clamp(62px,19vw,150px);font-weight:900;letter-spacing:.04em;line-height:.9;margin-right:-.06em;
   background:linear-gradient(100deg,#fff 0%,#d9fbff 30%,var(--accent) 45%,#fff 52%,var(--accent2) 70%,#fff 100%);background-size:250% 100%;
@@ -155,20 +193,27 @@ body.star #starGlow{opacity:1}
 .ghostBtn:active{transform:scale(.97)}
 .hint{margin-top:14px;font-size:14px;font-weight:600;color:var(--dim);letter-spacing:.02em;text-shadow:0 2px 6px #000;max-width:420px}
 .hint b{color:#fff}
-#menuBest{margin-top:22px;font-size:12px;font-weight:800;letter-spacing:.26em;color:rgba(235,242,255,.8);text-shadow:0 0 3px rgba(0,0,0,.8),0 1px 6px rgba(0,0,0,.7)}
+#menuBest{margin-top:16px;font-size:12px;font-weight:800;letter-spacing:.26em;color:rgba(235,242,255,.8);text-shadow:0 0 3px rgba(0,0,0,.8),0 1px 6px rgba(0,0,0,.7)}
 #menuBest span{color:var(--gold);font-size:15px;letter-spacing:.06em}
 .skinRow{display:flex;align-items:center;gap:10px;width:100%;justify-content:center}
 .skinRow .lbl{font-size:11px;font-weight:800;letter-spacing:.2em;color:rgba(235,242,255,.8);width:54px;text-align:right;text-shadow:0 0 3px rgba(0,0,0,.8),0 1px 6px rgba(0,0,0,.7)}
 .sw{width:44px;height:44px;border-radius:13px;border:2px solid rgba(255,255,255,.18);position:relative;box-shadow:0 4px 14px rgba(0,0,0,.4)}
 .sw.round{border-radius:50%}
 .sw.sel{border-color:#fff;box-shadow:0 0 0 3px rgba(78,242,255,.5),0 4px 14px rgba(0,0,0,.4)}
-#menuTop{position:absolute;top:calc(var(--sat) + 10px);left:calc(var(--sal) + 12px);right:calc(var(--sar) + 12px);display:flex;justify-content:space-between;align-items:center;gap:8px;z-index:2}
-.seg{display:inline-flex;padding:4px;border-radius:15px;background:var(--glass);border:1px solid var(--glass-brd);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);gap:4px}
-.seg button{min-height:38px;padding:6px 12px;border-radius:11px;font-size:12px;font-weight:900;letter-spacing:.12em;color:var(--dim);transition:background .2s,color .2s}
-.seg button.on{background:rgba(255,255,255,.16);color:#fff;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
+#menuTop{position:absolute;top:calc(var(--sat) + 10px);left:calc(var(--sal) + 12px);right:calc(var(--sar) + 12px);display:flex;justify-content:space-between;align-items:center;gap:8px;z-index:3}
+/* segmented controls: a glass pill (placed by the game) slides under the chosen option */
+.seg{position:relative;display:inline-flex;padding:4px;border-radius:15px;background:var(--glass);border:1px solid var(--glass-brd);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);gap:4px}
+.seg .pill{position:absolute;top:4px;bottom:4px;left:0;width:0;border-radius:11px;pointer-events:none;background:rgba(255,255,255,.17);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.3),0 2px 10px rgba(0,0,0,.25);transition:transform .5s cubic-bezier(.3,1.3,.4,1),width .5s cubic-bezier(.3,1.3,.4,1)}
+.seg button{position:relative;min-height:38px;padding:6px 12px;border-radius:11px;font-size:12px;font-weight:900;letter-spacing:.12em;color:var(--dim);transition:color .3s}
+.seg button.on{color:#fff}
+.seg button:active{transform:scale(.95)}
 #modeSeg{margin-top:20px}
+#ctrlSeg button{min-width:128px}
+#todSeg{gap:2px;width:300px}
+#todSeg button{flex:1 1 auto;padding:6px 8px;font-size:11px;letter-spacing:.08em;white-space:nowrap}
 #modeSeg button{width:142px;min-height:44px;padding:6px 4px;font-size:13px;white-space:nowrap}
-#tgKid{margin-top:10px;width:290px;max-width:100%;justify-content:center;white-space:nowrap}
+#tgKid{width:290px;max-width:100%;justify-content:center;white-space:nowrap}
 .linkBtn{background:none;border:0;padding:2px 6px;font:inherit;font-weight:900;letter-spacing:.08em;line-height:16px;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 #tgKid:not(.off){color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold));border-color:transparent}
 #ovRails{margin-top:10px;padding:6px 14px;border-radius:12px;font-size:13px;font-weight:800;letter-spacing:.06em;color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold))}
@@ -197,6 +242,8 @@ body.star #starGlow{opacity:1}
 @keyframes shReady{from{box-shadow:0 0 0 1px var(--accent),0 0 8px rgba(78,242,255,.25)}to{box-shadow:0 0 0 2px var(--accent),0 0 24px rgba(78,242,255,.6)}}
 #ovMode{margin-top:6px;font-size:12px;font-weight:800;letter-spacing:.2em;color:var(--accent)}
 #pause .skins{margin-top:16px}
+#sheet .skins{margin-top:0}
+#permMsg{margin-left:auto;margin-right:auto}
 #permMsg{margin-top:14px;font-size:13px;font-weight:700;color:#ffb3c7;max-width:380px;text-shadow:0 2px 6px #000}
 
 #calib{background:rgba(5,6,13,.25)}
@@ -240,13 +287,23 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 .row2{display:flex;gap:10px;width:100%;max-width:420px}
 .row2 .ghostBtn{flex:1}
 #noGL{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:30px;text-align:center;z-index:99;background:#05060d;font-weight:700}
-.mcol{display:flex;flex-direction:column;align-items:center;width:100%}
-#mLeft #menuBest{order:3}
-@media (orientation:portrait){ #menuBest{margin-top:12px} #mRight{margin-top:0} #menu .bigBtn{margin-top:22px} }
-@media (orientation:portrait) and (max-height:700px){ #tagline{margin-top:4px} #modeSeg{margin-top:12px} #menu .bigBtn{margin-top:14px;height:56px} .skins{margin-top:12px} .sw{width:40px;height:40px} #menuBest{margin-top:8px} }
+#mLeft,#mRight{display:flex;flex-direction:column;align-items:center}
+#menu .bigBtn{margin:0 auto}
+@media (orientation:portrait) and (max-height:700px){ #tagline{margin-top:4px} #modeSeg{margin-top:12px} #menu .bigBtn{height:56px} .skins{gap:8px} .sw{width:40px;height:40px} .optRow{margin-top:10px} .optRow .seg button{min-height:34px} }
 @media (orientation:landscape) and (max-height:560px){
-  #menu{flex-direction:row;gap:4vw}
-  .mcol{flex:1;max-width:440px}
+  #mLeft{top:0;bottom:0;right:52%;left:calc(var(--sal) + 24px);display:flex;flex-direction:column;justify-content:center}
+  #mRight{top:0;bottom:0;left:52%;right:calc(var(--sar) + 24px);display:flex;flex-direction:column;justify-content:center}
+  #btnOpts{left:76%;transition:background .3s,color .3s,transform .55s cubic-bezier(.3,1.15,.4,1)}
+  #menu.opts #btnOpts{transform:translate(calc(-50% - 26vw),calc(74px + var(--sab) + var(--sat) - 100vh))}   /* DONE glides to the middle of the top bar */
+  #sheet{left:50%;top:calc(var(--sat) + 62px);max-height:none;border-radius:26px 0 0 0;padding:12px calc(var(--sar) + 16px) calc(var(--sab) + 12px) 16px;transform:translateX(106%)}
+  #sheet::before{display:none}
+  .optRow{flex-direction:row;justify-content:space-between;margin-top:8px}
+  .optRow .skins{gap:6px}
+  .optLbl{width:74px;text-align:left;line-height:1.4}
+  #todSeg{width:284px}
+  #todSeg button{padding:6px 6px}
+  #menu.opts #title,#menu.opts #modeSeg,#menu.opts #modeInfo{transform:none}
+  #menu.opts #tagline{opacity:1;visibility:visible;transform:none}
   #title{font-size:clamp(52px,18vh,110px)}
   .bigBtn{margin-top:0;height:52px;font-size:14px}
   .ghostBtn{min-height:44px;margin-top:10px;padding:8px 18px}
@@ -264,6 +321,10 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   #over .bigBtn,#pause .bigBtn{margin-top:14px}
   #record{margin-top:6px}
   .volRow{margin-top:12px}
+}
+@media (orientation:landscape) and (max-height:560px) and (max-width:700px){
+  #sheet{left:36%}
+  .optRow{flex-direction:column;gap:4px}
 }
 </style>
 </head>
@@ -296,26 +357,32 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   <div id="toasts"></div>
 </div>
 
-<div class="screen" id="menu">
+<div class="screen intro" id="menu">
   <div id="menuTop">
-    <div class="seg" id="langSeg"><button data-lang="fr">FR</button><button data-lang="en">EN</button></div>
+    <div class="seg" id="langSeg"><i class="pill"></i><button data-lang="fr">FR</button><button data-lang="en">EN</button></div>
     <div class="tgRow"><button class="tg icon tgMusic" data-i18n-aria="music"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M8.6 17.4V6.2l11.2-2.7v11.4M8.6 9.6l11.2-2.7"/><ellipse cx="6" cy="17.6" rx="2.9" ry="2.3" transform="rotate(-18 6 17.6)"/><ellipse cx="17.2" cy="15" rx="2.9" ry="2.3" transform="rotate(-18 17.2 15)"/><path class="cut" d="M3.5 3.5l17 17"/><path class="stk slash" d="M3.5 3.5l17 17"/></svg></button><button class="tg icon tgSfx" data-i18n-aria="sfx"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.4 9h3.7l4.7-4c.6-.5 1.5-.1 1.5.7v12.6c0 .8-.9 1.2-1.5.7l-4.7-4H3.4c-.6 0-1-.4-1-1V10c0-.6.4-1 1-1z"/><path class="stk wave" d="M16.3 9.3a3.8 3.8 0 0 1 0 5.4"/><path class="stk wave" d="M19 6.6a7.6 7.6 0 0 1 0 10.8"/><path class="stk mute" d="M16.6 9.6l4.8 4.8M21.4 9.6l-4.8 4.8"/></svg></button></div>
   </div>
-  <div class="mcol" id="mLeft">
+  <div id="mLeft">
     <div id="title">GYROLL</div>
     <div id="tagline">How far can you go?</div>
-    <div class="seg" id="modeSeg"><button data-mode="random" data-i18n="modeRandom"></button><button data-mode="daily" data-i18n="modeDaily"></button></div>
+    <div class="seg" id="modeSeg"><i class="pill"></i><button data-mode="random" data-i18n="modeRandom"></button><button data-mode="daily" data-i18n="modeDaily"></button></div>
     <div id="modeInfo"><span id="modeTxt"></span><button class="linkBtn hidden" id="btnNewTrack" data-i18n="newTrack"></button></div>
-    <button class="tg" id="tgKid"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 2.9l7.4 2.8v5.5c0 4.6-3 8.5-7.4 9.9-4.4-1.4-7.4-5.3-7.4-9.9V5.7z"/><path class="stk" d="M8.6 12.1l2.4 2.4 4.5-4.6"/></svg><span data-i18n="kid"></span></button>
+  </div>
+  <div id="mRight">
+    <button class="bigBtn" id="btnPlay" data-i18n="play"></button>
     <div id="menuBest">BEST <span class="num" id="mBest">0 m</span></div>
-  </div>
-  <div class="mcol" id="mRight">
-    <button class="bigBtn" id="btnTilt"></button>
-    <button class="ghostBtn" id="btnTouch" data-i18n="playTouch"></button>
     <div id="permMsg" class="hidden"></div>
-    <div class="skins" id="skinsMenu"></div>
-    <button class="ghostBtn small hidden" id="btnInstall" data-i18n="install"></button>
   </div>
+  <div id="sheet">
+    <div class="sheetIn">
+      <div class="optRow" style="--i:0"><button class="tg" id="tgKid"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 2.9l7.4 2.8v5.5c0 4.6-3 8.5-7.4 9.9-4.4-1.4-7.4-5.3-7.4-9.9V5.7z"/><path class="stk" d="M8.6 12.1l2.4 2.4 4.5-4.6"/></svg><span data-i18n="kid"></span></button></div>
+      <div class="optRow" id="ctrlRow" style="--i:1"><span class="optLbl" data-i18n="control"></span><div class="seg" id="ctrlSeg"><i class="pill"></i><button data-ctrl="tilt" data-i18n="ctrlTilt"></button><button data-ctrl="touch" data-i18n="ctrlTouch"></button></div></div>
+      <div class="optRow" style="--i:2"><span class="optLbl" data-i18n="tod"></span><div class="seg" id="todSeg"><i class="pill"></i><button data-tod="real" data-i18n="todReal"></button><button data-tod="day" data-i18n="todDay"></button><button data-tod="night" data-i18n="todNight"></button><button data-tod="system" data-i18n="todSystem"></button></div></div>
+      <div class="optRow" style="--i:3"><div class="skins" id="skinsMenu"></div></div>
+      <button class="ghostBtn small hidden" id="btnInstall" data-i18n="install"></button>
+    </div>
+  </div>
+  <button id="btnOpts" aria-controls="sheet" aria-expanded="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M3.5 8h17M3.5 16h17"/><circle class="k1" cx="15" cy="8" r="2.8"/><circle class="k2" cx="9" cy="16" r="2.8"/></svg><span class="lb1" data-i18n="options"></span><span class="lb2" data-i18n="done"></span></button>
 </div>
 
 <div class="screen hidden" id="calib">
@@ -552,19 +619,77 @@ const ZONES = [
     c1: hex(0xff3a1a), c2: hex(0xffa020), dust: hex(0xffa050), drift: [0.4, 1.8], floor: 4, floorA: hex(0x120202), floorB: hex(0xff4a10), shafts: 0.3 },
 ];
 
+// ---------------------------------------------------------------- time of day
+// The setting: 'real' follows the local clock, 'day' keeps each world's own sun, 'night' puts a
+// moon in its place, 'system' follows the device's dark mode.
+const TOD_MODES = ['real', 'day', 'night', 'system'];
+const MOON_MONTH = 29.530588853, NEW_MOON = Date.UTC(2000, 0, 6, 18, 14);
+const SOUTH_TZ = /^(Australia|Antarctica)\/|^Pacific\/(Auckland|Chatham|Fiji|Noumea|Tongatapu)|^America\/(Argentina|Santiago|Sao_Paulo|Montevideo|Asuncion)|^Africa\/(Johannesburg|Maputo|Harare|Windhoek|Lusaka|Gaborone)|^Indian\/(Reunion|Mauritius)/;
+// Where the sun (or the moon) stands, how dark the night is, how warm a low sun is, and the moon's
+// phase. The real clock uses a place at 45° of latitude (south of the equator when the time zone
+// says so) without asking for the location. The track heads towards the equator (+z): the sun rises
+// on the left and sets on the right, and its path is squeezed towards the front (turn angle and
+// height × 0.55) so it shows in the view more often.
+function skyState(mode, date = new Date(), dark = false) {
+  if (mode === 'system') mode = dark ? 'night' : 'day';
+  const age = ((((date.getTime() - NEW_MOON) / 864e5) % MOON_MONTH) + MOON_MONTH) % MOON_MONTH;
+  const S = {
+    mode, night: mode === 'night' ? 1 : 0, dusk: 0, dir: null, moon: mode === 'night',
+    // angle between the sunlight on the moon and the viewer (0 = full moon), kept to a visible crescent
+    phase: Math.min(2.4, Math.abs(Math.PI - age / MOON_MONTH * TAU)), side: age < MOON_MONTH / 2 ? 1 : -1,
+  };
+  if (mode === 'real') {
+    let tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { /* ignore */ }
+    const y = date.getFullYear(), std = Math.max(new Date(y, 0, 1).getTimezoneOffset(), new Date(y, 6, 1).getTimezoneOffset());
+    const doy = (Date.UTC(y, date.getMonth(), date.getDate()) - Date.UTC(y, 0, 0)) / 864e5, rad = Math.PI / 180, lat = 45 * rad;
+    const decl = -23.44 * rad * Math.cos(TAU * (doy + 10) / 365) * (SOUTH_TZ.test(tz) ? -1 : 1);
+    const H = (date.getHours() + date.getMinutes() / 60 - (date.getTimezoneOffset() < std ? 1 : 0) - 12) * 15 * rad;   // summer time removed
+    const el = Math.asin(Math.sin(lat) * Math.sin(decl) + Math.cos(lat) * Math.cos(decl) * Math.cos(H));
+    const az = Math.atan2(-Math.sin(H), Math.tan(decl) * Math.cos(lat) - Math.sin(lat) * Math.cos(H));   // from north, east positive
+    const deg = el / rad, n = clamp((2 - deg) / 10, 0, 1);
+    S.night = n * n * (3 - 2 * n); S.moon = S.night >= 0.5;
+    S.dusk = S.moon ? 0 : clamp(1 - Math.abs(deg - 2) / 14, 0, 1);
+    const a = Math.PI + wrapAngle((S.moon ? az : az + Math.PI) - (SOUTH_TZ.test(tz) ? Math.PI : 0)) * 0.55;   // the moon stands opposite the sun
+    const e = S.moon ? Math.max(0.2, -el * 0.55) : Math.max(-0.03, el * 0.55);
+    S.dir = [Math.sin(a) * Math.cos(e), Math.sin(e), -Math.cos(a) * Math.cos(e)];
+  }
+  S.key = [mode, S.moon ? 1 : 0, S.dir ? S.dir.map((v) => Math.round(v * 16)).join(',') : '-', Math.round(S.night * 8), Math.round(S.dusk * 8)].join(':');
+  return S;
+}
+// A world's palette under a time of day. Night dims it to a moonlit blue (worlds that are already
+// dark barely change) and swaps sunlight for moonlight; a low sun warms the light and the horizon.
+// `paint` keeps the original colours for the sky painting, which gets dimmed as a whole instead.
+const NIGHT_TINT = [0.12, 0.16, 0.33], MOON_LIGHT = [0.62, 0.72, 1.0], DUSK_SUN = [1.0, 0.56, 0.3];
+function skyZone(Z, S) {
+  const mixc = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+  const lum = Z.skyMid[0] * 0.2126 + Z.skyMid[1] * 0.7152 + Z.skyMid[2] * 0.0722, zd = clamp((lum - 0.05) / 0.3, 0, 1);
+  const k = S.night * zd, dk = S.dusk * (1 - S.night);
+  const g = (c, w = 1) => [c[0] * lerp(1, NIGHT_TINT[0], k * w), c[1] * lerp(1, NIGHT_TINT[1], k * w), c[2] * lerp(1, NIGHT_TINT[2], k * w)];
+  const moonCol = mixc(Z.sun, MOON_LIGHT, 0.5 + 0.5 * zd).map((v) => v * lerp(0.8, 0.55, zd));
+  const sun = S.moon ? mixc(Z.sun, moonCol, S.night) : mixc(Z.sun, DUSK_SUN, dk * 0.75);
+  const sunDir = S.dir || Z.sunDir;
+  return Object.assign({}, Z, {
+    sunDir, moon: S.moon, sun, stars: Math.max(Z.stars, S.night * 0.5), shafts: Z.shafts * (1 - 0.7 * k),
+    skyTop: g(Z.skyTop), skyMid: g(Z.skyMid), horizon: g(mixc(Z.horizon, [1, 0.62, 0.4], dk * 0.35)), abyss: g(Z.abyss), fog: g(Z.fog),
+    floorA: g(Z.floorA), floorB: g(Z.floorB, 0.85), dust: g(Z.dust, 0.5),
+    paint: Object.assign({}, Z, { sunDir, moon: S.moon, nightK: k, dusk: dk }),
+  });
+}
+
 // ---------------------------------------------------------------- i18n
 const I18N = {
   fr: {
-    playGyro: 'JOUER AVEC LE GYROSCOPE', play: 'JOUER', playTouch: 'JOUER AU TACTILE', music: 'MUSIQUE', sfx: 'EFFETS',
-    modeRandom: 'ALÉATOIRE', modeDaily: 'DÉFI DU JOUR', infoRandom: 'Parcours sans fin · vous repartez du dernier checkpoint', infoContinue: 'Reprise au checkpoint {d} m', newTrack: '↻ NOUVEAU PARCOURS', infoDaily: 'Même parcours pour tous · {date}',
+    play: 'JOUER', music: 'MUSIQUE', sfx: 'EFFETS', options: 'OPTIONS', done: 'OK', control: 'CONTRÔLE',
+    tod: 'MOMENT DE LA JOURNÉE', todReal: 'TEMPS RÉEL', todDay: 'JOUR', todNight: 'NUIT', todSystem: 'SYSTÈME',
+    modeRandom: 'ENTRAÎNEMENT', modeDaily: 'DÉFI DU JOUR', infoRandom: 'Parcours sans fin · vous repartez du dernier checkpoint', infoContinue: 'Reprise au checkpoint {d} m', newTrack: '↻ NOUVEAU PARCOURS', infoDaily: 'Même parcours pour tous · {date}',
     track: 'PISTE', ball: 'BILLE', pause: 'PAUSE', resume: 'REPRENDRE', recal: 'RECALIBRER LE GYROSCOPE', mainMenu: 'MENU PRINCIPAL',
     gameOver: 'GAME OVER', newRecord: 'NOUVEAU RECORD', retry: 'REJOUER', menu: 'MENU',
     share: 'PARTAGER MON SCORE', shareBusy: 'PRÉPARATION DE LA VIDÉO…', shareSaved: 'VIDÉO ENREGISTRÉE ✓', shareReady: 'PARTAGER LA VIDÉO ▶', shareImg: 'PARTAGER MON SCORE',
     shareText: 'J’ai roulé {d} m sur GYROLL (score {s}) ! Tu fais mieux ?', shareDaily: 'Défi du jour {date}',
     calib: 'CALIBRATION', calibSub: 'Tenez le téléphone dans une position naturelle', ready: 'PRÊT ?',
-    touchHint: 'Glissez le doigt pour guider la bille', keysHint: 'Flèches / WASD / ZQSD · ou glisser à la souris',
+    touchHint: 'Glissez le doigt pour guider la bille', camHint: 'Glissez pour tourner la caméra · pincez pour zoomer', keysHint: 'Flèches / WASD / ZQSD · ou glisser à la souris',
     permDenied: 'Accès au gyroscope refusé — contrôle tactile activé.', permNone: 'Gyroscope indisponible — contrôle tactile activé.',
-    ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TACTILE', ctrlKeys: 'CLAVIER', record: 'NOUVEAU RECORD !', dailyTag: 'DÉFI DU JOUR · {date}', randomTag: 'PARTIE ALÉATOIRE',
+    ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TACTILE', ctrlKeys: 'CLAVIER', record: 'NOUVEAU RECORD !', dailyTag: 'DÉFI DU JOUR · {date}', randomTag: 'ENTRAÎNEMENT',
     kid: 'MODE ENFANT · RAILS LATÉRAUX', kidInfo: 'Des petits rails rattrapent la bille sur les côtés', kidBadge: '🛡 Réalisé avec les rails latéraux', kidShare: 'avec les rails latéraux', kidTag: 'RAILS', tooFast: 'TROP VITE !',
     star: 'STAR POWER', starGo: 'LEVEZ D’UN COUP ↑', starGoTouch: 'TAPEZ 2 FOIS', starGoKeys: 'ESPACE', starReady: 'STAR POWER PRÊT !',
     starOn: '★ STAR POWER ★', starActive: '★ SCORE ×2', starEnd: 'FIN DU STAR POWER', combo: 'PIÈCES ×{n}', comboLost: 'SÉRIE PERDUE',
@@ -572,16 +697,17 @@ const I18N = {
     noGL: 'WebGL est indisponible sur cet appareil / navigateur. Activez l’accélération matérielle ou essayez un Chrome / Safari récent.',
   },
   en: {
-    playGyro: 'PLAY WITH GYROSCOPE', play: 'PLAY', playTouch: 'PLAY WITH TOUCH', music: 'MUSIC', sfx: 'SFX',
-    modeRandom: 'RANDOM', modeDaily: 'DAILY RUN', infoRandom: 'Endless track · you restart at the last checkpoint', infoContinue: 'Back at the {d} m checkpoint', newTrack: '↻ NEW TRACK', infoDaily: 'Same track for everyone · {date}',
+    play: 'PLAY', music: 'MUSIC', sfx: 'SFX', options: 'OPTIONS', done: 'DONE', control: 'CONTROLS',
+    tod: 'TIME OF DAY', todReal: 'REAL TIME', todDay: 'DAY', todNight: 'NIGHT', todSystem: 'SYSTEM',
+    modeRandom: 'TRAINING', modeDaily: 'DAILY RUN', infoRandom: 'Endless track · you restart at the last checkpoint', infoContinue: 'Back at the {d} m checkpoint', newTrack: '↻ NEW TRACK', infoDaily: 'Same track for everyone · {date}',
     track: 'TRACK', ball: 'BALL', pause: 'PAUSE', resume: 'RESUME', recal: 'RECALIBRATE GYROSCOPE', mainMenu: 'MAIN MENU',
     gameOver: 'GAME OVER', newRecord: 'NEW RECORD', retry: 'PLAY AGAIN', menu: 'MENU',
     share: 'SHARE MY SCORE', shareBusy: 'PREPARING VIDEO…', shareSaved: 'VIDEO SAVED ✓', shareReady: 'SHARE THE VIDEO ▶', shareImg: 'SHARE MY SCORE',
     shareText: 'I rolled {d} m in GYROLL (score {s})! Can you beat it?', shareDaily: 'Daily run {date}',
     calib: 'CALIBRATION', calibSub: 'Hold your phone in a natural position', ready: 'READY?',
-    touchHint: 'Drag your finger to steer the ball', keysHint: 'Arrows / WASD · or drag with the mouse',
+    touchHint: 'Drag your finger to steer the ball', camHint: 'Drag to turn the camera · pinch to zoom', keysHint: 'Arrows / WASD · or drag with the mouse',
     permDenied: 'Gyroscope access denied — touch control enabled.', permNone: 'Gyroscope unavailable — touch control enabled.',
-    ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TOUCH', ctrlKeys: 'KEYBOARD', record: 'NEW RECORD!', dailyTag: 'DAILY RUN · {date}', randomTag: 'RANDOM RUN',
+    ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TOUCH', ctrlKeys: 'KEYBOARD', record: 'NEW RECORD!', dailyTag: 'DAILY RUN · {date}', randomTag: 'TRAINING',
     kid: 'KID MODE · SIDE RAILS', kidInfo: 'Small rails catch the ball on the sides', kidBadge: '🛡 Achieved with side rails on', kidShare: 'with side rails on', kidTag: 'RAILS', tooFast: 'TOO FAST!',
     star: 'STAR POWER', starGo: 'FLICK PHONE UP ↑', starGoTouch: 'DOUBLE-TAP', starGoKeys: 'PRESS SPACE', starReady: 'STAR POWER READY!',
     starOn: '★ STAR POWER ★', starActive: '★ SCORE ×2', starEnd: 'STAR POWER OVER', combo: 'COINS ×{n}', comboLost: 'STREAK LOST',
@@ -1488,21 +1614,39 @@ void main(){
   gl_FragColor = vec4(col * u_fade, clamp(glow + u_speed * fr * 0.5, 0.0, 1.0));
 }`;
 
-// Sky: fullscreen triangle sampling the pre-rendered equirect panorama.
+// Sky: fullscreen triangle sampling the pre-rendered equirect panorama, plus the sun (a disc,
+// darker at its rim, in a halo) or the moon (a lit ball with seas and craters, its phase, a cold
+// halo) at u_sunDir. u_orb: x 1 = moon, y moon phase angle (0 = full), z lit side (+1 right), w radius.
 const VS_SKY = `attribute vec2 a_pos; varying vec2 v_p; void main(){ v_p = a_pos; gl_Position = vec4(a_pos, 0.9999, 1.0); }`;
 const FS_SKY = GLSL_COMMON + `
 varying vec2 v_p; uniform mat4 u_invVP; uniform sampler2D u_env; uniform sampler2D u_env2; uniform float u_mix; uniform float u_flash;
-uniform vec3 u_sunDir; uniform vec3 u_sunCol; uniform float u_time;
+uniform vec3 u_sunDir; uniform vec3 u_sunCol; uniform float u_time; uniform vec4 u_orb;
 void main(){
   vec4 a = u_invVP * vec4(v_p, -1.0, 1.0); vec4 b = u_invVP * vec4(v_p, 1.0, 1.0);
   vec3 d = normalize(b.xyz / b.w - a.xyz / a.w);
   vec2 q = equirect(d);
   vec3 col = u_mix < 0.002 ? texture2D(u_env, q).rgb : mix(texture2D(u_env, q).rgb, texture2D(u_env2, q).rgb, u_mix);
   col += vec3(0.75, 0.7, 1.0) * u_flash * (0.35 + 0.65 * smoothstep(-0.1, 0.5, d.y));
-  float sd = max(dot(d, u_sunDir), 0.0);
-  col += u_sunCol * (pow(sd, 900.0) * 3.0 + pow(sd, 60.0) * 0.25);
+  float c = dot(d, u_sunDir), sd = max(c, 0.0), glow;
+  // position on the disc, in radii (x to the right of the screen, y up)
+  vec3 rx = normalize(cross(u_sunDir, vec3(0.0, 1.0, 0.0))), ry = cross(rx, u_sunDir);
+  vec2 p = vec2(dot(d, rx), dot(d, ry)) / u_orb.w;
+  float r2 = c > 0.0 ? dot(p, p) : 9.0, disc = smoothstep(1.0, 0.88, sqrt(r2));
+  if (u_orb.x < 0.5) {
+    col += u_sunCol * (disc * (1.3 + 1.2 * sqrt(max(1.0 - r2, 0.0))) + pow(sd, 2500.0) * 0.5 + pow(sd, 300.0) * 0.1);
+    glow = disc * 0.8 + pow(sd, 2500.0) * 0.5;
+  } else {
+    vec3 n = vec3(p, sqrt(max(1.0 - r2, 0.0)));
+    float lit = smoothstep(-0.08, 0.16, dot(n, normalize(vec3(sin(u_orb.y) * u_orb.z, 0.15 * sin(u_orb.y), cos(u_orb.y)))));
+    vec2 uv = p * 1.7 + 3.0;
+    float seas = smoothstep(0.42, 0.72, fbm(uv * 1.4)), crater = smoothstep(0.78, 0.9, noise(uv * 7.0));
+    vec3 alb = vec3(0.93, 0.95, 1.0) * (1.0 - 0.36 * seas - 0.06 * crater) * (0.92 + 0.08 * noise(uv * 19.0));
+    col = mix(col, alb * (lit * (0.62 + 0.3 * n.z) + 0.05), disc);
+    col += vec3(0.62, 0.72, 1.0) * (pow(sd, 700.0) * 0.28 + pow(sd, 60.0) * 0.1 + pow(sd, 8.0) * 0.03) * (0.4 + 0.6 * cos(u_orb.y * 0.5));
+    glow = disc * lit * 0.16 + pow(sd, 900.0) * 0.12;
+  }
   col += (hash(v_p * 431.0 + u_time) - 0.5) * 0.012;
-  gl_FragColor = vec4(col, clamp(pow(sd, 600.0) * 1.5, 0.0, 1.0));
+  gl_FragColor = vec4(col, clamp(glow, 0.0, 1.0));
 }`;
 
 // Floor far below the track (midground/background parallax layer), one style per zone.
@@ -1677,7 +1821,9 @@ void main(){
 const FS_COMPOSITE = `
 precision mediump float; varying vec2 v_uv;
 uniform sampler2D u_scene; uniform sampler2D u_bloom; uniform float u_bloomK; uniform float u_blur; uniform float u_ca; uniform float u_time; uniform vec2 u_center;
+uniform vec3 u_sun; uniform vec3 u_sunTint; uniform float u_aspect;
 float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+float ghost(vec2 d, float r){ float l = length(d) / r; return smoothstep(1.0, 0.75, l) * (0.55 + 0.45 * l); }
 void main(){
   vec2 dir = v_uv - u_center; float r = length(dir);
   vec3 c;
@@ -1690,6 +1836,19 @@ void main(){
     c.r = mix(c.r, texture2D(u_scene, v_uv + o).r, 0.8); c.b = mix(c.b, texture2D(u_scene, v_uv - o).b, 0.8);
   }
   c += texture2D(u_bloom, v_uv).rgb * u_bloomK;
+  // lens flare of the sun (u_sun: its place on the screen, strength): ghosts strung along the line
+  // through the middle of the screen, a halo ring and a thin streak; none when something hides the sun
+  if (u_sun.z > 0.001) {
+    float vis = u_sun.z * smoothstep(0.62, 0.9, dot(texture2D(u_scene, u_sun.xy).rgb, vec3(0.3, 0.55, 0.15)));
+    vec2 A = vec2(u_aspect, 1.0), s = u_sun.xy, ax = vec2(0.5) - s, dv = (v_uv - s) * A;
+    vec3 fl = u_sunTint * ghost((v_uv - s - ax * 0.45) * A, 0.035) * 0.1;
+    fl += vec3(0.5, 0.8, 1.0) * ghost((v_uv - s - ax * 0.9) * A, 0.07) * 0.06;
+    fl += vec3(1.0, 0.6, 0.9) * ghost((v_uv - s - ax * 1.3) * A, 0.025) * 0.12;
+    fl += vec3(0.6, 1.0, 0.7) * ghost((v_uv - s - ax * 1.7) * A, 0.11) * 0.045;
+    fl += u_sunTint * ghost((v_uv - s - ax * 2.1) * A, 0.05) * 0.07;
+    fl += u_sunTint * (smoothstep(0.02, 0.0, abs(length(dv) - 0.16)) * 0.05 + exp(-abs(dv.y) * 160.0) * exp(-abs(dv.x) * 4.0) * 0.22);
+    c += fl * vis;
+  }
   c = c / (1.0 + max(max(c.r, c.g), c.b) * 0.08);     // soft shoulder
   c += (h(v_uv * 731.0 + fract(u_time)) - 0.5) * 0.02;
   gl_FragColor = vec4(c, 1.0);
@@ -2178,7 +2337,8 @@ TrackMesher.preview = () => {
 
 // ---------------------------------------------------------------- sky panoramas (Canvas 2D → textures)
 // One equirect panorama per world zone; far silhouettes are painted in, so they act as the
-// infinitely distant background layer of the parallax.
+// infinitely distant background layer of the parallax. Z may carry a time of day (see skyZone):
+// a moved sun, a warm glow for a low sun, or a night (dimmed, with stars and the moon's glow).
 function makeSkyCanvases(Z, seed) {
   const W = 1024, H = 512, HZ = H / 2, r = RNG(seed);
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
@@ -2304,9 +2464,11 @@ function makeSkyCanvases(Z, seed) {
     sg.fillStyle = lg; sg.beginPath(); sg.arc(R + 2, R + 2, R, 0, TAU); sg.fill();
     sg.globalCompositeOperation = 'destination-out';
     for (let k = 0; k < 7; k++) { const y = R + 8 + k * 11; sg.fillRect(0, y, R * 2 + 4, 2 + k * 0.9); }
-    g.globalCompositeOperation = 'lighter'; blob(sunX, sunY - 20, 190, [1, 0.2, 0.6], 0.35);
-    g.globalCompositeOperation = 'source-over';
-    g.drawImage(sc, sunX - R - 2, sunY - R - 30);
+    if (!Z.moon) {                                   // the striped sunset sun (the moon takes its place at night)
+      g.globalCompositeOperation = 'lighter'; blob(sunX, sunY - 20, 190, [1, 0.2, 0.6], 0.35);
+      g.globalCompositeOperation = 'source-over';
+      g.drawImage(sc, sunX - R - 2, sunY - R - 30);
+    }
     const f = ridge(14, 30);
     g.fillStyle = css(Z.skyTop, 1); g.strokeStyle = css(Z.c2, 0.9); g.lineWidth = 1.5;
     g.beginPath(); g.moveTo(0, H * 0.6);
@@ -2436,6 +2598,28 @@ function makeSkyCanvases(Z, seed) {
     g.fillStyle = hg; g.fillRect(0, HZ - 50, W, 80);
     for (let k = 0; k < 500; k++) { g.fillStyle = css(Z.c2, r.range(0.2, 0.7)); g.fillRect(r.range(0, W), r.range(HZ - 120, HZ + 60), 1, 1); }
   }
+  if (Z.dusk > 0) {                                // low sun: the horizon glows warm around it
+    g.globalCompositeOperation = 'lighter';
+    blob(sunX, HZ - 8, 260, [1, 0.42, 0.18], 0.16 * Z.dusk); blob(sunX, HZ - 4, 90, [1, 0.62, 0.35], 0.12 * Z.dusk);
+    g.globalCompositeOperation = 'source-over';
+  }
+  const nk = Z.nightK || 0;
+  if (nk > 0 || Z.moon) {
+    // night: the whole painting dims to a moonlit blue, then stars, a faint Milky Way and the moon's glow on top
+    if (nk > 0) { g.globalCompositeOperation = 'multiply'; g.fillStyle = css(NIGHT_TINT.map((v) => lerp(1, v, nk))); g.fillRect(0, 0, W, H); }
+    g.globalCompositeOperation = 'lighter';
+    const tilt = r.range(0, TAU);
+    for (let k = 0; k < 90 * nk; k++) {
+      const x = r.range(0, W), y = H * 0.22 + Math.sin(x / W * TAU + tilt) * H * 0.13 + r.range(-18, 18);
+      blob(x, y, r.range(18, 60), [0.72, 0.78, 1], r.range(0.02, 0.05) * nk);
+    }
+    for (let k = 0; k < 1800 * nk; k++) {
+      const y = Math.pow(r.next(), 1.3) * H * 0.5, a = r.range(0.1, 0.75) * (1 - y / H * 1.2);
+      g.fillStyle = `rgba(${r.chance(0.2) ? '255,236,210' : '225,235,255'},${a})`; g.fillRect(r.range(0, W), y, r.chance(0.08) ? 2 : 1, 1);
+    }
+    if (Z.moon) { blob(sunX, sunY, 150, [0.62, 0.72, 1], 0.14); blob(sunX, sunY, 48, [0.85, 0.9, 1], 0.2); }
+    g.globalCompositeOperation = 'source-over';
+  }
   const down = (src, w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = true; x.drawImage(src, 0, 0, w, h); return c; };
   const midC = down(down(cv, 512, 256), 256, 128);
   const blurC = down(down(midC, 128, 64), 64, 32);
@@ -2465,6 +2649,7 @@ class Renderer {
     this.Z = { fog: [0, 0, 0], abyss: [0, 0, 0], skyMid: [0, 0, 0], sun: [1, 1, 1], stars: 1, haze: 1, dust: [1, 1, 1], c1: [1, 1, 1], c2: [1, 1, 1],
       floorA: [0, 0, 0], floorB: [1, 1, 1], shafts: 1, drift: [0, 0] };
     this.sunDir = new Float32Array([0, 1, 0]);
+    this.sky = skyState('day'); this.zones = ZONES.map((z) => skyZone(z, this.sky));   // world palettes under the time of day
     this.initGL();
   }
 
@@ -2596,7 +2781,7 @@ class Renderer {
   // Zone panoramas are built lazily (one per call) so start-up stays fast.
   ensureZone(i) {
     if (this.zoneTex[i]) return false;
-    const c = makeSkyCanvases(ZONES[i], 11 + i * 7);
+    const c = makeSkyCanvases(this.zones[i].paint, 11 + i * 7);
     this.zoneTex[i] = { sky: this.makeTex(c.sky, true), mid: this.makeTex(c.mid, true), blur: this.makeTex(c.blur, true) };
     return true;
   }
@@ -2604,7 +2789,7 @@ class Renderer {
   setZones(a, b, k) {
     this.ensureZone(a); if (k > 0) this.ensureZone(b);
     this.zA = a; this.zB = k > 0 ? b : a; this.zMix = k > 0 ? k : 0;
-    const A = ZONES[a], B = ZONES[this.zB], Z = this.Z, m = this.zMix;
+    const A = this.zones[a], B = this.zones[this.zB], Z = this.Z, m = this.zMix;
     const mixv = (o, x, y) => { o[0] = lerp(x[0], y[0], m); o[1] = lerp(x[1], y[1], m); o[2] = lerp(x[2], y[2], m); };
     for (const key of ['fog', 'abyss', 'skyMid', 'sun', 'dust', 'c1', 'c2', 'floorA', 'floorB']) mixv(Z[key], A[key], B[key]);
     Z.stars = lerp(A.stars, B.stars, m); Z.shafts = lerp(A.shafts, B.shafts, m); Z.haze = lerp(A.haze || 1, B.haze || 1, m);
@@ -2613,6 +2798,16 @@ class Renderer {
     const x = lerp(A.sunDir[0] / na, B.sunDir[0] / nb, m), y = lerp(A.sunDir[1] / na, B.sunDir[1] / nb, m), z = lerp(A.sunDir[2] / na, B.sunDir[2] / nb, m);
     const l = Math.hypot(x, y, z) || 1;
     this.sunDir[0] = x / l; this.sunDir[1] = y / l; this.sunDir[2] = z / l;
+  }
+  // New time of day: palettes change and every panorama is painted again (lazily, the current one now).
+  setSky(S) {
+    if (this.sky.key === S.key) return false;
+    this.sky = S; this.zones = ZONES.map((z) => skyZone(z, S));
+    const gl = this.gl;
+    for (const t of this.zoneTex) if (t) { gl.deleteTexture(t.sky); gl.deleteTexture(t.mid); gl.deleteTexture(t.blur); }
+    this.zoneTex = [];
+    this.setZones(this.zA, this.zB, this.zMix);
+    return true;
   }
   bindZoneTex(p, key, uA, uB, unitA, unitB) {
     const gl = this.gl, A = this.zoneTex[this.zA], B = this.zoneTex[this.zB] || A;
@@ -2686,6 +2881,7 @@ class Renderer {
     const Z = this.Z, p = this.use(this.pSky);
     gl.uniformMatrix4fv(p.u('u_invVP'), false, this.invVP);
     gl.uniform3fv(p.u('u_sunDir'), this.sunDir); gl.uniform3fv(p.u('u_sunCol'), Z.sun);
+    const S = this.sky; gl.uniform4f(p.u('u_orb'), S.moon ? 1 : 0, S.phase, S.side, S.moon ? 0.05 : 0.026);
     gl.uniform1f(p.u('u_time'), time % 100); gl.uniform1f(p.u('u_mix'), this.zMix); gl.uniform1f(p.u('u_flash'), this.flash);
     this.bindZoneTex(p, 'sky', 'u_env', 'u_env2', 0, 1);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.triBuf); this.attribs(1);
@@ -2800,7 +2996,7 @@ class Renderer {
   }
   freeFB(f) { const gl = this.gl; gl.deleteFramebuffer(f.fb); gl.deleteTexture(f.tex); if (f.rb) gl.deleteRenderbuffer(f.rb); }
   drawFloor(y, time) {
-    const gl = this.gl, Z = this.Z, A = ZONES[this.zA], B = ZONES[this.zB], p = this.use(this.pFloor);
+    const gl = this.gl, Z = this.Z, A = this.zones[this.zA], B = this.zones[this.zB], p = this.use(this.pFloor);
     gl.uniformMatrix4fv(p.u('u_vp'), false, this.vp); gl.uniform3fv(p.u('u_cam'), this.cam); gl.uniform1f(p.u('u_y'), y);
     gl.uniform1f(p.u('u_time'), time % 1000); gl.uniform1f(p.u('u_stA'), A.floor); gl.uniform1f(p.u('u_stB'), B.floor); gl.uniform1f(p.u('u_mix'), this.zMix);
     gl.uniform3fv(p.u('u_aA'), A.floorA); gl.uniform3fv(p.u('u_bA'), A.floorB); gl.uniform3fv(p.u('u_aB'), B.floorA); gl.uniform3fv(p.u('u_bB'), B.floorB);
@@ -2972,6 +3168,11 @@ class Renderer {
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, A.tex); gl.uniform1i(p.u('u_bloom'), 1); gl.activeTexture(gl.TEXTURE0);
       gl.uniform1f(p.u('u_bloomK'), o.bloom); gl.uniform1f(p.u('u_blur'), o.blur); gl.uniform1f(p.u('u_ca'), o.ca);
       gl.uniform1f(p.u('u_time'), this.time % 100); gl.uniform2f(p.u('u_center'), o.cx, o.cy);
+      // lens flare: where the sun (or, fainter, the moon) lands on the screen, fading at the edges
+      const d = this.sunDir, v = this.vp, x = this.cam[0] + d[0] * 500, y = this.cam[1] + d[1] * 500, z = this.cam[2] + d[2] * 500;
+      const cw = v[3] * x + v[7] * y + v[11] * z + v[15], sx = (v[0] * x + v[4] * y + v[8] * z + v[12]) / cw * 0.5 + 0.5, sy = (v[1] * x + v[5] * y + v[9] * z + v[13]) / cw * 0.5 + 0.5;
+      const fk = cw > 0 ? (this.sky.moon ? 0.3 : 1) * clamp((0.5 - Math.max(Math.abs(sx - 0.5), Math.abs(sy - 0.5))) * 14, 0, 1) * (o.flare === undefined ? 1 : o.flare) : 0;
+      gl.uniform3f(p.u('u_sun'), sx, sy, fk); gl.uniform3fv(p.u('u_sunTint'), this.Z.sun); gl.uniform1f(p.u('u_aspect'), this.w / this.h);
     });
   }
 }
@@ -3160,7 +3361,9 @@ class Physics {
 }
 
 // =====================================================================
-// CameraRig — smoothed chase cam with anticipation, roll and FOV kick.
+// CameraRig — smoothed chase cam with anticipation, roll and FOV kick. Fingers can move it: on the
+// menu a drag walks it around the ball and a pinch zooms; in gyroscope play a drag swings it around
+// the ball (it eases back behind once the finger lifts) and a pinch sets the chase distance.
 // =====================================================================
 class CameraRig {
   constructor() {
@@ -3169,6 +3372,24 @@ class CameraRig {
     this.eye = [0, 0, 0]; this.tgt = [0, 0, 0]; this.tmp = [0, 0, 0, 0];
     this.gyroLook = null;                           // menu look-around from the phone: { yaw, pitch }
     this.orbA = null; this.orbH = 2.3;
+    this.zoom = 1; this.zoomM = 1;                 // chase distance factor (play) and orbit distance factor (menu)
+    this.offYaw = 0; this.offPitch = 0; this.held = false; this.relT = 9;   // play look-around
+    this.mYaw = 0; this.mH = 0; this.swingK = 1;   // menu: drag offsets; the slow automatic swing stops once dragged
+  }
+  menuDrag(dx, dy) {
+    if (this.swingK > 0 && !this.gyroLook) {       // keep the view where the swing had taken it
+      this.mYaw += Math.sin(this.t * 0.13) * 0.95 * this.swingK; this.mH += Math.sin(this.t * 0.21) * 0.6 * this.swingK;
+    }
+    this.swingK = 0;
+    this.mYaw -= dx * 0.007; this.mH = clamp(this.mH + dy * 0.018, -2, 8.7);
+  }
+  lookDrag(dx, dy) {
+    this.offYaw = clamp(this.offYaw - dx * 0.007, -Math.PI, Math.PI); this.offPitch = clamp(this.offPitch + dy * 0.006, -0.45, 1.1);
+    this.relT = 0;
+  }
+  zoomBy(f, menu) {
+    if (menu) this.zoomM = clamp(this.zoomM * f, 0.38, 2.2);
+    else this.zoom = clamp(this.zoom * f, 0.6, 1.8);
   }
   params(aspect, speed) {
     const portrait = aspect < 0.9;
@@ -3201,11 +3422,14 @@ class CameraRig {
       this.yawRate = lerp(this.yawRate, yr, damp(6, dt));
       this.roll = lerp(this.roll, clamp(-this.yawRate * 0.09 * (0.4 + sp / 14), -0.16, 0.16), damp(4, dt));
       const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
-      const tx = ball.p[0] - fx * P.dist, ty2 = ball.p[1] + P.height, tz = ball.p[2] - fz * P.dist;
+      if (this.held) this.relT = 0; else if ((this.relT += dt) > 0.8) { const k = damp(2.4, dt); this.offYaw -= this.offYaw * k; this.offPitch -= this.offPitch * k; }
+      const D = Math.hypot(P.dist, P.height) * this.zoom, e = clamp(Math.atan2(P.height, P.dist) + this.offPitch, 0.05, 1.35), a = this.yaw + this.offYaw;
+      const tx = ball.p[0] - Math.sin(a) * Math.cos(e) * D, ty2 = ball.p[1] + Math.sin(e) * D, tz = ball.p[2] - Math.cos(a) * Math.cos(e) * D;
       const kxz = damp(7.5, dt), ky = damp(4.2, dt);
       this.pos[0] = lerp(this.pos[0], tx, kxz); this.pos[2] = lerp(this.pos[2], tz, kxz); this.pos[1] = lerp(this.pos[1], ty2, ky);
-      const la = 3 + sp * 0.28;
-      const lx = ball.p[0] + fx * la, ly = ball.p[1] + 0.2, lz = ball.p[2] + fz * la;
+      // look down the track; the further the camera swings away, the more it looks at the ball itself
+      const la = 3 + sp * 0.28, lk = clamp(Math.abs(this.offYaw) / 0.9 + Math.abs(this.offPitch) / 1.1, 0, 1);
+      const lx = ball.p[0] + fx * la * (1 - lk), ly = ball.p[1] + 0.2, lz = ball.p[2] + fz * la * (1 - lk);
       const kl = damp(10, dt);
       this.look[0] = lerp(this.look[0], lx, kl); this.look[1] = lerp(this.look[1], ly, kl); this.look[2] = lerp(this.look[2], lz, kl);
       this.fov = lerp(this.fov, P.fov + this.kick * 0.16, damp(3, dt));
@@ -3218,16 +3442,16 @@ class CameraRig {
     } else {                                          // attract mode: slow swing behind the ball, looking down the track
       T.pointAt(ball.s + 2, 0, 0, this.tmp);
       // with the phone's motion, turning / tilting it walks the camera around the ball instead
-      const th = this.tmp[3], L = this.gyroLook, r = 6.4;
-      const ta = th + Math.PI + (L ? -L.yaw : Math.sin(this.t * 0.13) * 0.95);
-      const th2 = L ? clamp(2.3 - L.pitch * 7, 0.5, 11) : 2.3 + Math.sin(this.t * 0.21) * 0.6;
+      const th = this.tmp[3], L = this.gyroLook, zm = this.zoomM, r = 6.4 * zm, sw = this.swingK, fast = L || this.held;
+      const ta = th + Math.PI + (L ? -L.yaw : Math.sin(this.t * 0.13) * 0.95 * sw) + this.mYaw;
+      const th2 = clamp((L ? clamp(2.3 - L.pitch * 7, 0.5, 11) : 2.3 + Math.sin(this.t * 0.21) * 0.6 * sw) + this.mH, 0.3, 11);
       if (this.orbA === null) this.orbA = ta;
-      this.orbA += wrapAngle(ta - this.orbA) * damp(L ? 6 : 1.6, dt); this.orbH = lerp(this.orbH, th2, damp(L ? 5 : 1.6, dt));
+      this.orbA += wrapAngle(ta - this.orbA) * damp(fast ? 6 : 1.6, dt); this.orbH = lerp(this.orbH, th2, damp(fast ? 5 : 1.6, dt));
       const a = this.orbA, tx = ball.p[0] + Math.sin(a) * r, tz = ball.p[2] + Math.cos(a) * r;
-      const k = damp(L ? 8 : 1.6, dt);
-      this.pos[0] = lerp(this.pos[0], tx, k); this.pos[1] = lerp(this.pos[1], ball.p[1] + this.orbH, k); this.pos[2] = lerp(this.pos[2], tz, k);
-      const vd = L ? a + Math.PI : th;               // look past the ball, the way the camera faces
-      const lx = ball.p[0] + Math.sin(vd) * 5, ly = ball.p[1] + 1.7 - (L ? clamp(this.orbH - 2.3, -2, 6) * 0.5 : 0), lz = ball.p[2] + Math.cos(vd) * 5;
+      const k = damp(fast ? 8 : 1.6, dt);
+      this.pos[0] = lerp(this.pos[0], tx, k); this.pos[1] = lerp(this.pos[1], ball.p[1] + this.orbH * zm, k); this.pos[2] = lerp(this.pos[2], tz, k);
+      const vd = L || !sw ? a + Math.PI : th, lo = L || !sw ? clamp(this.orbH - 2.3, -2, 6) * 0.5 : 0;   // look past the ball, the way the camera faces
+      const lx = ball.p[0] + Math.sin(vd) * 5 * zm, ly = ball.p[1] + (1.7 - lo) * zm, lz = ball.p[2] + Math.cos(vd) * 5 * zm;
       this.look[0] = lerp(this.look[0], lx, k); this.look[1] = lerp(this.look[1], ly, k); this.look[2] = lerp(this.look[2], lz, k);
       this.yaw = th; this.prevYaw = th;
       this.roll = lerp(this.roll, Math.sin(this.t * 0.13) * 0.06, k); this.fov = lerp(this.fov, P.fov, k);
@@ -3280,7 +3504,7 @@ class InputManager {
     window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
     window.addEventListener('blur', () => { this.keys.clear(); this.release(); });
     canvas.addEventListener('pointerdown', (e) => {
-      if (!this.enabled || this.ptr !== null) return;
+      if (!this.enabled || this.ptr !== null || this.tilt) return;     // with the gyroscope, fingers move the camera (CamGestures)
       e.preventDefault();
       const now = performance.now();
       if (now - this.lastTap < 320) this.doubleTap = true;
@@ -3400,6 +3624,56 @@ class InputManager {
     x = clamp(x + this.keyX, -1, 1); y = clamp(y + this.keyY, -1, 1);
     this.x = fin(x); this.y = fin(y);
   }
+}
+
+// =====================================================================
+// CamGestures — one finger (or the mouse) drags the camera, two fingers pinch to zoom, the wheel
+// zooms. `accept(target, event)` says whether a press belongs to the camera; the game takes the
+// totals every frame. Quick taps are counted (two in a row make a double tap).
+// =====================================================================
+class CamGestures {
+  constructor(accept) {
+    this.accept = accept; this.pts = new Map(); this.pinchD = 0; this.lastTap = -1e4; this.onTap = null;
+    this.take();
+    window.addEventListener('pointerdown', (e) => {
+      if (!this.accept(e.target, e)) return;
+      const multi = this.pts.size > 0;
+      for (const p of this.pts.values()) p.multi = true;
+      this.pts.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t: performance.now(), multi });
+      this.pinchD = this.spread();
+    });
+    window.addEventListener('pointermove', (e) => {
+      const p = this.pts.get(e.pointerId);
+      if (!p) return;
+      if (this.pts.size === 1) { this.dx += e.clientX - p.x; this.dy += e.clientY - p.y; }
+      p.x = e.clientX; p.y = e.clientY;
+      if (this.pts.size > 1) { const d = this.spread(); if (this.pinchD > 0 && d > 0) this.zoom *= this.pinchD / d; this.pinchD = d; }
+    });
+    const up = (e) => {
+      const p = this.pts.get(e.pointerId);
+      if (!p) return;
+      this.pts.delete(e.pointerId); this.pinchD = this.spread();
+      const now = performance.now();
+      if (e.type === 'pointerup' && !p.multi && now - p.t < 280 && Math.hypot(p.x - p.x0, p.y - p.y0) < 12) {
+        this.taps++; if (now - this.lastTap < 350) this.double = true;
+        this.lastTap = now;
+        if (this.onTap) this.onTap();
+      }
+    };
+    window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up); window.addEventListener('blur', () => this.reset());
+    window.addEventListener('wheel', (e) => {
+      if (!this.accept(e.target, e)) return;
+      e.preventDefault(); this.zoom *= Math.exp(clamp(e.deltaY, -120, 120) * 0.0016);
+    }, { passive: false });
+  }
+  spread() { if (this.pts.size < 2) return 0; const [a, b] = this.pts.values(); return Math.hypot(a.x - b.x, a.y - b.y); }
+  get held() { return this.pts.size > 0; }
+  take() {
+    const o = { dx: this.dx || 0, dy: this.dy || 0, zoom: this.zoom || 1, taps: this.taps || 0, double: !!this.double };
+    this.dx = this.dy = 0; this.zoom = 1; this.taps = 0; this.double = false;
+    return o;
+  }
+  reset() { this.pts.clear(); this.pinchD = 0; this.take(); }
 }
 
 // =====================================================================
@@ -4203,7 +4477,7 @@ class UI {
       ctrl: $('ctrlTag'), toasts: $('toasts'), danger: $('danger'), flash: $('flash'), menu: $('menu'), calib: $('calib'),
       calibNum: $('calibNum'), calibTxt: $('calibTxt'), calibSub: $('calibSub'), go: $('go'), pause: $('pause'), over: $('over'),
       record: $('record'), ovDist: $('ovDist'), ovScore: $('ovScore'), ovBest: $('ovBest'), ovMode: $('ovMode'), ovRails: $('ovRails'), mBest: $('mBest'), perm: $('permMsg'),
-      btnTilt: $('btnTilt'), btnTouch: $('btnTouch'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), modeTxt: $('modeTxt'), newTrack: $('btnNewTrack'), share: $('btnShare'), recal: $('btnRecal'),
+      btnPlay: $('btnPlay'), btnOpts: $('btnOpts'), sheet: $('sheet'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), modeTxt: $('modeTxt'), newTrack: $('btnNewTrack'), share: $('btnShare'), recal: $('btnRecal'),
       power: $('power'), pwCoin: $('pwCoin'), pwTxt: $('pwTxt'), pwFill: $('pwFill'),
     };
     this.cache = {};
@@ -4219,13 +4493,38 @@ class UI {
       clearTimeout(e._t); e._t = setTimeout(() => { if (e.classList.contains('fade')) e.classList.add('hidden'); }, 450);
     }
   }
-  // Clean menu: how far the play buttons slide to sit in the middle of the screen. Layout offsets
-  // ignore that slide, so the value holds while it plays.
-  centerCta() {
-    const m = this.el.menu, bs = [this.el.btnTilt, this.el.btnTouch].filter((b) => b.offsetParent === m);
-    if (!bs.length) return;
-    const top = Math.min(...bs.map((b) => b.offsetTop)), bot = Math.max(...bs.map((b) => b.offsetTop + b.offsetHeight));
-    m.style.setProperty('--cleanY', Math.round(m.clientHeight / 2 - (top + bot) / 2) + 'px');
+  // Menu offsets (portrait): PLAY in the middle of the screen (lower if the header needs the room),
+  // and for options mode the title's move into the top bar, the mode switch's move under it and the
+  // top of the sheet. Layout offsets ignore transforms, so the values hold while the animations play.
+  layoutMenu() {
+    const m = this.el.menu, $ = this.$, H = m.clientHeight;
+    if (!H) return;
+    const top = (el) => { let y = 0; for (let e = el; e && e !== m; e = e.offsetParent) y += e.offsetTop; return y; };
+    const set = (k, v) => m.style.setProperty(k, Math.round(v) + 'px');
+    if (matchMedia('(orientation: landscape) and (max-height: 560px)').matches) { for (const k of ['--playY', '--tY', '--hY', '--sheetTop']) set(k, 0); return; }
+    const title = $('title'), seg = $('modeSeg'), info = this.el.modeInfo, bar = $('menuTop'), head = top(info) + info.offsetHeight;
+    set('--playY', Math.max(H / 2 - this.el.btnPlay.offsetHeight / 2, head + 14));
+    set('--tY', top(bar) + bar.offsetHeight / 2 - top(title) - title.offsetHeight / 2);
+    const hY = top(bar) + bar.offsetHeight + 12 - top(seg);
+    set('--hY', hY); set('--sheetTop', head + hY + 10);
+  }
+  setOpts(on) {
+    this.layoutMenu();
+    this.el.menu.classList.toggle('opts', on); this.el.btnOpts.setAttribute('aria-expanded', String(on));
+    if (on) this.el.sheet.scrollTop = 0;
+  }
+  // Marks the chosen button of a segmented control; its pill slides under it.
+  setSeg(id, key, val) {
+    for (const b of this.$(id).querySelectorAll('button')) b.classList.toggle('on', b.dataset[key] === val);
+    this.pills();
+  }
+  pills() {
+    for (const seg of document.querySelectorAll('.seg')) {
+      const pill = seg.querySelector('.pill'), on = seg.querySelector('button.on');
+      if (!pill) continue;
+      pill.style.width = on ? on.offsetWidth + 'px' : '0';
+      if (on) pill.style.transform = `translateX(${on.offsetLeft}px)`;
+    }
   }
   hideNow(name) { const e = this.el[name]; e.classList.add('hidden', 'fade'); }
   hud(on) { this.el.hud.classList.toggle('on', on); }
@@ -4235,7 +4534,7 @@ class UI {
     document.documentElement.lang = LANG;
     for (const e of document.querySelectorAll('[data-i18n]')) e.textContent = tr(e.dataset.i18n);
     for (const e of document.querySelectorAll('[data-i18n-aria]')) { const t = tr(e.dataset.i18nAria); e.setAttribute('aria-label', t); e.title = t; }
-    for (const b of document.querySelectorAll('#langSeg button')) b.classList.toggle('on', b.dataset.lang === LANG);
+    this.setSeg('langSeg', 'lang', LANG);
     this.refreshSkinLabels();
   }
   setToggles(musicOn, sfxOn) {
@@ -4243,7 +4542,7 @@ class UI {
     for (const b of document.querySelectorAll('.tgSfx')) b.classList.toggle('off', !sfxOn);
   }
   setMode(mode, info) {
-    for (const b of document.querySelectorAll('#modeSeg button')) b.classList.toggle('on', b.dataset.mode === mode);
+    this.setSeg('modeSeg', 'mode', mode);
     this.el.modeTxt.textContent = info;
   }
 
@@ -4536,6 +4835,12 @@ class Game {
     try { qm = new URLSearchParams(location.search).get('mode'); } catch (e) { qm = null; }
     this.gameMode = (qm === 'daily' || qm === 'random' ? qm : Store.get('mode', 'random')) === 'daily' ? 'daily' : 'random';
     this.kid = Store.get('kid', false) === true;
+    this.ctrl = this.mobile && Store.get('ctrl', 'tilt') !== 'touch' ? 'tilt' : 'touch';   // the control PLAY starts with
+    const tod = Store.get('tod', 'real'); this.tod = TOD_MODES.includes(tod) ? tod : 'real';
+    this.darkMQ = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
+    this.cam.zoom = clamp(+Store.get('zoom', 1) || 1, 0.6, 1.8);
+    this.gest = new CamGestures((t, e) => this.camTarget(t, e));
+    this.gest.onTap = () => { if (this.state === 'menu' && this.ui.el.menu.classList.contains('opts')) this.setOpts(false); };
     // Random mode is one endless track per player: after a fall the next run starts again at the last checkpoint.
     this.rSeed = (Store.get('rseed', 0) | 0) || this.newSeed();
     this.contS = Math.max(CFG.START_S, +Store.get('rpos', 0) || 0);
@@ -4549,6 +4854,7 @@ class Game {
     this.collapseS = -1e9; this.danger = 0; this.warnT = 0; this.pruneT = 0; this.emitAcc = 0;
     this.R.setTheme(TRACK_THEMES[this.themeIdx]); this.physics.roll = TRACK_THEMES[this.themeIdx].roll || null;
     this.debris = []; this.bobY = 0; this.bobV = 0; this.bobP = [0, 0, 0];
+    this.R.setSky(this.skyNow());
     this.R.setZones(0, 0, 0); this.zoneIdx = 0; this.floorY = 0;
     this.ui.setAccent(TRACK_THEMES[this.themeIdx]);
     this.bindUI();
@@ -4557,6 +4863,7 @@ class Game {
     this.bindWindow();
     this.setupPWA();
     Analytics.init();
+    this.introMenu();
     this.last = performance.now();
     this.frame = this.frame.bind(this);
     requestAnimationFrame(this.frame);
@@ -4567,12 +4874,12 @@ class Game {
     const U = this.ui, E = U.el, $ = U.$;
     const tap = (el, fn) => el.addEventListener('click', (e) => { e.preventDefault(); fn(e); });
     for (const b of document.querySelectorAll('#langSeg button')) tap(b, () => { LANG = b.dataset.lang; Store.set('lang', LANG); this.refreshTexts(); this.audio.tick(); });
-    // a tap on the menu background shows only the title, the play buttons (moved to the middle) and
-    // the world; another tap brings the rest back
-    E.menu.addEventListener('click', (e) => {
-      if (this.state !== 'menu' || e.target.closest('button,input,a,.seg,.skinRow,.tgRow')) return;
-      U.centerCta(); E.menu.classList.toggle('clean');
-    });
+    // the options toggle raises the settings sheet (and hides PLAY); a tap outside the sheet closes it
+    tap(E.btnOpts, () => { if (this.state === 'menu') { this.setOpts(!E.menu.classList.contains('opts')); this.audio.tick(); } });
+    for (const b of document.querySelectorAll('#ctrlSeg button')) tap(b, () => { if (b.dataset.ctrl !== this.ctrl) { this.setCtrl(b.dataset.ctrl); this.audio.tick(); } });
+    for (const b of document.querySelectorAll('#todSeg button')) tap(b, () => { if (b.dataset.tod !== this.tod) { this.setTod(b.dataset.tod); this.audio.tick(); } });
+    if (!this.mobile) $('ctrlRow').classList.add('hidden');                 // keyboard and mouse only
+    if (this.darkMQ && this.darkMQ.addEventListener) this.darkMQ.addEventListener('change', () => { if (this.tod === 'system' && this.state === 'menu') this.updateSky(true); });
     tap($('tgKid'), () => { if (this.state === 'menu') { this.setKid(!this.kid); this.audio.tick(); } });
     tap(E.newTrack, () => { if (this.state === 'menu') { this.newTrack(); this.audio.tick(); } });
     for (const b of document.querySelectorAll('#modeSeg button')) tap(b, () => { if (this.state === 'menu' && b.dataset.mode !== this.gameMode) { this.setGameMode(b.dataset.mode); this.audio.tick(); } });
@@ -4580,24 +4887,7 @@ class Game {
     for (const b of document.querySelectorAll('.tgMusic')) tap(b, () => { this.audio.init(); this.audio.setMusic(!this.audio.musicOn); toggles(); });
     for (const b of document.querySelectorAll('.tgSfx')) tap(b, () => { this.audio.init(); this.audio.setSfx(!this.audio.sfxOn); toggles(); this.audio.tick(); });
     toggles();
-    if (!this.mobile) E.btnTouch.classList.add('hidden');
-    tap(E.btnTilt, () => {
-      if (this.state !== 'menu' || this.busy) return;
-      this.audio.init();
-      if (!this.mobile) { this.input.tilt = false; this.startRun('keys'); return; }
-      this.busy = true; E.btnTilt.style.opacity = 0.6;
-      this.input.requestTilt().then((r) => {
-        this.busy = false; E.btnTilt.style.opacity = '';
-        if (r.ok) { this.input.tilt = true; E.perm.classList.add('hidden'); this.startRun('tilt'); }
-        else {
-          this.input.tilt = false;
-          E.perm.textContent = tr(r.reason === 'denied' ? 'permDenied' : 'permNone');
-          E.perm.classList.remove('hidden');
-          setTimeout(() => this.startRun('touch'), 900);
-        }
-      });
-    });
-    tap(E.btnTouch, () => { if (this.state !== 'menu') return; this.audio.init(); this.input.tilt = false; this.startRun('touch'); });
+    tap(E.btnPlay, () => this.play());
     tap($('btnPause'), () => this.pause());
     tap($('btnResume'), () => this.resume(false));
     tap(E.recal, () => this.resume(true));
@@ -4623,6 +4913,7 @@ class Game {
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
       if ((k === 'escape' || k === 'p') && (this.state === 'play' || this.state === 'calib')) this.pause();
+      else if (k === 'escape' && this.state === 'menu') this.setOpts(false);
       else if (k === ' ' && this.state === 'play') this.starKey = true;
       else if ((k === 'escape' || k === 'p' || k === 'enter') && this.state === 'paused') this.resume(false);
       else if ((k === ' ' || k === 'enter') && this.state === 'menu' && !this.mobile) { this.audio.init(); this.input.tilt = false; this.startRun('keys'); }
@@ -4632,13 +4923,58 @@ class Game {
   refreshTexts() {
     const U = this.ui, E = U.el;
     U.applyLang();
-    E.btnTilt.textContent = tr(this.mobile ? 'playGyro' : 'play');
+    U.setSeg('ctrlSeg', 'ctrl', this.ctrl); U.setSeg('todSeg', 'tod', this.tod);
     const cont = this.gameMode === 'random' && this.contS > CFG.START_S + 5;
     U.setMode(this.gameMode, this.gameMode === 'daily' ? tr('infoDaily', { date: dayLabel(dayKey()) }) : cont ? tr('infoContinue', { d: fmt(this.contS - CFG.START_S) }) : tr('infoRandom'));
     E.newTrack.classList.toggle('hidden', !cont);
     E.mBest.textContent = fmt(this.modeBest()) + ' m';
     const kb = U.$('tgKid'); kb.classList.toggle('off', !this.kid); kb.title = tr('kidInfo');
     if (this.shareSt) U.shareState(this.shareSt, this.shareP || 0);
+    U.pills();
+  }
+  // PLAY starts with the chosen control; the gyroscope asks for permission first (iOS) and falls
+  // back to touch (and becomes the setting) when it is refused or missing.
+  play() {
+    const E = this.ui.el;
+    if (this.state !== 'menu' || this.busy) return;
+    this.audio.init();
+    if (!this.mobile || this.ctrl !== 'tilt') { this.input.tilt = false; this.startRun(this.mobile ? 'touch' : 'keys'); return; }
+    this.busy = true; E.btnPlay.style.opacity = 0.6;
+    this.input.requestTilt().then((r) => {
+      this.busy = false; E.btnPlay.style.opacity = '';
+      if (r.ok) { this.input.tilt = true; E.perm.classList.add('hidden'); this.startRun('tilt'); return; }
+      this.input.tilt = false; this.setCtrl('touch');
+      E.perm.textContent = tr(r.reason === 'denied' ? 'permDenied' : 'permNone');
+      E.perm.classList.remove('hidden');
+      setTimeout(() => { if (this.state === 'menu') this.startRun('touch'); }, 900);
+    });
+  }
+  setOpts(on) { this.ui.setOpts(!!on && this.state === 'menu'); }
+  setCtrl(c) { this.ctrl = c === 'touch' ? 'touch' : 'tilt'; Store.set('ctrl', this.ctrl); this.ui.setSeg('ctrlSeg', 'ctrl', this.ctrl); }
+  setTod(m) { this.tod = TOD_MODES.includes(m) ? m : 'real'; Store.set('tod', this.tod); this.ui.setSeg('todSeg', 'tod', this.tod); this.updateSky(true); }
+  skyNow() { return skyState(this.tod, new Date(), !!(this.darkMQ && this.darkMQ.matches)); }
+  // Time of day: the skies are painted again when the sun or the moon has moved enough. Only checked
+  // on the menu, so a run keeps its sky.
+  updateSky(fade) {
+    const S = this.skyNow();
+    if (S.key === this.R.sky.key) return false;
+    if (fade) this.crossfade();
+    this.R.setSky(S); this.pvKey = null;
+    return true;
+  }
+  // The menu rises into place, part after part (on start and on every return to it).
+  introMenu() {
+    const m = this.ui.el.menu;
+    m.classList.remove('intro'); void m.offsetWidth; m.classList.add('intro');
+    clearTimeout(this.introT); this.introT = setTimeout(() => m.classList.remove('intro'), 1600);
+  }
+  // Presses that move the camera: the menu background, or the game itself in gyroscope play
+  // (the wheel zooms in every kind of play).
+  camTarget(t, e) {
+    const st = this.state;
+    if (st === 'menu') return !!(t && t.closest && t.closest('#menu') && !t.closest('button,input,a,.seg,.skinRow,.tgRow,#sheet'));
+    if (st === 'play' || st === 'calib' || st === 'falling') return t === this.canvas && (this.mode === 'tilt' || e.type === 'wheel');
+    return false;
   }
   // ------------------------------------------------------------- game modes
   setGameMode(m) {
@@ -4713,11 +5049,11 @@ class Game {
     window.addEventListener('resize', onResize); window.addEventListener('orientationchange', onResize);
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) { if (this.state === 'play' || this.state === 'calib') this.pause(); this.audio.suspend(); }
-      else { if (this.state !== 'paused') this.audio.resume(); if (this.state === 'play') this.lockWake(); }
+      else { if (this.state !== 'paused') this.audio.resume(); if (this.state === 'play') this.lockWake(); if (this.state === 'menu') this.updateSky(true); }
     });
     window.addEventListener('blur', () => { if (this.state === 'play' && !this.mobile) this.pause(); });
     window.addEventListener('pagehide', () => this.audio.suspend());
-    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement)) e.preventDefault(); }, { passive: false });
+    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement) && !e.target.closest('#sheet')) e.preventDefault(); }, { passive: false });
     document.addEventListener('gesturestart', (e) => e.preventDefault());
     document.addEventListener('dblclick', (e) => e.preventDefault());
     this.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.glLost = true; if (this.state === 'play') this.pause(); });
@@ -4736,7 +5072,7 @@ class Game {
     if (force || this.R.post !== q.post || this.R.bloomDiv !== q.bloomDiv) { this.R.freeFBO(); this.R.w = 0; }
     this.R.post = q.post; this.R.bloomDiv = q.bloomDiv;
     this.R.resize(w, h, this.quality.pixelScale(w, h));
-    this.ui.centerCta();
+    this.ui.layoutMenu(); this.ui.pills();
   }
   applyQuality() {
     const q = this.quality.cur;
@@ -4806,18 +5142,17 @@ class Game {
     const U = this.ui, E = U.el;
     if (this.gameMode === 'daily' && this.runDay !== dayKey()) this.newWorld();   // the day changed
     this.best = this.modeBest();
-    U.show('menu', false); U.show('over', false); U.show('pause', false); E.menu.classList.remove('clean');
+    U.show('menu', false); U.show('over', false); U.show('pause', false); U.setOpts(false);
     U.hud(true);
     U.el.ctrl.textContent = tr(mode === 'tilt' ? 'ctrlTilt' : mode === 'keys' ? 'ctrlKeys' : 'ctrlTouch') + (this.kid ? ' · 🛡 ' + tr('kidTag') : '');
     E.recal.classList.toggle('hidden', mode !== 'tilt');
     this.input.enabled = true; this.input.release();
     this.cam.mode = 'follow';
     this.beginCountdown(mode === 'tilt', mode === 'tilt' ? 1.5 : 0.7);
-    if (mode !== 'tilt') {
-      U.el.touchHint.textContent = tr(mode === 'keys' ? 'keysHint' : 'touchHint');
-      U.el.touchHint.classList.remove('hidden'); U.el.touchHint.style.opacity = 1;
-      clearTimeout(this.hintT); this.hintT = setTimeout(() => { U.el.touchHint.style.opacity = 0; }, 3500);
-    } else U.el.touchHint.classList.add('hidden');
+    U.el.touchHint.textContent = tr(mode === 'keys' ? 'keysHint' : mode === 'tilt' ? 'camHint' : 'touchHint');
+    U.el.touchHint.classList.remove('hidden'); U.el.touchHint.style.opacity = 1;
+    clearTimeout(this.hintT); this.hintT = setTimeout(() => { U.el.touchHint.style.opacity = 0; }, 3500);
+    this.gest.reset(); this.cam.offYaw = this.cam.offPitch = 0;
     this.lockWake();
     Analytics.event('run_start', { mode: this.gameMode, control: mode, kid: this.kid });
   }
@@ -4864,16 +5199,19 @@ class Game {
   goMenu() {
     this.state = 'menu'; this.input.enabled = false; this.input.release();
     const U = this.ui;
-    U.show('pause', false); U.show('over', false); U.show('calib', false); U.el.menu.classList.remove('clean'); U.show('menu', true); U.hud(false);
+    U.show('pause', false); U.show('over', false); U.show('calib', false); U.setOpts(false); U.show('menu', true); U.hud(false); U.layoutMenu();
+    this.introMenu(); this.saveZoom(); this.gest.reset();
     U.el.touchHint.classList.add('hidden');
     this.best = this.modeBest(); this.refreshTexts();
     this.audio.resume();
+    this.updateSky(false);
     this.newWorld(); this.used = false; this.cam.mode = 'orbit';
     this.unlockWake();
   }
+  saveZoom() { if (this.zoomDirty) { this.zoomDirty = false; Store.set('zoom', +this.cam.zoom.toFixed(3)); } }
   finishRun() {
     this.state = 'over'; this.overT = 0;
-    this.input.enabled = false; this.input.release(); this.unlockWake();
+    this.input.enabled = false; this.input.release(); this.unlockWake(); this.saveZoom();
     const dist = Math.floor(this.dist), score = Math.floor(this.score);
     const beat = dist > Math.floor(this.best);
     if (beat) { this.best = dist; this.saveBest(dist); }
@@ -5001,6 +5339,17 @@ class Game {
     this.time += dtR;
     this.input.update(dtR);
     const st = this.state, b = this.ball;
+    // finger camera: drag and pinch on the menu, or during gyroscope play (a double tap there fires star power)
+    const G = this.gest.take(); this.cam.held = this.gest.held;
+    if (st === 'menu') {
+      if (G.dx || G.dy) this.cam.menuDrag(G.dx, G.dy);
+      if (G.zoom !== 1) this.cam.zoomBy(G.zoom, true);
+      if ((this.skyT = (this.skyT || 0) + dtR) > 30) { this.skyT = 0; this.updateSky(true); }
+    } else if (st === 'play' || st === 'calib' || st === 'falling') {
+      if (G.dx || G.dy) this.cam.lookDrag(G.dx, G.dy);
+      if (G.zoom !== 1) { this.cam.zoomBy(G.zoom, false); this.zoomDirty = true; }
+      if (G.double && st === 'play') this.input.doubleTap = true;
+    }
     if (st === 'calib') this.updateCountdown(dtR);
     if (st === 'falling') {
       this.fallT += dtR;
@@ -5286,7 +5635,7 @@ class Game {
   // Picker thumbnails drawn with the game's own shaders: every ball as it looks right here (it
   // mirrors the same world), every track theme on a short bend. Redrawn when the world or the theme changes.
   previews(dt) {
-    const key = this.themeIdx + ':' + this.zoneIdx + ':' + (this.R.probeReady ? 1 : 0);
+    const key = this.themeIdx + ':' + this.zoneIdx + ':' + (this.R.probeReady ? 1 : 0) + ':' + this.R.sky.key;
     if (key !== this.pvKey) {
       this.pvWait = (this.pvWait || 0) + dt;
       if (this.pvWait < 0.3) return;

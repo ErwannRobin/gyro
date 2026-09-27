@@ -202,19 +202,77 @@ const ZONES = [
     c1: hex(0xff3a1a), c2: hex(0xffa020), dust: hex(0xffa050), drift: [0.4, 1.8], floor: 4, floorA: hex(0x120202), floorB: hex(0xff4a10), shafts: 0.3 },
 ];
 
+// ---------------------------------------------------------------- time of day
+// The setting: 'real' follows the local clock, 'day' keeps each world's own sun, 'night' puts a
+// moon in its place, 'system' follows the device's dark mode.
+const TOD_MODES = ['real', 'day', 'night', 'system'];
+const MOON_MONTH = 29.530588853, NEW_MOON = Date.UTC(2000, 0, 6, 18, 14);
+const SOUTH_TZ = /^(Australia|Antarctica)\/|^Pacific\/(Auckland|Chatham|Fiji|Noumea|Tongatapu)|^America\/(Argentina|Santiago|Sao_Paulo|Montevideo|Asuncion)|^Africa\/(Johannesburg|Maputo|Harare|Windhoek|Lusaka|Gaborone)|^Indian\/(Reunion|Mauritius)/;
+// Where the sun (or the moon) stands, how dark the night is, how warm a low sun is, and the moon's
+// phase. The real clock uses a place at 45° of latitude (south of the equator when the time zone
+// says so) without asking for the location. The track heads towards the equator (+z): the sun rises
+// on the left and sets on the right, and its path is squeezed towards the front (turn angle and
+// height × 0.55) so it shows in the view more often.
+function skyState(mode, date = new Date(), dark = false) {
+  if (mode === 'system') mode = dark ? 'night' : 'day';
+  const age = ((((date.getTime() - NEW_MOON) / 864e5) % MOON_MONTH) + MOON_MONTH) % MOON_MONTH;
+  const S = {
+    mode, night: mode === 'night' ? 1 : 0, dusk: 0, dir: null, moon: mode === 'night',
+    // angle between the sunlight on the moon and the viewer (0 = full moon), kept to a visible crescent
+    phase: Math.min(2.4, Math.abs(Math.PI - age / MOON_MONTH * TAU)), side: age < MOON_MONTH / 2 ? 1 : -1,
+  };
+  if (mode === 'real') {
+    let tz = ''; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) { /* ignore */ }
+    const y = date.getFullYear(), std = Math.max(new Date(y, 0, 1).getTimezoneOffset(), new Date(y, 6, 1).getTimezoneOffset());
+    const doy = (Date.UTC(y, date.getMonth(), date.getDate()) - Date.UTC(y, 0, 0)) / 864e5, rad = Math.PI / 180, lat = 45 * rad;
+    const decl = -23.44 * rad * Math.cos(TAU * (doy + 10) / 365) * (SOUTH_TZ.test(tz) ? -1 : 1);
+    const H = (date.getHours() + date.getMinutes() / 60 - (date.getTimezoneOffset() < std ? 1 : 0) - 12) * 15 * rad;   // summer time removed
+    const el = Math.asin(Math.sin(lat) * Math.sin(decl) + Math.cos(lat) * Math.cos(decl) * Math.cos(H));
+    const az = Math.atan2(-Math.sin(H), Math.tan(decl) * Math.cos(lat) - Math.sin(lat) * Math.cos(H));   // from north, east positive
+    const deg = el / rad, n = clamp((2 - deg) / 10, 0, 1);
+    S.night = n * n * (3 - 2 * n); S.moon = S.night >= 0.5;
+    S.dusk = S.moon ? 0 : clamp(1 - Math.abs(deg - 2) / 14, 0, 1);
+    const a = Math.PI + wrapAngle((S.moon ? az : az + Math.PI) - (SOUTH_TZ.test(tz) ? Math.PI : 0)) * 0.55;   // the moon stands opposite the sun
+    const e = S.moon ? Math.max(0.2, -el * 0.55) : Math.max(-0.03, el * 0.55);
+    S.dir = [Math.sin(a) * Math.cos(e), Math.sin(e), -Math.cos(a) * Math.cos(e)];
+  }
+  S.key = [mode, S.moon ? 1 : 0, S.dir ? S.dir.map((v) => Math.round(v * 16)).join(',') : '-', Math.round(S.night * 8), Math.round(S.dusk * 8)].join(':');
+  return S;
+}
+// A world's palette under a time of day. Night dims it to a moonlit blue (worlds that are already
+// dark barely change) and swaps sunlight for moonlight; a low sun warms the light and the horizon.
+// `paint` keeps the original colours for the sky painting, which gets dimmed as a whole instead.
+const NIGHT_TINT = [0.12, 0.16, 0.33], MOON_LIGHT = [0.62, 0.72, 1.0], DUSK_SUN = [1.0, 0.56, 0.3];
+function skyZone(Z, S) {
+  const mixc = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+  const lum = Z.skyMid[0] * 0.2126 + Z.skyMid[1] * 0.7152 + Z.skyMid[2] * 0.0722, zd = clamp((lum - 0.05) / 0.3, 0, 1);
+  const k = S.night * zd, dk = S.dusk * (1 - S.night);
+  const g = (c, w = 1) => [c[0] * lerp(1, NIGHT_TINT[0], k * w), c[1] * lerp(1, NIGHT_TINT[1], k * w), c[2] * lerp(1, NIGHT_TINT[2], k * w)];
+  const moonCol = mixc(Z.sun, MOON_LIGHT, 0.5 + 0.5 * zd).map((v) => v * lerp(0.8, 0.55, zd));
+  const sun = S.moon ? mixc(Z.sun, moonCol, S.night) : mixc(Z.sun, DUSK_SUN, dk * 0.75);
+  const sunDir = S.dir || Z.sunDir;
+  return Object.assign({}, Z, {
+    sunDir, moon: S.moon, sun, stars: Math.max(Z.stars, S.night * 0.5), shafts: Z.shafts * (1 - 0.7 * k),
+    skyTop: g(Z.skyTop), skyMid: g(Z.skyMid), horizon: g(mixc(Z.horizon, [1, 0.62, 0.4], dk * 0.35)), abyss: g(Z.abyss), fog: g(Z.fog),
+    floorA: g(Z.floorA), floorB: g(Z.floorB, 0.85), dust: g(Z.dust, 0.5),
+    paint: Object.assign({}, Z, { sunDir, moon: S.moon, nightK: k, dusk: dk }),
+  });
+}
+
 // ---------------------------------------------------------------- i18n
 const I18N = {
   fr: {
-    playGyro: 'JOUER AVEC LE GYROSCOPE', play: 'JOUER', playTouch: 'JOUER AU TACTILE', music: 'MUSIQUE', sfx: 'EFFETS',
-    modeRandom: 'ALÉATOIRE', modeDaily: 'DÉFI DU JOUR', infoRandom: 'Parcours sans fin · vous repartez du dernier checkpoint', infoContinue: 'Reprise au checkpoint {d} m', newTrack: '↻ NOUVEAU PARCOURS', infoDaily: 'Même parcours pour tous · {date}',
+    play: 'JOUER', music: 'MUSIQUE', sfx: 'EFFETS', options: 'OPTIONS', done: 'OK', control: 'CONTRÔLE',
+    tod: 'MOMENT DE LA JOURNÉE', todReal: 'TEMPS RÉEL', todDay: 'JOUR', todNight: 'NUIT', todSystem: 'SYSTÈME',
+    modeRandom: 'ENTRAÎNEMENT', modeDaily: 'DÉFI DU JOUR', infoRandom: 'Parcours sans fin · vous repartez du dernier checkpoint', infoContinue: 'Reprise au checkpoint {d} m', newTrack: '↻ NOUVEAU PARCOURS', infoDaily: 'Même parcours pour tous · {date}',
     track: 'PISTE', ball: 'BILLE', pause: 'PAUSE', resume: 'REPRENDRE', recal: 'RECALIBRER LE GYROSCOPE', mainMenu: 'MENU PRINCIPAL',
     gameOver: 'GAME OVER', newRecord: 'NOUVEAU RECORD', retry: 'REJOUER', menu: 'MENU',
     share: 'PARTAGER MON SCORE', shareBusy: 'PRÉPARATION DE LA VIDÉO…', shareSaved: 'VIDÉO ENREGISTRÉE ✓', shareReady: 'PARTAGER LA VIDÉO ▶', shareImg: 'PARTAGER MON SCORE',
     shareText: 'J’ai roulé {d} m sur GYROLL (score {s}) ! Tu fais mieux ?', shareDaily: 'Défi du jour {date}',
     calib: 'CALIBRATION', calibSub: 'Tenez le téléphone dans une position naturelle', ready: 'PRÊT ?',
-    touchHint: 'Glissez le doigt pour guider la bille', keysHint: 'Flèches / WASD / ZQSD · ou glisser à la souris',
+    touchHint: 'Glissez le doigt pour guider la bille', camHint: 'Glissez pour tourner la caméra · pincez pour zoomer', keysHint: 'Flèches / WASD / ZQSD · ou glisser à la souris',
     permDenied: 'Accès au gyroscope refusé — contrôle tactile activé.', permNone: 'Gyroscope indisponible — contrôle tactile activé.',
-    ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TACTILE', ctrlKeys: 'CLAVIER', record: 'NOUVEAU RECORD !', dailyTag: 'DÉFI DU JOUR · {date}', randomTag: 'PARTIE ALÉATOIRE',
+    ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TACTILE', ctrlKeys: 'CLAVIER', record: 'NOUVEAU RECORD !', dailyTag: 'DÉFI DU JOUR · {date}', randomTag: 'ENTRAÎNEMENT',
     kid: 'MODE ENFANT · RAILS LATÉRAUX', kidInfo: 'Des petits rails rattrapent la bille sur les côtés', kidBadge: '🛡 Réalisé avec les rails latéraux', kidShare: 'avec les rails latéraux', kidTag: 'RAILS', tooFast: 'TROP VITE !',
     star: 'STAR POWER', starGo: 'LEVEZ D’UN COUP ↑', starGoTouch: 'TAPEZ 2 FOIS', starGoKeys: 'ESPACE', starReady: 'STAR POWER PRÊT !',
     starOn: '★ STAR POWER ★', starActive: '★ SCORE ×2', starEnd: 'FIN DU STAR POWER', combo: 'PIÈCES ×{n}', comboLost: 'SÉRIE PERDUE',
@@ -222,16 +280,17 @@ const I18N = {
     noGL: 'WebGL est indisponible sur cet appareil / navigateur. Activez l’accélération matérielle ou essayez un Chrome / Safari récent.',
   },
   en: {
-    playGyro: 'PLAY WITH GYROSCOPE', play: 'PLAY', playTouch: 'PLAY WITH TOUCH', music: 'MUSIC', sfx: 'SFX',
-    modeRandom: 'RANDOM', modeDaily: 'DAILY RUN', infoRandom: 'Endless track · you restart at the last checkpoint', infoContinue: 'Back at the {d} m checkpoint', newTrack: '↻ NEW TRACK', infoDaily: 'Same track for everyone · {date}',
+    play: 'PLAY', music: 'MUSIC', sfx: 'SFX', options: 'OPTIONS', done: 'DONE', control: 'CONTROLS',
+    tod: 'TIME OF DAY', todReal: 'REAL TIME', todDay: 'DAY', todNight: 'NIGHT', todSystem: 'SYSTEM',
+    modeRandom: 'TRAINING', modeDaily: 'DAILY RUN', infoRandom: 'Endless track · you restart at the last checkpoint', infoContinue: 'Back at the {d} m checkpoint', newTrack: '↻ NEW TRACK', infoDaily: 'Same track for everyone · {date}',
     track: 'TRACK', ball: 'BALL', pause: 'PAUSE', resume: 'RESUME', recal: 'RECALIBRATE GYROSCOPE', mainMenu: 'MAIN MENU',
     gameOver: 'GAME OVER', newRecord: 'NEW RECORD', retry: 'PLAY AGAIN', menu: 'MENU',
     share: 'SHARE MY SCORE', shareBusy: 'PREPARING VIDEO…', shareSaved: 'VIDEO SAVED ✓', shareReady: 'SHARE THE VIDEO ▶', shareImg: 'SHARE MY SCORE',
     shareText: 'I rolled {d} m in GYROLL (score {s})! Can you beat it?', shareDaily: 'Daily run {date}',
     calib: 'CALIBRATION', calibSub: 'Hold your phone in a natural position', ready: 'READY?',
-    touchHint: 'Drag your finger to steer the ball', keysHint: 'Arrows / WASD · or drag with the mouse',
+    touchHint: 'Drag your finger to steer the ball', camHint: 'Drag to turn the camera · pinch to zoom', keysHint: 'Arrows / WASD · or drag with the mouse',
     permDenied: 'Gyroscope access denied — touch control enabled.', permNone: 'Gyroscope unavailable — touch control enabled.',
-    ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TOUCH', ctrlKeys: 'KEYBOARD', record: 'NEW RECORD!', dailyTag: 'DAILY RUN · {date}', randomTag: 'RANDOM RUN',
+    ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TOUCH', ctrlKeys: 'KEYBOARD', record: 'NEW RECORD!', dailyTag: 'DAILY RUN · {date}', randomTag: 'TRAINING',
     kid: 'KID MODE · SIDE RAILS', kidInfo: 'Small rails catch the ball on the sides', kidBadge: '🛡 Achieved with side rails on', kidShare: 'with side rails on', kidTag: 'RAILS', tooFast: 'TOO FAST!',
     star: 'STAR POWER', starGo: 'FLICK PHONE UP ↑', starGoTouch: 'DOUBLE-TAP', starGoKeys: 'PRESS SPACE', starReady: 'STAR POWER READY!',
     starOn: '★ STAR POWER ★', starActive: '★ SCORE ×2', starEnd: 'STAR POWER OVER', combo: 'COINS ×{n}', comboLost: 'STREAK LOST',
