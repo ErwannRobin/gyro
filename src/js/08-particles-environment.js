@@ -435,7 +435,7 @@ class Environment {
 }
 
 // =====================================================================
-// FxBuilder — per-frame additive geometry (trail ribbon, halos, shafts).
+// FxBuilder — per-frame additive geometry (trail ribbon, halos, shafts, shockwave rings).
 // =====================================================================
 class FxBuilder {
   constructor() { this.buf = new Float32Array(4000 * 10); this.n = 0; this.trail = []; for (let k = 0; k < 30; k++) this.trail.push([0, 0, 0]); this.th = 0; this.tn = 0; }
@@ -457,6 +457,19 @@ class FxBuilder {
     if (a <= 0.003) return;
     const rx = this.rx * size, ry = this.ry * size, rz = this.rz * size, ux = this.ux * size, uy = this.uy * size, uz = this.uz * size;
     this.quad([x - rx - ux, y - ry - uy, z - rz - uz], [x + rx - ux, y + ry - uy, z + rz - uz], [x + rx + ux, y + ry + uy, z + rz + uz], [x - rx + ux, y - ry + uy, z - rz + uz], 1, col, a, [0, 0, 1, 0, 1, 1, 0, 1]);
+  }
+  // Shockwave ring: facing the camera, or lying in the plane of normal n.
+  ring(x, y, z, size, col, a, n) {
+    if (a <= 0.003) return;
+    let rx = this.rx, ry = this.ry, rz = this.rz, ux = this.ux, uy = this.uy, uz = this.uz;
+    if (n) {                                          // two axes in the plane of n
+      const k = Math.abs(n[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+      rx = n[1] * k[2] - n[2] * k[1]; ry = n[2] * k[0] - n[0] * k[2]; rz = n[0] * k[1] - n[1] * k[0];
+      const l = Math.hypot(rx, ry, rz) || 1; rx /= l; ry /= l; rz /= l;
+      ux = n[1] * rz - n[2] * ry; uy = n[2] * rx - n[0] * rz; uz = n[0] * ry - n[1] * rx;
+    }
+    rx *= size; ry *= size; rz *= size; ux *= size; uy *= size; uz *= size;
+    this.quad([x - rx - ux, y - ry - uy, z - rz - uz], [x + rx - ux, y + ry - uy, z + rz - uz], [x + rx + ux, y + ry + uy, z + rz + uz], [x - rx + ux, y - ry + uy, z - rz + uz], 3, col, a, [0, 0, 1, 0, 1, 1, 0, 1]);
   }
   shaft(sh, cam, col) {
     let dx = cam[0] - sh.x, dz = cam[2] - sh.z; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;

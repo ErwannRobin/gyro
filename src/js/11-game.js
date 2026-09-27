@@ -52,6 +52,10 @@ class Game {
     this.collapseS = -1e9; this.danger = 0; this.warnT = 0; this.pruneT = 0; this.emitAcc = 0;
     this.R.setTheme(TRACK_THEMES[this.themeIdx]); this.physics.roll = TRACK_THEMES[this.themeIdx].roll || null;
     this.debris = []; this.bobY = 0; this.bobV = 0; this.bobP = [0, 0, 0];
+    // game feel: time warps (hit-stop, slow motion), the ball's squash and stretch, shockwave rings
+    this.tw = { t: 9, hold: 0, ease: 0, k: 1, slow: false }; this.nearCool = 0; this.slowK = 0; this.rushK = 0; this.impactK = 0;
+    this.sq = 0; this.sqV = 0; this.sqC = [0, 0, 0]; this.rings = [];
+    this.still = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
     this.R.setSky(this.skyNow());
     this.R.setZones(0, 0, 0); this.zoneIdx = 0; this.floorY = 0;
     this.ui.setAccent(TRACK_THEMES[this.themeIdx]);
@@ -112,6 +116,7 @@ class Game {
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
       if (U.aboutOpen) { if (k === 'escape') U.closeAbout(); return; }
+      if (U.installOpen) { if (k === 'escape') U.closeInstall(); return; }
       if ((k === 'escape' || k === 'p') && (this.state === 'play' || this.state === 'calib')) this.pause();
       else if (k === 'escape' && this.state === 'menu') this.setOpts(false);
       else if (k === ' ' && this.state === 'play') this.starKey = true;
@@ -144,7 +149,7 @@ class Game {
       this.busy = false; E.btnPlay.style.opacity = '';
       if (r.ok) { this.input.tilt = true; E.perm.classList.add('hidden'); this.startRun('tilt'); return; }
       this.input.tilt = false; this.setCtrl('touch');
-      E.perm.textContent = tr(r.reason === 'denied' ? 'permDenied' : 'permNone');
+      E.perm.textContent = tr(r.reason === 'denied' ? 'permDenied' : 'permNone'); E.perm.classList.remove('ok');
       E.perm.classList.remove('hidden');
       setTimeout(() => { if (this.state === 'menu') this.startRun('touch'); }, 900);
     });
@@ -313,6 +318,7 @@ class Game {
     this.input.flick = this.input.doubleTap = this.starKey = false;
     this.audio.setTempo(1); this.ui.updatePower(0, 1, 'fill', '');
     this.parts.clear(); this.debris.length = 0; this.bobY = this.bobV = 0;
+    this.tw.t = 9; this.nearCool = 0; this.slowK = this.rushK = this.impactK = 0; this.sq = this.sqV = 0; this.rings.length = 0;
     this.replay.reset(); this.shareToken = (this.shareToken || 0) + 1; this.shareFile = null; this.shareInfo = null;
     this.updateChunks(99);
     this.env.reset(this.track, b.s, this.quality.cur.env, this.quality.cur.dust, this.R.meshes);
@@ -446,6 +452,7 @@ class Game {
     const n = Math.min(26, 5 + impact * 2) | 0;
     this.parts.burst(pos[0], pos[1], pos[2], n, 3 + impact * 0.6, [1, 0.75, 0.4], { life: 0.5, size: 0.07, grav: 14, mix: [1, 1, 1], up: 1.5 });
     this.cam.shake = Math.min(1, this.cam.shake + impact / 12);
+    this.sqV += Math.min(impact * 0.3, 3);
     if (impact > 5 && navigator.vibrate) try { navigator.vibrate(12); } catch (e) { /* ignore */ }
   }
   // Grass tuft: the ball bounces a little (drawn only: the physics ball stays on the ground) and
@@ -453,6 +460,7 @@ class Game {
   tuft(b, o, sp, cut) {
     this.audio.grass(sp, cut);
     this.bobV = Math.max(this.bobV, cut ? 0 : Math.min(2.4, 1.1 + sp * 0.06));
+    if (!cut) this.sqV += 2;
     this.cam.shake = Math.min(1, this.cam.shake + (cut ? 0.05 : 0.12));
     const M = this.R.meshes, n = cut ? 9 : 6;
     for (let k = 0; k < n; k++) {
@@ -475,7 +483,23 @@ class Game {
         Math.cos(a) * v + b.v[0] * 0.55, 3 + Math.random() * 5, Math.sin(a) * v + b.v[2] * 0.55, post ? 0.08 + Math.random() * 0.1 : 0.12 + Math.random() * 0.14, 1.6);
     }
     this.parts.burst(pos[0], pos[1] + 0.4, pos[2], 46, 7, STAR_COL, { life: 0.8, size: 0.12, grav: 8, mix: col, up: 2, vx: b.v[0] * 0.4, vz: b.v[2] * 0.4 });
+    // hit-stop: the world almost freezes for a blink (the camera keeps shaking), then time rushes back
+    this.warp(0.075, 0.14, 0.03, false);
+    this.impactK = 1; this.sqV += 3;
+    this.rings.push({ p: [pos[0], pos[1] + 0.3, pos[2]], t: 0, dur: 0.45, size: 3.4, col: STAR_COL, a: 1.3, n: null });
     if (navigator.vibrate) try { navigator.vibrate(25); } catch (e) { /* ignore */ }
+  }
+  // An obstacle passed at speed within a hand's width, untouched: bonus points and, now and then, slow motion.
+  nearMiss(b, o) {
+    if (this.state !== 'play' || b.lost) return;
+    const th = TRACK_THEMES[this.themeIdx], pts = 100 * this.mult * (this.star ? 2 : 1), slow = this.nearCool <= 0;
+    this.score += pts; this.nears = (this.nears || 0) + 1;
+    this.ui.toast(tr('nearMiss', { n: fmt(pts) }), 'cyan');
+    this.audio.nearMiss(slow);
+    if (slow) { this.nearCool = 4; this.warp(0.42, 0.4, 0.28, true); }
+    this.parts.burst(b.p[0], b.p[1], b.p[2], 16, 3, th.accent2, { life: 0.5, size: 0.07, grav: 0, mix: [1, 1, 1], vx: b.v[0] * 0.3, vz: b.v[2] * 0.3 });
+    this.rings.push({ p: b.p.slice(), t: 0, dur: 0.5, size: 1.7, col: th.accent2, a: 0.8, n: null });
+    if (navigator.vibrate) try { navigator.vibrate(8); } catch (e) { /* ignore */ }
   }
   addDebris(mesh, col, x, y, z, vx, vy, vz, size, life) {
     if (this.debris.length > 60) this.debris.shift();
@@ -495,16 +519,18 @@ class Game {
     if (this.bobV > 0 || this.bobY > 0) { this.bobY += this.bobV * dt; this.bobV -= CFG.G * dt; if (this.bobY <= 0) { this.bobY = 0; this.bobV = 0; } }
   }
   land(b, imp) {
+    this.sqV -= clamp(imp * 0.8, 0, 9);                      // the ball squashes on the deck, then springs back
     if (imp < 2) return;
     this.audio.land(imp);
     const T = TRACK_THEMES[this.themeIdx];
     this.parts.burst(b.p[0], b.p[1] - CFG.R, b.p[2], Math.min(20, imp * 2) | 0, 2 + imp * 0.2, T.accent, { life: 0.5, size: 0.08, grav: 4, up: 0.8 });
     this.cam.shake = Math.min(1, this.cam.shake + imp / 25);
+    if (imp > 6) this.rings.push({ p: [b.p[0], b.p[1] - CFG.R + 0.05, b.p[2]], t: 0, dur: 0.5, size: 0.7 + imp * 0.08, col: T.accent, a: 0.9, n: this.ballPlane().gN.slice() });
   }
   railJump(b, impact, pos) {
     this.audio.hit(impact * 1.3);
     this.parts.burst(pos[0], pos[1], pos[2], 24, 5, [1, 0.6, 0.3], { life: 0.6, size: 0.09, grav: 12, mix: [1, 1, 1], up: 2 });
-    this.cam.shake = Math.min(1, this.cam.shake + 0.5);
+    this.cam.shake = Math.min(1, this.cam.shake + 0.5); this.sqV += 3;
     this.ui.toast(tr('tooFast'), 'pink', true);
   }
   boost(b) {
@@ -555,7 +581,7 @@ class Game {
       this.fallT += dtR;
       this.timeScale = this.fallT < 0.7 ? 0.3 : lerp(0.3, 1, clamp((this.fallT - 0.7) / 0.7, 0, 1));
       if (this.fallT > 1.8) this.finishRun();
-    } else this.timeScale = 1;
+    } else this.timeScale = st === 'play' ? this.warpScale(dtR) : 1;
     if (st === 'over') this.overT = (this.overT || 0) + dtR;
     const dt = dtR * this.timeScale;
     const sim = st === 'play' || st === 'falling' || st === 'over';
@@ -591,12 +617,15 @@ class Game {
       this.floorY = lerp(this.floorY, b.surfY - 62, damp(0.4, dtR));
       this.pruneT -= dtR;
       if (this.pruneT <= 0) { this.pruneT = 2; const o = this.track.objects, cut = b.s - 60; let w = 0; for (let k = 0; k < o.length; k++) if (o[k].s > cut) o[w++] = o[k]; o.length = w; }
-      this.parts.update(dt); this.updateDebris(dt);
+      this.parts.update(dt); this.updateDebris(dt); this.updateFeel(dt, dtR);
       this.fx.pushTrail(b.p, dt);
       this.cam.update(st === 'falling' ? dtR : dtR, b, this.track, this.R.w / this.R.h);
       this.audio.intensity = lerp(this.audio.intensity, st === 'play' ? clamp(b.speed / CFG.VMAX, 0.15, 1) : 0.15, damp(0.5, dtR));
       this.rollT = (this.rollT || 0) + dtR;
-      if (this.rollT > 0.05) { this.rollT = 0; this.audio.setRoll(b.speed, st === 'play' && b.grounded && b.support, !!this.physics.roll); }
+      if (this.rollT > 0.05) {
+        this.rollT = 0; this.audio.setRoll(b.speed, st === 'play' && b.grounded && b.support, !!this.physics.roll);
+        this.audio.setWind(st === 'play' ? b.speed : 0, !b.grounded); this.audio.setSlow(this.slowK);
+      }
     }
     // while the replay video is being encoded, draw the backdrop at half rate
     if (draw && st === 'over' && this.shareSt === 'busy' && (this.halfTick = !this.halfTick)) draw = false;
@@ -716,6 +745,56 @@ class Game {
     this.star = false; this.physics.star = false; this.power = 0;
     this.audio.setTempo(1); this.ui.updatePower(0, this.coinMult, 'fill', '');
     if (!quiet) { this.audio.starOff(); this.ui.toast(tr('starEnd'), 'gold'); }
+  }
+
+  // ------------------------------------------------------------- game feel
+  // Time warps: time runs at k for `hold` real seconds, then eases back to 1 over `ease`.
+  // A smash is a near freeze (hit-stop), a near miss is slow motion.
+  warp(hold, ease, k, slow) {
+    const W = this.tw;
+    if (W.t < W.hold && W.k <= k) return;             // a deeper warp is still holding
+    W.t = 0; W.hold = hold; W.ease = ease; W.k = k; W.slow = slow;
+  }
+  warpScale(dtR) {
+    const W = this.tw;
+    if (W.t >= W.hold + W.ease) return 1;
+    W.t += dtR;
+    const e = clamp((W.t - W.hold) / W.ease, 0, 1);
+    return lerp(W.k, 1, e * e * (3 - 2 * e));
+  }
+  updateFeel(dt, dtR) {
+    const b = this.ball, W = this.tw, play = this.state === 'play';
+    // the slow motion look (drained colour, dark edges, a closer camera, muffled music) follows its warp
+    const slow = play && W.slow && W.t < W.hold + W.ease ? 1 - clamp((W.t - W.hold) / W.ease, 0, 1) : 0;
+    this.slowK = lerp(this.slowK, slow, damp(slow > this.slowK ? 14 : 6, dtR));
+    this.impactK = Math.max(0, this.impactK - dtR * 3);
+    this.nearCool = Math.max(0, this.nearCool - dtR);
+    // speed rush past ~70 km/h: more speed lines, wind, dark edges and a light camera rumble
+    this.rushK = lerp(this.rushK, play ? clamp((b.speed - 19) / 14, 0, 1) : 0, damp(3, dtR));
+    this.cam.focus = this.slowK; this.cam.rush = this.still ? 0 : this.rushK;
+    // squash and stretch: a springy scale along the deck normal (about 4 Hz); in the air the ball stretches along its fall
+    const rest = !b.grounded && !b.lost ? clamp(Math.abs(b.v[1]) * 0.012, 0, 0.12) : 0;
+    for (let n = Math.ceil(dt * 240), h = dt / Math.max(n, 1); n > 0; n--) {
+      this.sqV += (-676 * (this.sq - rest) - 15.6 * this.sqV) * h;
+      this.sq += this.sqV * h;
+    }
+    this.sq = clamp(this.sq, -0.32, 0.3);
+    for (let k = this.rings.length - 1; k >= 0; k--) if ((this.rings[k].t += dt) >= this.rings[k].dur) this.rings.splice(k, 1);
+  }
+  // Squash (sq < 0) or stretch (sq > 0) the ball's matrix along n, keeping its volume; on the deck
+  // its bottom stays put. Returns the ball's new center.
+  squash(m, c, n) {
+    const s = this.sq, C = this.sqC;
+    C[0] = c[0]; C[1] = c[1]; C[2] = c[2];
+    if (Math.abs(s) < 0.002) return C;
+    const along = 1 + s, side = 1 / Math.sqrt(along), d = along - side;
+    for (let o = 0; o <= 8; o += 4) {
+      const dn = (m[o] * n[0] + m[o + 1] * n[1] + m[o + 2] * n[2]) * d;
+      m[o] = m[o] * side + n[0] * dn; m[o + 1] = m[o + 1] * side + n[1] * dn; m[o + 2] = m[o + 2] * side + n[2] * dn;
+    }
+    const b = this.ball, sink = b.grounded && !b.lost && this.bobY <= 0 ? CFG.R * (1 - along) : 0;
+    for (let j = 0; j < 3; j++) { C[j] -= n[j] * sink; m[12 + j] = C[j]; }
+    return C;
   }
 
   // ------------------------------------------------------------- rendering
@@ -914,7 +993,7 @@ class Game {
     this.env.draw(R, this.time, b.p);
     R.endLit();
     M4.fromTRS(this.model, bp[0], bp[1], bp[2], b.q, CFG.R, CFG.R, CFG.R);
-    const pl = this.ballPlane(); pl.c = bp;
+    const pl = this.ballPlane(); pl.c = this.squash(this.model, bp, pl.gN);
     R.drawBall(this.model, sk, Math.max(spK, boostK), 1, stK, pl);
     // additive pass
     R.beginAdditive();
@@ -922,7 +1001,12 @@ class Game {
     const sk2 = Z.shafts, shaftCol = [lerp(Z.sun[0], th.accent[0], 0.3) * sk2, lerp(Z.sun[1], th.accent[1], 0.3) * sk2, lerp(Z.sun[2], th.accent[2], 0.3) * sk2];
     for (const s of this.env.shafts) F.shaft(s, cam.eye, shaftCol);
     const running = this.state === 'play' || this.state === 'falling';
-    F.speedLines(this.frameDt || 0, cam.eye, R.camF, running ? b.speed : 0, Z.dust, running ? clamp((b.speed - 7) / 12, 0, 1) * 0.3 + boostK * 0.35 : 0);
+    const lineCol = stK > 0.01 ? [lerp(Z.dust[0], STAR_COL[0], stK), lerp(Z.dust[1], STAR_COL[1], stK), lerp(Z.dust[2], STAR_COL[2], stK)] : Z.dust;
+    F.speedLines(this.frameDt || 0, cam.eye, R.camF, running ? b.speed : 0, lineCol, running ? clamp((b.speed - 7) / 12, 0, 1) * 0.3 + boostK * 0.35 + this.rushK * 0.45 : 0);
+    for (const r of this.rings) {                        // shockwaves: fast out, slow fade
+      const k = r.t / r.dur, e = 1 - (1 - k) * (1 - k) * (1 - k);
+      F.ring(r.p[0], r.p[1], r.p[2], r.size * (0.12 + 0.88 * e), r.col, (1 - k) * (1 - k) * r.a, r.n);
+    }
     for (const bo of this.env.bolts) { const a = bo.life / 0.28; F.polyRibbon(bo.pts, cam.eye, 1.4, Z.c1, a * 0.8); F.polyRibbon(bo.pts, cam.eye, 0.35, [1, 0.95, 1], a * 1.6); }
     F.ribbon(cam.eye, CFG.R * (0.55 + stK * 0.35), glowCol, clamp((b.speed - 8) / 8, 0, 1) * 0.55 + boostK * 0.5 + stK * 0.6);
     F.glow(b.p[0], b.p[1], b.p[2], CFG.R * (2.8 + stK * 2.2), glowCol, 0.1 + boostK * 0.35 + spK * 0.08 + stK * (0.4 + 0.12 * Math.sin(this.time * 14)));
@@ -934,7 +1018,8 @@ class Game {
     R.drawPoints(this.parts.out, n);
     R.endAdditive();
     const q = this.quality.cur;
-    R.finish({ bloom: 1.0, blur: q.blur ? clamp((b.speed - 11) / 9, 0, 1) * 0.5 + boostK * 0.4 : 0, ca: q.blur ? boostK * 0.6 : 0, cx: 0.5, cy: aspect < 1 ? 0.4 : 0.45 });
+    R.finish({ bloom: 1.0, blur: q.blur ? clamp((b.speed - 11) / 9, 0, 1) * 0.5 + boostK * 0.4 : 0, ca: (q.blur ? boostK * 0.6 : 0) + this.impactK * 1.6,
+      focus: this.slowK, vig: Math.max(this.slowK * 0.9, this.rushK * 0.45), cx: 0.5, cy: aspect < 1 ? 0.4 : 0.45 });
   }
 
   // ------------------------------------------------------------- world zones
@@ -959,24 +1044,40 @@ class Game {
 
   // ------------------------------------------------------------- installable app (PWA)
   // The manifest and service worker only exist on a web server; file:// copies skip them.
+  // INSTALL (next to ABOUT in the options) shows the browser's own install prompt when it offers one,
+  // and otherwise a guide made for this device.
   setupPWA() {
-    const web = /^https?:$/.test(location.protocol), btn = this.ui.$('btnInstall'), E = this.ui.el;
+    const web = /^https?:$/.test(location.protocol), U = this.ui, $ = U.$, btn = $('btnInstall');
     if (web) {
       const l = document.createElement('link'); l.rel = 'manifest'; l.href = 'manifest.webmanifest'; document.head.appendChild(l);
       if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
     }
     const installed = matchMedia('(display-mode: fullscreen)').matches || matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
     if (!web || installed) return;
-    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); this.installEvt = e; btn.classList.remove('hidden'); });
-    window.addEventListener('appinstalled', () => { btn.classList.add('hidden'); Analytics.event('install', { outcome: 'installed' }); });
-    if (ios) btn.classList.remove('hidden');
+    btn.classList.remove('hidden');
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); this.installEvt = e; });
+    window.addEventListener('appinstalled', () => {
+      btn.classList.add('hidden'); U.closeInstall();
+      U.el.perm.textContent = tr('installed'); U.el.perm.classList.add('ok'); U.el.perm.classList.remove('hidden');
+      Analytics.event('install', { outcome: 'installed' });
+    });
     btn.addEventListener('click', (e) => {
-      e.preventDefault();
+      e.preventDefault(); this.audio.tick();
       if (this.installEvt) {
         const ev = this.installEvt; this.installEvt = null; ev.prompt();
         ev.userChoice.then((c) => { Analytics.event('install', { outcome: c.outcome }); if (c.outcome === 'accepted') btn.classList.add('hidden'); }).catch(() => {});
-      } else if (ios) { E.perm.textContent = tr('iosInstall'); E.perm.classList.remove('hidden'); }
+        return;
+      }
+      const kind = installKind();
+      U.openInstall(kind, btn);
+      Analytics.event('install', { outcome: 'guide', kind });
+    });
+    $('btnInstallClose').addEventListener('click', (e) => { e.preventDefault(); U.closeInstall(); this.audio.tick(); });
+    const copy = $('btnCopyLink');
+    copy.addEventListener('click', (e) => {
+      e.preventDefault();
+      const url = location.origin + location.pathname, done = () => { copy.textContent = tr('linkCopied'); clearTimeout(copy._t); copy._t = setTimeout(() => { copy.textContent = tr('copyLink'); }, 2000); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, () => {});
     });
   }
 

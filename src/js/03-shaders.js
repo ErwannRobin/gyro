@@ -641,7 +641,8 @@ void main(){
   float a;
   if (v_uv.z < 0.5) { float x = 1.0 - abs(v_uv.y * 2.0 - 1.0); a = x * x * v_uv.x; }                    // ribbon
   else if (v_uv.z < 1.5) { vec2 c = v_uv.xy * 2.0 - 1.0; float d = max(1.0 - dot(c, c), 0.0); a = d * d * d; } // radial glow
-  else { float x = 1.0 - abs(v_uv.x * 2.0 - 1.0); a = x * x * smoothstep(0.0, 0.35, v_uv.y) * smoothstep(1.0, 0.5, v_uv.y); } // shaft
+  else if (v_uv.z < 2.5) { float x = 1.0 - abs(v_uv.x * 2.0 - 1.0); a = x * x * smoothstep(0.0, 0.35, v_uv.y) * smoothstep(1.0, 0.5, v_uv.y); } // shaft
+  else { float d = length(v_uv.xy * 2.0 - 1.0); a = smoothstep(0.6, 0.9, d) * smoothstep(1.0, 0.9, d) * 1.6; }                  // shockwave ring
   a *= v_col.a;
   gl_FragColor = vec4(v_col.rgb * a, a * 0.5);
 }`;
@@ -668,7 +669,7 @@ void main(){
 const FS_COMPOSITE = `
 precision mediump float; varying vec2 v_uv;
 uniform sampler2D u_scene; uniform sampler2D u_bloom; uniform float u_bloomK; uniform float u_blur; uniform float u_ca; uniform float u_time; uniform vec2 u_center;
-uniform vec3 u_sun; uniform vec3 u_sunTint; uniform float u_aspect;
+uniform float u_focus; uniform float u_vig; uniform vec3 u_sun; uniform vec3 u_sunTint; uniform float u_aspect;
 float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 float ghost(vec2 d, float r){ float l = length(d) / r; return smoothstep(1.0, 0.75, l) * (0.55 + 0.45 * l); }
 void main(){
@@ -696,6 +697,9 @@ void main(){
     fl += u_sunTint * (smoothstep(0.02, 0.0, abs(length(dv) - 0.16)) * 0.05 + exp(-abs(dv.y) * 160.0) * exp(-abs(dv.x) * 4.0) * 0.22);
     c += fl * vis;
   }
+  // slow motion drains the colour a little; slow motion and high speed darken the edges (tunnel vision)
+  if (u_focus > 0.001) c = mix(c, vec3(dot(c, vec3(0.3, 0.55, 0.15))) * vec3(0.92, 0.97, 1.08), u_focus * 0.55);
+  if (u_vig > 0.001) c *= 1.0 - u_vig * smoothstep(0.3, 0.85, r) * 0.75;
   c = c / (1.0 + max(max(c.r, c.g), c.b) * 0.08);     // soft shoulder
   c += (h(v_uv * 731.0 + fract(u_time)) - 0.5) * 0.02;
   gl_FragColor = vec4(c, 1.0);

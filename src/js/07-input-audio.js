@@ -231,7 +231,10 @@ class AudioManager {
     const comp = c.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.attack.value = 0.005; comp.release.value = 0.2;
     this.master.connect(comp); comp.connect(c.destination);
     this.sfx = c.createGain(); this.sfx.gain.value = this.sfxOn ? this.sfxVol : 0; this.sfx.connect(this.master);
-    this.music = c.createGain(); this.music.gain.value = this.musicOn ? this.musicVol * 0.55 : 0; this.music.connect(this.master);
+    // the music runs through a low-pass that closes in slow motion (the sound effects stay crisp)
+    this.musicLP = c.createBiquadFilter(); this.musicLP.type = 'lowpass'; this.musicLP.frequency.value = 18000; this.musicLP.Q.value = 0.9;
+    this.musicLP.connect(this.master); this.slowK = 0;
+    this.music = c.createGain(); this.music.gain.value = this.musicOn ? this.musicVol * 0.55 : 0; this.music.connect(this.musicLP);
     this.verb = c.createConvolver(); this.verb.buffer = this.impulse(2.2); this.verbOut = c.createGain(); this.verbOut.gain.value = 0.5;
     this.verb.connect(this.verbOut); this.verbOut.connect(this.master);
     // separate sends so each toggle also silences its reverb tail
@@ -241,6 +244,13 @@ class AudioManager {
     const fb = c.createGain(); fb.gain.value = 0.38; const dl = c.createBiquadFilter(); dl.type = 'lowpass'; dl.frequency.value = 2400;
     this.delay.connect(dl); dl.connect(fb); fb.connect(this.delay); dl.connect(this.music);
     this.noiseBuf = this.noise(2);
+    // wind at high speed: white noise through a band that opens with speed, drifting in slow gusts
+    const ws = c.createBufferSource(); ws.buffer = this.noiseBuf; ws.loop = true;
+    this.windBP = c.createBiquadFilter(); this.windBP.type = 'bandpass'; this.windBP.frequency.value = 500; this.windBP.Q.value = 0.6;
+    this.windAmp = c.createGain(); this.windAmp.gain.value = 0;
+    ws.connect(this.windBP); this.windBP.connect(this.windAmp); this.windAmp.connect(this.sfx); ws.start();
+    const gust = c.createOscillator(), gustAmp = c.createGain(); gust.frequency.value = 0.31; gustAmp.gain.value = 160;
+    gust.connect(gustAmp); gustAmp.connect(this.windBP.frequency); gust.start();
     // rolling: looped brown noise → bandpass, plus low rumble and seam "clicks" via LFO
     const src = c.createBufferSource(); src.buffer = this.noise(3, true); src.loop = true;
     this.rollBP = c.createBiquadFilter(); this.rollBP.type = 'bandpass'; this.rollBP.frequency.value = 300; this.rollBP.Q.value = 0.7;
@@ -298,6 +308,20 @@ class AudioManager {
     this.lfoAmp.gain.setTargetAtTime(lv * (soft ? 0.18 : 0.12), t, 0.05);
   }
 
+  // air rushing past the ball: silent below ~36 km/h, full past ~115 km/h, brighter in the air
+  setWind(speed, air) {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime, k = clamp((speed - 10) / 22, 0, 1);
+    this.windAmp.gain.setTargetAtTime(Math.pow(k, 1.5) * 0.35 + (air ? k * 0.06 : 0), t, 0.15);
+    this.windBP.frequency.setTargetAtTime(420 + k * 1500 + (air ? 300 : 0), t, 0.2);
+  }
+  // slow motion: k 0 … 1 closes the music's low-pass (a muffled, far away groove)
+  setSlow(k) {
+    if (!this.ctx || Math.abs(k - this.slowK) < 0.01) return;
+    this.slowK = k;
+    this.musicLP.frequency.setTargetAtTime(18000 * Math.pow(500 / 18000, k), this.ctx.currentTime, 0.04);
+  }
+
   // ---- tiny synth helpers
   env(g, t, a, peak, dec) { g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.exponentialRampToValueAtTime(0.0001, t + a + dec); }
   tone(type, f, t, a, peak, dec, dest, f2) {
@@ -333,6 +357,14 @@ class AudioManager {
     this.burst(t, 0.12, 0.35, 'highpass', 3000, 0.7);
     this.tone('sine', 140, t, 0.004, 0.45, 0.35, null, 45);
     for (const m of [84, 91]) this.tone('triangle', this.mtof(m), t + 0.04, 0.005, 0.08, 0.4, this.verbS);
+  }
+  // an obstacle whizzing past the ear; slow: time slows down too (a deep falling note)
+  nearMiss(slow) {
+    if (!this.ok) return; const t = this.ctx.currentTime;
+    this.burst(t, 0.3, 0.38, 'bandpass', 3400, 2.4, null, 420);
+    this.tone('sine', 1760, t + 0.02, 0.004, 0.08, 0.45, this.verbS, 2350);
+    this.tone('triangle', 2637, t + 0.07, 0.004, 0.045, 0.6, this.verbS);
+    if (slow) this.tone('sine', 196, t, 0.03, 0.2, 0.8, null, 82);
   }
   land(imp) {
     if (!this.ok) return; const t = this.ctx.currentTime, v = clamp(imp / 10, 0.1, 1);

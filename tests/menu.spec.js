@@ -19,7 +19,7 @@ const drag = (page, pts) => page.evaluate((pts) => {
 test('the light menu: title, tagline, mode switch and one PLAY in the middle; options swap PLAY for the settings', async ({ page }) => {
   const errors = await openGame(page);
   await still(page);
-  const LIGHT = ['#title', '#tagline', '#modeSeg', '#modeInfo', '#btnPlay', '#btnOpts'], HIDDEN = ['#menuTop', '#sheet', '#tgKid', '#ctrlSeg', '#todSeg', '#skinsMenu', '#btnAbout'];
+  const LIGHT = ['#title', '#tagline', '#modeSeg', '#modeInfo', '#btnPlay', '#btnOpts'], HIDDEN = ['#menuTop', '#sheet', '#tgKid', '#ctrlSeg', '#todSeg', '#skinsMenu', '#btnAbout', '#btnInstall'];
   expect(await vis(page, LIGHT)).toEqual(LIGHT.map(() => true));
   expect(await vis(page, HIDDEN)).toEqual(HIDDEN.map(() => false));
   expect(await page.locator('#modeSeg button').allTextContents()).toEqual(['TRAINING', 'DAILY RUN']);
@@ -29,11 +29,14 @@ test('the light menu: title, tagline, mode switch and one PLAY in the middle; op
   const t0 = await box(page, '#title');
   await page.click('#btnOpts');
   expect(await vis(page, ['#title', '#btnOpts', ...HIDDEN])).toEqual([true, true, ...HIDDEN.map(() => true)]);
-  expect(await vis(page, ['#btnPlay', '#tagline', '#modeSeg', '#modeInfo'])).toEqual([false, false, false, false]);   // the mode switch gives its place to ABOUT
+  expect(await vis(page, ['#btnPlay', '#tagline', '#modeSeg', '#modeInfo'])).toEqual([false, false, false, false]);   // the mode switch gives its place to ABOUT and INSTALL
   expect(await page.locator('#btnOpts').innerText()).toBe('DONE');
   expect(await page.locator('#btnAbout').innerText()).toBe('ABOUT');
-  // the title shrinks into the top bar, between the language and sound buttons; ABOUT sits below it, then the sheet
-  const t1 = await box(page, '#title'), lang = await box(page, '#langSeg'), snd = await box(page, '#menu .tgMusic'), ab = await box(page, '#btnAbout'), sheet = await box(page, '#sheet');
+  expect(await page.locator('#btnInstall').innerText()).toBe('INSTALL');
+  // the title shrinks into the top bar, between the language and sound buttons; ABOUT and INSTALL sit below it, side by side, then the sheet
+  const t1 = await box(page, '#title'), lang = await box(page, '#langSeg'), snd = await box(page, '#menu .tgMusic'), ab = await box(page, '#optLinks'), sheet = await box(page, '#sheet');
+  const abt = await box(page, '#btnAbout'), ins = await box(page, '#btnInstall');
+  expect(abt[1]).toBe(ins[1]); expect(ins[0]).toBeGreaterThan(abt[0] + abt[2]);
   expect(t1[2]).toBeLessThan(t0[2] * 0.6); expect(t1[1]).toBeLessThan(t0[1]);
   expect(t1[0]).toBeGreaterThan(lang[0] + lang[2]); expect(t1[0] + t1[2]).toBeLessThan(snd[0]);
   expect(ab[1]).toBeGreaterThan(lang[1] + lang[3]); expect(Math.abs(ab[0] + ab[2] / 2 - 180)).toBeLessThan(2);

@@ -36,6 +36,37 @@ class QualityManager {
 // =====================================================================
 // UI — DOM overlay: HUD, screens, toasts, skins, language, toggles.
 // =====================================================================
+// Install guides, one per kind of device: the steps (text keys; each has a hint under key + 'h')
+// with their icons, and for phones the labels shown in the animated phone.
+const INSTALL_ICONS = {
+  share: '<path class="stk" d="M12 3.5v10.5M8.2 7.3L12 3.5l3.8 3.8"/><path class="stk" d="M8 10H5.8v10.2h12.4V10H16"/>',
+  plus: '<rect class="stk" x="4" y="4" width="16" height="16" rx="4.5"/><path class="stk" d="M12 8.2v7.6M8.2 12h7.6"/>',
+  check: '<circle class="stk" cx="12" cy="12" r="9"/><path class="stk" d="M8 12.4l2.8 2.8 5.4-5.6"/>',
+  dots: '<circle cx="12" cy="5.4" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="12" cy="18.6" r="1.9"/>',
+  phone: '<rect class="stk" x="6.5" y="2.6" width="11" height="18.8" rx="2.6"/><path class="stk" d="M12 7v7M9.2 11.3l2.8 2.8 2.8-2.8"/>',
+  monitor: '<rect class="stk" x="3" y="4" width="18" height="12.5" rx="2"/><path class="stk" d="M8.5 20.3h7M12 16.5v3.8M12 7.2v5.4M9.5 10.2l2.5 2.5 2.5-2.5"/>',
+  menu: '<path class="stk" d="M4 6.5h16M4 12h16M4 17.5h10"/>',
+  dock: '<path class="stk" d="M3 18h18"/><rect class="stk" x="4.5" y="10" width="4.2" height="4.2" rx="1.2"/><rect class="stk" x="9.9" y="10" width="4.2" height="4.2" rx="1.2"/><rect class="stk" x="15.3" y="10" width="4.2" height="4.2" rx="1.2"/>',
+  globe: '<circle class="stk" cx="12" cy="12" r="9"/><path class="stk" d="M3 12h18M12 3c3.2 3.3 3.2 14.7 0 18M12 3c-3.2 3.3-3.2 14.7 0 18"/>',
+};
+const INSTALL_GUIDES = {
+  ios: { phone: 'ios', key: 'share', row: 'insIosRow', btn: 'insIosBtn', steps: [['insIos1', 'share'], ['insIos2', 'plus'], ['insIos3', 'check']] },
+  android: { phone: 'android', key: 'dots', row: 'insAndRow', btn: 'insAndBtn', steps: [['insAnd1', 'dots'], ['insAnd2', 'phone'], ['insAnd3', 'check']] },
+  desktop: { steps: [['insDk1', 'monitor'], ['insDk2', 'dots'], ['insDk3', 'check']] },
+  mac: { steps: [['insMac1', 'menu'], ['insMac2', 'dock'], ['insMac3', 'check']] },
+  firefox: { steps: [['insFf1', 'globe'], ['insFf2', 'check']] },
+  inapp: { steps: [['insIn1', 'globe'], ['insIn2', 'share']] },
+};
+// Which guide fits this browser: in-app browsers (social apps) cannot install at all.
+function installKind() {
+  const ua = navigator.userAgent || '';
+  if (/FBAN|FBAV|FB_IAB|Instagram|Line\/|MicroMessenger|musical_ly|TikTok|Snapchat|LinkedInApp/i.test(ua)) return 'inapp';
+  if (/iphone|ipad|ipod/i.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) return 'ios';
+  if (/android/i.test(ua)) return 'android';
+  if (/firefox/i.test(ua)) return 'firefox';
+  if (/macintosh/i.test(ua) && /safari/i.test(ua) && !/chrome|chromium|edg\//i.test(ua)) return 'mac';
+  return 'desktop';
+}
 class UI {
   constructor() {
     const $ = (id) => document.getElementById(id);
@@ -47,6 +78,7 @@ class UI {
       record: $('record'), ovDist: $('ovDist'), ovScore: $('ovScore'), ovBest: $('ovBest'), ovMode: $('ovMode'), ovRails: $('ovRails'), mBest: $('mBest'), perm: $('permMsg'),
       btnPlay: $('btnPlay'), btnOpts: $('btnOpts'), sheet: $('sheet'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), modeTxt: $('modeTxt'), newTrack: $('btnNewTrack'), share: $('btnShare'), recal: $('btnRecal'),
       power: $('power'), pwCoin: $('pwCoin'), pwTxt: $('pwTxt'), pwFill: $('pwFill'), about: $('about'), btnAbout: $('btnAbout'),
+      install: $('install'), insPhone: $('insPhone'), insSteps: $('insSteps'),
     };
     $('abRepo').href = REPO_URL; $('abX').href = X_URL;
     this.cache = {};
@@ -113,6 +145,48 @@ class UI {
       const k = clamp((t - 0.5 - i * 0.12) / 1.6, 0, 1);
       this.set('ab' + i, b, fmt(vals[b.dataset.to] * (1 - Math.pow(1 - k, 4))));
     });
+  }
+  // Install guide: it opens like About, from the button. The phone plays the steps in a loop
+  // (tap, menu, confirm, the icon lands on the home screen) and the list lights up the step shown.
+  get installOpen() { return this.el.install.classList.contains('open'); }
+  openInstall(kind, from) {
+    const a = this.el.install, G = INSTALL_GUIDES[kind] || INSTALL_GUIDES.desktop, ph = this.el.insPhone, ol = this.el.insSteps;
+    if (this.installOpen) return;
+    const r = from.getBoundingClientRect();
+    a.style.setProperty('--ox', Math.round(r.left + r.width / 2) + 'px'); a.style.setProperty('--oy', Math.round(r.top + r.height / 2) + 'px');
+    ol.textContent = '';
+    for (let i = 0; i < G.steps.length; i++) {
+      const [k, ic] = G.steps[i], li = document.createElement('li');
+      li.innerHTML = `<i class="n">${i + 1}</i><svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${INSTALL_ICONS[ic]}</svg><span><b></b><small></small></span>`;
+      li.querySelector('b').textContent = tr(k); li.querySelector('small').textContent = tr(k + 'h');
+      ol.appendChild(li);
+    }
+    this.$('insFig').classList.toggle('hidden', !G.phone);
+    if (G.phone) {
+      ph.className = G.phone;
+      ph.querySelector('.key').innerHTML = `<svg class="ic" viewBox="0 0 24 24">${INSTALL_ICONS[G.key]}</svg>`;
+      this.$('insRow').textContent = tr(G.row); this.$('insBtn').textContent = tr(G.btn);
+    }
+    this.$('insHelp').textContent = tr('insHelp', { host: location.host || 'gyroll.vercel.app' });
+    clearTimeout(a._t); a.classList.remove('hidden'); void a.offsetWidth; a.classList.add('open');
+    this.$('insScroll').scrollTop = 0;
+    const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches, n = G.steps.length;
+    let p = -1;
+    const step = () => {
+      p = (p + 1) % (G.phone ? 4 : n);
+      if (G.phone) ph.className = G.phone + ' p' + p;
+      ol.querySelectorAll('li').forEach((li, i) => li.classList.toggle('on', i === Math.min(p, n - 1)));
+      this.insT = setTimeout(step, G.phone && p === 3 ? 2400 : 1700);
+    };
+    clearTimeout(this.insT);
+    if (still) { if (G.phone) ph.className = G.phone + ' p1'; } else this.insT = setTimeout(step, 700);
+    this.$('btnInstallClose').focus({ preventScroll: true });
+  }
+  closeInstall() {
+    const a = this.el.install;
+    if (!this.installOpen) return;
+    a.classList.remove('open'); clearTimeout(this.insT);
+    clearTimeout(a._t); a._t = setTimeout(() => { if (!this.installOpen) a.classList.add('hidden'); }, 700);
   }
   setOpts(on) {
     this.layoutMenu();

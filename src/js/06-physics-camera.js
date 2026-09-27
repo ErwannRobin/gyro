@@ -145,6 +145,8 @@ class Physics {
         continue;
       }
       if ((o.kind !== 'post' && o.kind !== 'slider') || o.broken) continue;
+      // near miss: the obstacle is behind now, the ball came close and never touched it
+      if (o.near !== undefined && !o.nearDone && L.s > o.s + 0.8) { o.nearDone = true; if (!o.touched) this.ev.nearMiss(b, o); }
       let ou = o.u, ovx = 0, ovz = 0;
       if (o.kind === 'slider') {
         const ph = TAU * this.time / o.period + o.phase;
@@ -155,7 +157,9 @@ class Physics {
       }
       T.pointAt(o.s, ou, 0, this.tmp);
       const dx = b.p[0] - this.tmp[0], dz = b.p[2] - this.tmp[2], d = Math.hypot(dx, dz), min = R + o.rad;
-      if (d >= min || d < 1e-5) continue;
+      if (d >= min) { if (d - min < CFG.NEAR && b.speed >= CFG.NEAR_V && !(o.near <= d - min)) o.near = d - min; continue; }
+      if (d < 1e-5) continue;
+      o.touched = true;
       if (this.star) {                               // star power: the ball smashes through
         o.broken = this.time; b.v[0] *= 0.96; b.v[2] *= 0.96;
         this.ev.smash(b, o, [this.tmp[0], b.p[1], this.tmp[2]]);
@@ -183,14 +187,15 @@ class Physics {
 }
 
 // =====================================================================
-// CameraRig — smoothed chase cam with anticipation, roll and FOV kick. Fingers can move it: on the
+// CameraRig — smoothed chase cam with anticipation, roll, FOV kick, a push-in for slow motion and a
+// light rumble at top speed. Fingers can move it: on the
 // menu a drag walks it around the ball and a pinch zooms; in gyroscope play a drag swings it around
 // the ball (it eases back behind once the finger lifts) and a pinch sets the chase distance.
 // =====================================================================
 class CameraRig {
   constructor() {
     this.pos = [0, 3, -6]; this.look = [0, 0, 0]; this.yaw = 0; this.roll = 0; this.fov = 1.2;
-    this.shake = 0; this.kick = 0; this.mode = 'orbit'; this.t = 0; this.prevYaw = 0; this.yawRate = 0;
+    this.shake = 0; this.kick = 0; this.focus = 0; this.rush = 0; this.mode = 'orbit'; this.t = 0; this.prevYaw = 0; this.yawRate = 0;
     this.eye = [0, 0, 0]; this.tgt = [0, 0, 0]; this.tmp = [0, 0, 0, 0];
     this.gyroLook = null;                           // menu look-around from the phone: { yaw, pitch }
     this.orbA = null; this.orbH = 2.3;
@@ -254,7 +259,7 @@ class CameraRig {
       const lx = ball.p[0] + fx * la * (1 - lk), ly = ball.p[1] + 0.2, lz = ball.p[2] + fz * la * (1 - lk);
       const kl = damp(10, dt);
       this.look[0] = lerp(this.look[0], lx, kl); this.look[1] = lerp(this.look[1], ly, kl); this.look[2] = lerp(this.look[2], lz, kl);
-      this.fov = lerp(this.fov, P.fov + this.kick * 0.16, damp(3, dt));
+      this.fov = lerp(this.fov, P.fov + this.kick * 0.16 - this.focus * 0.13, damp(this.focus > 0.05 ? 6 : 3, dt));
     } else if (this.mode === 'fall') {
       this.pos[1] = lerp(this.pos[1], Math.max(ball.p[1] + 3.5, this.pos[1] - 40), damp(1.1, dt));
       const kl = damp(6, dt);
@@ -280,7 +285,7 @@ class CameraRig {
     }
     this.kick = Math.max(0, this.kick - dt * 1.5);
     this.shake = Math.max(0, this.shake - dt * 2.2);
-    const sh = this.shake * this.shake * 0.35;
+    const sh = this.shake * this.shake * 0.35 + (this.mode === 'follow' ? this.rush * 0.022 : 0);
     const n = (f) => Math.sin(this.t * f) * Math.sin(this.t * f * 1.37 + 1.3);
     this.eye[0] = this.pos[0] + n(41) * sh; this.eye[1] = this.pos[1] + n(37) * sh; this.eye[2] = this.pos[2] + n(45) * sh;
     this.tgt[0] = this.look[0]; this.tgt[1] = this.look[1]; this.tgt[2] = this.look[2];

@@ -10,7 +10,7 @@ GYROLL is an endless 3D marble game for your phone. Tilt the phone to roll a hea
 
 ![The nine worlds of GYROLL](docs/worlds.jpg)
 
-The whole game is **one self-contained `index.html` file** (about 385 KB, about 6 150 lines): HTML, CSS, JavaScript, GLSL shaders and synthesized audio.
+The whole game is **one self-contained `index.html` file** (about 415 KB, about 6 550 lines): HTML, CSS, JavaScript, GLSL shaders and synthesized audio.
 - It uses no libraries and no external assets, and it needs no network to play.
 - It is assembled from readable source files in [`src/`](src) by a tiny build script that has no dependencies.
 - A few optional files next to it make it installable and nice to share: icons, a manifest, a service worker and a preview image.
@@ -54,10 +54,15 @@ The whole game is **one self-contained `index.html` file** (about 385 KB, about 
   - bloom, radial speed blur and chromatic aberration when boosting
   - a lens flare when the sun is in view (none when something hides it)
   - slow motion when you fall
+- **Game feel.** Every big moment has its own motion:
+  - **Smash (hit-stop).** When star power smashes a post, the world almost freezes for about 75 ms while the camera keeps shaking. A shockwave ring and a colour fringe burst out, then time rushes back.
+  - **Near miss.** Pass a post or a moving slider at 29 km/h or more, less than 35 cm away, without touching it: **CLOSE CALL!** gives 100 points × the speed multiplier (doubled by star power), with a whoosh past your ear. At most once every 4 seconds, time also slows to 28 % for about 0.4 s and then eases back: the colours drain, the edges darken, the camera moves in and the music sounds muffled.
+  - **Squash and stretch.** The ball squashes when it lands (up to about 30 %) and springs back like jelly. It stretches as it falls and keeps its volume, and its bottom stays on the deck. Hard landings also send a flat shockwave ring along the deck.
+  - **Speed rush.** Past about 70 km/h, more speed lines stream past (gold with star power), a wind noise grows with the speed, the edges of the screen darken and the camera rumbles lightly. The rumble is off when the device asks for reduced motion.
 - **5 track skins** (neon carbon, steel & gold, wooden toy, ice marble, grass) **and 5 marble skins** (chrome, glass, gold, plasma, candy). You can change them from the menu options. The pause screen keeps only resume, recalibrate, sound and main menu, so it stays calm in portrait and fits a short landscape screen. The pickers show real pictures drawn with the game's own shaders: each marble as it looks in the current world, and each track skin on a short bend under the current sky. They are redrawn when the world or the track skin changes, one picture per frame.
 - **Grass track.** A lawn with mowing stripes, clover, daisies, a stone curb and turf sides. It is not only a look: the ball rolls slower (on flat ground it tops out near 76 km/h instead of more than 120 km/h), the uneven ground nudges it sideways, and grass tufts on the track slow it down, kick it aside and make it bounce, with clippings flying. Tufts never sit on narrow ground, boosters, checkpoint pads or among obstacles. They are placed from the track seed without changing the track, so the daily run stays the same for everyone.
 - **A light menu.** The menu shows only the GYROLL title, the tagline, the Training / Daily run switch, one **PLAY** button in the middle of the screen (the ball rolls into view below it) and an **Options** toggle at the bottom. Its parts rise into place one after the other when it opens.
-- **Options.** The toggle raises a glass sheet with every setting: kid mode, controls (gyroscope or touch), time of day, track and marble skins, language and sound. PLAY and the Training / Daily run switch hide, the title shrinks into the top bar between the language and sound buttons, and an **About** button takes the switch's place. **Done** (or a tap outside the sheet) brings the light menu back. The selected option of each switch is marked by a pill that slides under it.
+- **Options.** The toggle raises a glass sheet with every setting: kid mode, controls (gyroscope or touch), time of day, track and marble skins, language and sound. PLAY and the Training / Daily run switch hide, the title shrinks into the top bar between the language and sound buttons, and **About** and **Install** buttons take the switch's place. **Done** (or a tap outside the sheet) brings the light menu back. The selected option of each switch is marked by a pill that slides under it.
 - **Time of day.** The sky shows a sun (a bright disc with a lens flare) or a moon (with seas, craters and today's phase, lit on the correct side). Four settings:
   - **Real time** (the default): the sun follows the local clock. It rises on the left, is highest around noon and sets on the right, lower in winter. At night the moon rises opposite it.
   - **Day**: each world keeps its own sun.
@@ -75,7 +80,10 @@ The whole game is **one self-contained `index.html` file** (about 385 KB, about 
   - no scrolling or zooming, large touch targets, readable in sunlight
   - screen stays awake while playing, pauses on focus loss
 - **Adaptive quality.** Resolution, bloom, particles and scenery density adjust automatically to hold the frame rate. Repeated scenery is drawn with GPU instancing: about 35 draw calls per frame instead of about 105. The ball's reflection cube map is 256 px on computers and 128 px on phones (half of it redrawn each frame there), and it is turned off on the lowest level.
-- **Installable app (PWA).** Add GYROLL to your home screen. It then opens full screen, locked in portrait so the screen does not rotate while you tilt, and it works offline.
+- **Installable app (PWA).** Add GYROLL to your home screen. It then opens full screen, locked in portrait so the screen does not rotate while you tilt, and it works offline. The glowing **Install** button sits next to About in the options (it hides once the app is installed, and in a local file copy, which cannot be installed):
+  - When the browser offers its own install prompt (Chrome, Edge, most Android browsers), the button opens it.
+  - Otherwise it opens a guide made for the device. It opens like About, from the button. On iPhone, iPad and Android, a small animated phone plays the steps in a loop (tap Share or the ⋮ menu, pick "Add to Home Screen" or "Install app", confirm, then the GYROLL icon pops onto the home screen), and the list below lights up the step being shown.
+  - Safari on Mac, Firefox and the in-app browsers of social apps (Instagram, Facebook, TikTok…) get their own steps. A **Copy the link** button helps to open the game in a real browser.
 - **Nice link previews.** Shared links show a preview image and a description.
 
 ## Screenshots
@@ -100,6 +108,10 @@ The whole game is **one self-contained `index.html` file** (about 385 KB, about 
 |---|
 | ![Game over screen in landscape](docs/over-landscape.jpg) |
 
+| A near miss in slow motion | The install guide on an iPhone |
+|---|---|
+| ![A near miss: CLOSE CALL, slow motion, drained colours](docs/near-miss.jpg) | ![The install guide: an animated phone and the steps](docs/install.jpg) |
+
 ## Controls
 
 | Input | Action |
@@ -112,14 +124,14 @@ The whole game is **one self-contained `index.html` file** (about 385 KB, about 
 | Arrows · WASD · ZQSD | Keyboard control (desktop) |
 | Mouse drag | Joystick (desktop) |
 | Quick tilt up · double-tap · `Space` · tap the gauge | Start star power (when the gauge is full) |
-| `P` / `Esc` | Pause / resume (`Esc` also closes the options and the About screen) |
+| `P` / `Esc` | Pause / resume (`Esc` also closes the options, the About screen and the install guide) |
 | `Space` / `Enter` | Start / play again |
 
 ## Scoring
 
 - **Distance** is the furthest point you have reached in this run (meters), counted from where the run started.
 - **Score:** each meter is worth 10 points × a speed multiplier. The multiplier is ×2 above ~29 km/h, ×3 above ~43 km/h, ×4 above ~72 km/h or while boosting, and ×5 above ~108 km/h.
-- **Coin:** 250 × the coin multiplier. **Checkpoint:** +1000.
+- **Coin:** 250 × the coin multiplier. **Checkpoint:** +1000. **Near miss:** 100 × the speed multiplier. **Smash** (star power): +500.
 - **Star power** doubles every point while it lasts.
 - The track collapses behind you, so you can't stand still forever.
 
@@ -173,7 +185,7 @@ The tests drive the game loop step by step instead of waiting for real frames, s
 - a menu layout that never moves when the language, mode, kid mode, sound, control, time of day or skin changes, and the sliding pills of the switches
 - the share link and the share video
 - all nine worlds rendering, and the loop back to the first one
-- the installable app, including offline play
+- the installable app, including offline play, and the INSTALL button: the browser's prompt when there is one, otherwise the guide for iPhone (the animated phone and the list in step), Android and Firefox, in English and French
 - kid mode, safety rails that give way to hard hits (kid rails hold more), and speed past 50 km/h
 - coins, streak multiplier, star gauge, the tilt-up flick and star power, which smashes obstacles
 - the grass track: slower rolling, uneven ground, tufts that slow and push the ball (and that star power mows), tufts only on safe ground, the same for everyone and never changing the track shape
@@ -190,6 +202,7 @@ The tests drive the game loop step by step instead of waiting for real frames, s
 - the time of day: the sun's path over the day and the year, the moon and its phase, night palettes, the city's day look, the setting and dark mode, the sun and moon discs, and all worlds rendering at night
 - a menu camera that stays still when options change, and kid mode keeping the same world
 - picker pictures drawn by the game, redrawn for a new world
+- game feel: a near miss gives points and about 0.4 s of slow motion (a wide pass or a hit gives nothing), a smash freezes time for about 75 ms with a shockwave, the ball squashes on landing, stretches as it falls and springs back round, and the speed rush grows past 70 km/h (without the camera rumble for reduced motion)
 
 ## Deploy
 
@@ -207,7 +220,7 @@ If you fork the project, change the `PROD_URL` constant in `src/js/01-core.js`. 
   - `run_start`: game mode and control type
   - `game_over`: mode, world reached, distance rounded to 50 m
   - `share`: how the score was shared
-  - `install`: whether the app was installed
+  - `install`: whether the app was installed, or which install guide was opened
 - Local copies, forks and other domains send nothing.
 
 ## How it works
@@ -222,13 +235,13 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
 | `Renderer` + GLSL shaders | WebGL1 forward renderer, plus a cube map reflection probe for the ball. The shaders handle procedural materials, zone-blended sky panoramas with the sun or moon disc, the floor layer, point-sprite particles and additive FX, followed by a bloom/composite post chain with a lens flare. |
 | `skyState`, `skyZone` | Time of day: where the sun or moon stands (from the clock), the moon's phase, and each world's palette at night or at dusk (a dark world can carry its own `day` palette, like the city). The sky panoramas are painted again when it changes, only on the menu. |
 | `Physics`, `Ball` | Fixed 120 Hz steps for a sphere rolling without slipping: slope and bank gravity, rails, props, landing and falling. The track skin can change the rolling (grass: drag, uneven ground, tufts). |
-| `CameraRig` | Chase camera with look-ahead, roll in turns, speed FOV, shake, fall and attract modes, plus the finger offsets and zoom. |
+| `CameraRig` | Chase camera with look-ahead, roll in turns, speed FOV, shake, a push-in for slow motion, a rumble at top speed, fall and attract modes, plus the finger offsets and zoom. |
 | `InputManager`, `CamGestures` | DeviceOrientation (with the iOS permission), calibration, low-pass filtering, joystick and keyboard; camera drags, pinches, wheel and taps. |
-| `AudioManager` | Web Audio synthesis and a generative music scheduler, with separate music and SFX buses. |
-| `ParticleSystem`, `FxBuilder` | Pooled particles, trail ribbon, glows, light shafts, speed lines and lightning. |
+| `AudioManager` | Web Audio synthesis and a generative music scheduler, with separate music and SFX buses, speed wind, and a music low-pass for slow motion. |
+| `ParticleSystem`, `FxBuilder` | Pooled particles, trail ribbon, glows, light shafts, speed lines, shockwave rings and lightning. |
 | `Environment` | Zone-driven scenery in three parallax layers (trees, turbines, balloons, boats, lighthouses, cacti, mesas… are built from a few procedural shapes and drawn with instancing). Nothing may enter a keep-out zone around the track; objects that newer track bends towards shrink away, and anything between the camera and the ball is hidden. |
 | `Replay` | Timelapse capture and share-video composition. |
-| `QualityManager`, `UI`, `Game` | Adaptive quality, DOM overlay with FR/EN strings, and the state machine / main loop. |
+| `QualityManager`, `UI`, `Game` | Adaptive quality, DOM overlay with FR/EN strings (and the install guides), and the state machine / main loop with the game feel: time warps (hit-stop, slow motion), squash and stretch, shockwaves. |
 | `Analytics`, `sw.js` | Opt-out-friendly stats on the official site, and the offline cache for the installable app. |
 
 ## Browser support and known limitations
@@ -251,6 +264,8 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
   - The grass track's feel (how slow, how bumpy) was tuned with automated runs, not by playing on a phone. It may need adjusting.
   - The finger camera, pinch zoom and the options sheet were tested with simulated pointer events, not on a real touch screen.
   - The share video's music was checked by its levels and by decoding the recorded file, not yet by ear on a real phone.
+  - The game feel (hit-stop length, slow motion, squash, wind level) was tuned with automated runs and screenshots, not by playing on a phone. The wind was checked by its level, not by ear.
+  - The install guide's steps follow the browsers' menus as we know them (on iOS 26, Safari may keep Share inside the ··· menu; Android labels differ between browsers). They were checked in headless Chromium with other browsers' user agents, not on the real browsers. In-app browsers are recognised by their user agent, so some may be missed.
 - **Real-time sky, simplified on purpose.** The game does not ask for your location. The sun's path is computed for a place at 45° of latitude (south of the equator when the time zone says so), and it is squeezed towards the front of the view so you can see it more often. Only the moon's phase is real; the moon itself simply stands opposite the sun at night.
 - **Analytics events.** Page views work whenever Web Analytics is on. Custom events (`run_start`, `game_over`…) may need a Vercel plan that supports them; if not, they are simply ignored.
 
@@ -871,6 +886,17 @@ And we don’t need to have the change track or ball texture options in the paus
 And the reset track button is still not always readable. Let’s remove the button background and just apply some shadow to the text. 
 
 And can we have a music in the exported video?
+````
+
+</details>
+
+<details>
+<summary><strong>Game feel and install prompt</strong></summary>
+
+"2" is the game feel item of the list Claude gave when asked what the game still missed: a short freeze and camera shake on a smash, slow motion on near misses, squash and stretch when the ball lands, speed lines and wind at high speed.
+
+````markdown
+Let’s do 2.  Also, the “install the app” button in the options is not working as it only show a small text on the main menu. It should be directly visible and better guide the user
 ````
 
 </details>

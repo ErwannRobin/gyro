@@ -540,6 +540,7 @@ class Renderer {
       gl.uniform1i(p.u('u_scene'), 0);
       gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, A.tex); gl.uniform1i(p.u('u_bloom'), 1); gl.activeTexture(gl.TEXTURE0);
       gl.uniform1f(p.u('u_bloomK'), o.bloom); gl.uniform1f(p.u('u_blur'), o.blur); gl.uniform1f(p.u('u_ca'), o.ca);
+      gl.uniform1f(p.u('u_focus'), o.focus || 0); gl.uniform1f(p.u('u_vig'), o.vig || 0);
       gl.uniform1f(p.u('u_time'), this.time % 100); gl.uniform2f(p.u('u_center'), o.cx, o.cy);
       // lens flare: where the sun (or, fainter, the moon) lands on the screen, fading at the edges
       const d = this.sunDir, v = this.vp, x = this.cam[0] + d[0] * 500, y = this.cam[1] + d[1] * 500, z = this.cam[2] + d[2] * 500;
