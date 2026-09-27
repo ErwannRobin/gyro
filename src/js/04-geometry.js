@@ -507,7 +507,7 @@ function makeSkyCanvases(Z, seed) {
   const ridge = (n, amp) => { const ph = []; for (let k = 1; k <= n; k++) ph.push([r.range(0, TAU), amp / Math.pow(k, 0.9) * r.range(0.6, 1.2), k * r.int(1, 3)]); return (x) => ph.reduce((s, [p, a, f]) => s + Math.sin(x / W * TAU * f + p) * a, 0); };
   const sd = Z.sunDir, sl = Math.hypot(sd[0], sd[1], sd[2]);
   const sunX = (Math.atan2(sd[0] / sl, sd[2] / sl) / TAU + 0.5) * W, sunY = Math.acos(sd[1] / sl) / Math.PI * H;
-  const nebK = { tech: 1, land: 0.5, neon: 1, abstract: 0.6, chaos: 0.7, farm: 0.05, forest: 0.1, sea: 0.04, desert: 0.08 }[Z.id];
+  const dayK = Z.dayK || 0, nebK = { tech: lerp(1, 0.05, dayK), land: 0.5, neon: 1, abstract: 0.6, chaos: 0.7, farm: 0.05, forest: 0.1, sea: 0.04, desert: 0.08 }[Z.id];
   g.globalCompositeOperation = 'lighter';
   for (let b = 0; b < 4; b++) {
     const cx = r.range(0, W), cy = r.range(H * 0.12, H * 0.42), col = Z.neb[b % Z.neb.length];
@@ -571,13 +571,18 @@ function makeSkyCanvases(Z, seed) {
   // Draws `fn(x)` at x and at its wrapped copies near the seams.
   const wrapX = (x, w, fn) => { fn(x); if (x - w < 0) fn(x + W); if (x + w > W) fn(x - W); };
   if (Z.id === 'tech') {
+    if (dayK > 0) {                                  // by day: sun glow, high streaks and a few clouds over the skyline
+      g.globalCompositeOperation = 'lighter'; blob(sunX, sunY, 120, Z.sun, 0.22 * dayK); g.globalCompositeOperation = 'source-over';
+      streaks(10, [1, 1, 1], 0.3 * dayK);
+      cloudSky(12, mix([1, 1, 1], Z.sun, 0.2), mix(Z.skyMid, Z.horizon, 0.5), 0.9 * dayK, 0.85);
+    }
     for (let L = 0; L < 3; L++) {
       const col = mix(Z.horizon, Z.skyTop, 0.35 + L * 0.2), base = HZ + 5 + L * 3;
       let x = 0;
       while (x < W) {
         const w = r.range(5, 22), h = r.range(6, 26) * (1 + L * 0.45) * (r.chance(0.12) ? 2.2 : 1);
         g.fillStyle = css(col, 0.92); g.fillRect(x, base - h, w, h + 2);
-        g.fillStyle = css(Z.c1, 0.55);
+        g.fillStyle = css(Z.c1, 0.55 * (1 - 0.6 * dayK));
         for (let k = 0; k < h * w / 40; k++) if (r.chance(0.5)) g.fillRect(x + r.range(1, w - 2), base - r.range(2, h), 1, 1);
         if (h > 40) { g.fillStyle = 'rgba(255,60,60,.9)'; g.fillRect(x + w / 2, base - h - 3, 1.5, 1.5); }
         x += w + r.range(0, 4);
@@ -587,7 +592,7 @@ function makeSkyCanvases(Z, seed) {
     g.globalCompositeOperation = 'lighter';
     for (let k = 0; k < 7; k++) {
       const x = r.range(0, W), lg = g.createLinearGradient(0, HZ, 0, HZ - 180);
-      lg.addColorStop(0, css(Z.c1, 0.14)); lg.addColorStop(1, css(Z.c1, 0));
+      lg.addColorStop(0, css(Z.c1, 0.14 * (1 - dayK))); lg.addColorStop(1, css(Z.c1, 0));
       g.fillStyle = lg; g.beginPath(); g.moveTo(x - 2, HZ); g.lineTo(x + 2, HZ); g.lineTo(x + r.range(-40, 40), HZ - 180); g.fill();
     }
   } else if (Z.id === 'land') {

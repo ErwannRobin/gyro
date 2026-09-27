@@ -10,7 +10,7 @@ GYROLL is an endless 3D marble game for your phone. Tilt the phone to roll a hea
 
 ![The nine worlds of GYROLL](docs/worlds.jpg)
 
-The whole game is **one self-contained `index.html` file** (about 360 KB): HTML, CSS, JavaScript, GLSL shaders and synthesized audio.
+The whole game is **one self-contained `index.html` file** (about 375 KB, about 6 000 lines): HTML, CSS, JavaScript, GLSL shaders and synthesized audio.
 - It uses no libraries and no external assets, and it needs no network to play.
 - It is assembled from readable source files in [`src/`](src) by a tiny build script that has no dependencies.
 - A few optional files next to it make it installable and nice to share: icons, a manifest, a service worker and a preview image.
@@ -27,12 +27,12 @@ The whole game is **one self-contained `index.html` file** (about 360 KB): HTML,
   - checkpoints about every 250 m, each on a calm, wide, straight pad, and coins to collect
   - The generator always leaves a safe line, so no section is impossible.
 - **Two game modes:**
-  - **Training**: one endless track to explore. After a fall, the next run (and the menu scene) starts again at the last checkpoint you passed, so you can go further each time. The track and the restart point are saved on the device. **↻ New track** on the menu starts a fresh track from 0 m.
+  - **Training**: one endless track to explore. After a fall, the next run (and the menu scene) starts again at the last checkpoint you passed, so you can go further each time. The track and the restart point are saved on the device. **↻ Reset track** on the menu (a small dark pill, readable over any sky) starts a fresh track from 0 m.
   - **Daily run**: everyone gets the same track on the same day, and every run starts from the beginning. The seed comes from the UTC date, and the daily best is saved separately. The link `?mode=daily` opens the daily run directly.
 - **Star power.** Coins fill a gauge at the bottom of the screen. Coins taken in a row raise the coin multiplier (×2 after 4, ×3 after 8, ×4 after 12), so the gauge fills faster; missing a single coin resets it. When the gauge is full, flick the phone up quickly (or double-tap, press Space, or tap the gauge): glowing side rails appear, the ball lights up, the music speeds up and the score is doubled. The ball also smashes every post and moving slider it touches into flying pieces (+500 points each, doubled by star power) instead of bouncing off, and it mows grass tufts flat. The gauge then drains in about 6 seconds and the rails go away.
 - **Kid mode (side rails).** A menu toggle adds a bumper fence along both edges of the track: a low bar, short posts and a glowing top bar as high as the ball's center. The ball bounces back instead of falling off the side. A very hard hit (above about 32 km/h sideways) still jumps the fence, and holes and gaps still count. Kid-mode runs keep their own best scores, and the game over screen, the share text and the share video all say "with side rails".
 - **Nine worlds** that change every 500 m of track and blend smoothly into each other. After the last one, the list starts again:
-  - **Tech** (0–500 m): towers with lit windows, beacons, a glowing grid below
+  - **Tech** (0–500 m): towers with lit windows, beacons, a glowing grid below. By day it is a glass city under a clear blue sky with clouds; at night it keeps its dark neon look. The daily run always starts here, so the time of day shows from the first meter.
   - **Countryside** (500–1000 m): a sunny patchwork of fields and hedges far below, rows of tall cypresses, floating meadows with trees, wind turbines, hot-air balloons, rolling hills and white clouds
   - **Landscape** (1000–1500 m): sunset, floating rock islands, mountains, a sea of clouds
   - **Forest** (1500–2000 m): giant conifers in the morning mist (the track runs through their crowns), a canopy of round treetops far below, light shafts, fireflies
@@ -54,16 +54,17 @@ The whole game is **one self-contained `index.html` file** (about 360 KB): HTML,
   - bloom, radial speed blur and chromatic aberration when boosting
   - a lens flare when the sun is in view (none when something hides it)
   - slow motion when you fall
-- **5 track skins** (neon carbon, steel & gold, wooden toy, ice marble, grass) **and 5 marble skins** (chrome, glass, gold, plasma, candy). You can change them from the menu or the pause screen. The pickers show real pictures drawn with the game's own shaders: each marble as it looks in the current world, and each track skin on a short bend under the current sky. They are redrawn when the world or the track skin changes, one picture per frame.
+- **5 track skins** (neon carbon, steel & gold, wooden toy, ice marble, grass) **and 5 marble skins** (chrome, glass, gold, plasma, candy). You can change them from the menu options or the pause screen (in portrait; the landscape pause screen keeps only resume, sound and menu, in one column). The pickers show real pictures drawn with the game's own shaders: each marble as it looks in the current world, and each track skin on a short bend under the current sky. They are redrawn when the world or the track skin changes, one picture per frame.
 - **Grass track.** A lawn with mowing stripes, clover, daisies, a stone curb and turf sides. It is not only a look: the ball rolls slower (on flat ground it tops out near 76 km/h instead of more than 120 km/h), the uneven ground nudges it sideways, and grass tufts on the track slow it down, kick it aside and make it bounce, with clippings flying. Tufts never sit on narrow ground, boosters, checkpoint pads or among obstacles. They are placed from the track seed without changing the track, so the daily run stays the same for everyone.
 - **A light menu.** The menu shows only the GYROLL title, the tagline, the Training / Daily run switch, one **PLAY** button in the middle of the screen (the ball rolls into view below it) and an **Options** toggle at the bottom. Its parts rise into place one after the other when it opens.
-- **Options.** The toggle raises a glass sheet with every setting: kid mode, controls (gyroscope or touch), time of day, track and marble skins, language and sound. PLAY hides, and the title shrinks into the top bar between the language and sound buttons. **Done** (or a tap outside the sheet) brings the light menu back. The selected option of each switch is marked by a pill that slides under it.
+- **Options.** The toggle raises a glass sheet with every setting: kid mode, controls (gyroscope or touch), time of day, track and marble skins, language and sound. PLAY and the Training / Daily run switch hide, the title shrinks into the top bar between the language and sound buttons, and an **About** button takes the switch's place. **Done** (or a tap outside the sheet) brings the light menu back. The selected option of each switch is marked by a pill that slides under it.
 - **Time of day.** The sky shows a sun (a bright disc with a lens flare) or a moon (with seas, craters and today's phase, lit on the correct side). Four settings:
   - **Real time** (the default): the sun follows the local clock. It rises on the left, is highest around noon and sets on the right, lower in winter. At night the moon rises opposite it.
   - **Day**: each world keeps its own sun.
   - **Night**: a moon in each world.
   - **System**: day or night, following the dark mode of the device.
-  At night the bright worlds turn to a moonlit blue with stars and a faint Milky Way, sunlight becomes moonlight, and neon lights, coins and the track lines glow. The worlds that are already dark stay almost the same. A low sun warms the light and the horizon.
+  At night the bright worlds turn to a moonlit blue with stars and a faint Milky Way, sunlight becomes moonlight, and neon lights, coins and the track lines glow. The city (the first world) switches to its own day look; the other worlds that are already dark stay almost the same. A low sun warms the light and the horizon.
+- **About.** The story of the project and its concept, the real line count and size of `index.html` (the build writes them into the file), and links to the source code on GitHub and to [@diwann](https://x.com/diwann) on X. It opens with its own animation: a circle grows from the About button, a marble draws a neon track and keeps rolling along it, the numbers count up and the text rises line after line. ✕ or `Esc` closes it.
 - **A still menu camera.** Changing the mode, kid mode, the track, a skin or the time of day on the menu never moves the camera: the camera keeps its place next to the ball, and the new world or sky appears with a short cross-fade. Kid mode only adds the rails to the same track.
 - **Sound.** Every sound is synthesized with the Web Audio API, including the rolling sound, impacts, coins, checkpoints, boosts, falls, thunder and generative ambient music. Music and sound effects have separate toggles (white icons) and volume sliders.
 - **Share my score.** During the run the game records a light timelapse. When you press **Share my score** at game over, it builds a short accelerated video (intro, run, fall, score card) with `MediaRecorder`; press **Share the video** when it is ready. On phones it is shared through the Web Share API; elsewhere it is downloaded. If video is not supported, a score-card image is used instead.
@@ -87,13 +88,13 @@ The whole game is **one self-contained `index.html` file** (about 360 KB): HTML,
 |---|---|---|---|---|
 | ![Neon world](docs/world-neon.jpg) | ![Sea world](docs/world-sea.jpg) | ![Desert world](docs/world-desert.jpg) | ![Abstract world](docs/world-abstract.jpg) | ![Chaos world](docs/world-chaos.jpg) |
 
-| Options | Grass track | Star power smash (kid mode) |
-|---|---|---|
-| ![Options sheet](docs/menu-options.jpg) | ![Grass track with tufts](docs/track-grass.jpg) | ![Star power smashing a post, with the kid mode fence](docs/star-smash.jpg) |
+| Options | About | Grass track | Star power smash (kid mode) |
+|---|---|---|---|
+| ![Options sheet](docs/menu-options.jpg) | ![About screen](docs/about.jpg) | ![Grass track with tufts](docs/track-grass.jpg) | ![Star power smashing a post, with the kid mode fence](docs/star-smash.jpg) |
 
-| Real time: morning sun | Night: moon over the sea | Night: countryside |
-|---|---|---|
-| ![Morning sun with a lens flare](docs/sky-sun.jpg) | ![Moon and stars over the sea world](docs/sky-moon.jpg) | ![The countryside world at night](docs/sky-night.jpg) |
+| Real time: morning sun | Night: moon over the sea | Night: countryside | Day: the city |
+|---|---|---|---|
+| ![Morning sun with a lens flare](docs/sky-sun.jpg) | ![Moon and stars over the sea world](docs/sky-moon.jpg) | ![The countryside world at night](docs/sky-night.jpg) | ![The tech world by day](docs/world-tech-day.jpg) |
 
 ## Controls
 
@@ -107,7 +108,7 @@ The whole game is **one self-contained `index.html` file** (about 360 KB): HTML,
 | Arrows · WASD · ZQSD | Keyboard control (desktop) |
 | Mouse drag | Joystick (desktop) |
 | Quick tilt up · double-tap · `Space` · tap the gauge | Start star power (when the gauge is full) |
-| `P` / `Esc` | Pause / resume (`Esc` also closes the options) |
+| `P` / `Esc` | Pause / resume (`Esc` also closes the options and the About screen) |
 | `Space` / `Enter` | Start / play again |
 
 ## Scoring
@@ -138,7 +139,8 @@ src/js/02-track.js    track storage + procedural generator
 src/js/03-shaders.js  all GLSL shaders
 src/js/04-…11-*.js    geometry, renderer, physics & camera, input & audio,
                       particles & environment, UI, replay/share, game loop
-scripts/build.mjs     src/ → index.html (and --check for CI)
+scripts/build.mjs     src/ → index.html (and --check for CI); writes the file's own
+                      line count and size into BUILD_INFO for the About screen
 scripts/serve.mjs     tiny static server
 tests/                Playwright browser tests
 sw.js, manifest.webmanifest, icons/, og.jpg   installable app + link preview
@@ -172,13 +174,15 @@ The tests drive the game loop step by step instead of waiting for real frames, s
 - coins, streak multiplier, star gauge, the tilt-up flick and star power, which smashes obstacles
 - the grass track: slower rolling, uneven ground, tufts that slow and push the ball (and that star power mows), tufts only on safe ground, the same for everyone and never changing the track shape
 - scenery staying out of the track corridor, including giant objects that drift onto it
-- training mode restarting at the last checkpoint (and "new track"), daily runs restarting from 0
+- training mode restarting at the last checkpoint (and "reset track"), daily runs restarting from 0
 - checkpoints on safe pads, at round distances
 - the ball's reflection cube map facing the right way
 - the share video only being made on request
 - the menu camera following the phone
-- the light menu (one PLAY in the middle) and the options sheet (the title moves into the top bar; Done or a tap outside closes it)
-- the time of day: the sun's path over the day and the year, the moon and its phase, night palettes, the setting and dark mode, the sun and moon discs, and all worlds rendering at night
+- the light menu (one PLAY in the middle) and the options sheet (the title moves into the top bar, the mode switch gives its place to About; Done or a tap outside closes it)
+- the About screen: the story in both languages, the line count and size that match the real `index.html`, the links, the marble animation, closing with ✕ or `Esc`, and scrolling on a short landscape screen
+- the landscape pause screen: one column without skin pickers that fits a short screen
+- the time of day: the sun's path over the day and the year, the moon and its phase, night palettes, the city's day look, the setting and dark mode, the sun and moon discs, and all worlds rendering at night
 - a menu camera that stays still when options change, and kid mode keeping the same world
 - picker pictures drawn by the game, redrawn for a new world
 
@@ -211,7 +215,7 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
 | `Track` | Ring buffer of centerline samples and per-row solid intervals. Handles point-to-track projection and support tests. |
 | `TrackMesher` | Builds GPU meshes in 32 m chunks: deck, rims, rails, kid-mode fences, underside beams, hangers. |
 | `Renderer` + GLSL shaders | WebGL1 forward renderer, plus a cube map reflection probe for the ball. The shaders handle procedural materials, zone-blended sky panoramas with the sun or moon disc, the floor layer, point-sprite particles and additive FX, followed by a bloom/composite post chain with a lens flare. |
-| `skyState`, `skyZone` | Time of day: where the sun or moon stands (from the clock), the moon's phase, and each world's palette at night or at dusk. The sky panoramas are painted again when it changes, only on the menu. |
+| `skyState`, `skyZone` | Time of day: where the sun or moon stands (from the clock), the moon's phase, and each world's palette at night or at dusk (a dark world can carry its own `day` palette, like the city). The sky panoramas are painted again when it changes, only on the menu. |
 | `Physics`, `Ball` | Fixed 120 Hz steps for a sphere rolling without slipping: slope and bank gravity, rails, props, landing and falling. The track skin can change the rolling (grass: drag, uneven ground, tufts). |
 | `CameraRig` | Chase camera with look-ahead, roll in turns, speed FOV, shake, fall and attract modes, plus the finger offsets and zoom. |
 | `InputManager`, `CamGestures` | DeviceOrientation (with the iOS permission), calibration, low-pass filtering, joystick and keyboard; camera drags, pinches, wheel and taps. |
@@ -827,6 +831,23 @@ The option toggle would switch the screen to option mode, without the play CTA, 
 If gyroscope is used, touching the screen would control the camera. With support of pinch to zoom. We should also support pinch to zoom on the menus
 
 Let’s add the sun on the sky, or the moon depending on the current time, or according to a new setting : time of the day: real time / day / night / system dark mode setting. Using real time would put the sun at a different position depending on the time.
+````
+
+</details>
+
+<details>
+<summary><strong>About screen prompt</strong></summary>
+
+````markdown
+When the option menu is activated, we should also hide the training / daily run toggle. 
+We can replace this by an about button which would open a new screen with a text about the history of this project and the concept. Make sure to include the number of line of code and the size of the index.html file. Also put the link to the repo and my twitter account (@diwann)
+with a dedicated animation 
+
+Also, we should apply the day / night theme toggle on the daily run too. 
+
+Also the new track button should be on a small shadow to be readable above a purple background. And it should be “reset track” instead of “new track”
+
+And the pause menu on landscape mode is too packed. Let’s remove the track and ball texture selectors.
 ````
 
 </details>

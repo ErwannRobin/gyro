@@ -27,16 +27,21 @@ test('time of day: the real clock moves the sun across the front of the view; a 
   expect(r.phase.min).toBeLessThan(0.25); expect(r.phase.max).toBe(2.4); expect(r.phase.sides).toEqual([-1, 1]);
 });
 
-test('night dims bright worlds and swaps sunlight for moonlight; dark worlds barely change', async ({ page }) => {
+test('night dims bright worlds and swaps sunlight for moonlight; the city has a day look; other dark worlds barely change', async ({ page }) => {
   await openGame(page);
   const r = await page.evaluate(() => {
     const lum = (c) => c[0] * 0.2126 + c[1] * 0.7152 + c[2] * 0.0722, N = skyState('night'), D = skyState('day');
-    return ZONES.map((z) => ({ id: z.id, fog: lum(skyZone(z, N).fog) / lum(skyZone(z, D).fog), sun: lum(skyZone(z, N).sun) / lum(z.sun), blue: skyZone(z, N).sun[2] >= skyZone(z, N).sun[0] }));
+    return ZONES.map((z) => ({ id: z.id, fog: lum(skyZone(z, N).fog) / lum(skyZone(z, D).fog), sun: lum(skyZone(z, N).sun) / lum(z.sun), blue: skyZone(z, N).sun[2] >= skyZone(z, N).sun[0],
+      sky: [lum(skyZone(z, D).skyMid), lum(skyZone(z, N).skyMid)], dayK: [skyZone(z, D).dayK, skyZone(z, N).dayK, skyZone(z, D).paint.dayK], stars: skyZone(z, D).stars }));
   });
   const by = Object.fromEntries(r.map((z) => [z.id, z]));
   for (const id of ['farm', 'sea', 'desert', 'forest', 'abstract']) { expect(by[id].fog, id).toBeLessThan(0.35); expect(by[id].sun, id).toBeLessThan(0.7); }
-  for (const id of ['tech', 'neon', 'chaos']) expect(by[id].fog, id).toBeGreaterThan(0.85);
+  for (const id of ['neon', 'chaos']) expect(by[id].fog, id).toBeGreaterThan(0.85);
   for (const z of r) if (z.id !== 'chaos') expect(z.blue, z.id).toBe(true);           // the red world keeps a red light
+  // the city, where the daily run starts: a clear blue sky by day, its dark neon look at night
+  expect(by.tech.fog).toBeLessThan(0.35); expect(by.tech.sky[0]).toBeGreaterThan(0.25); expect(by.tech.sky[1]).toBeLessThan(0.1);
+  expect(by.tech.dayK).toEqual([1, 0, 1]); expect(by.tech.stars).toBe(0);
+  for (const z of r) if (z.id !== 'tech') expect(z.dayK, z.id).toEqual([0, 0, 0]);
 });
 
 test('the setting repaints the sky, is remembered and follows the dark mode of the device', async ({ page }) => {
@@ -70,7 +75,7 @@ test('the sun and the moon are drawn in the sky, and every world renders at nigh
     return { mid: at(32, 32), off: Math.max(at(32, 2), at(2, 32), at(61, 32)), err: gl.getError() };
   });
   const day = await look();
-  expect(day.err).toBe(0); expect(day.mid).toBeGreaterThan(700); expect(day.mid).toBeGreaterThan(day.off + 60);
+  expect(day.err).toBe(0); expect(day.mid).toBeGreaterThan(740); expect(day.mid).toBeGreaterThan(day.off + 40);   // a white disc, even on the city's bright day sky
   await page.evaluate(() => window.__game.setTod('night'));
   const night = await look();
   expect(night.err).toBe(0); expect(night.mid).toBeGreaterThan(night.off + 150);

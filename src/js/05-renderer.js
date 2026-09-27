@@ -20,7 +20,7 @@ class Renderer {
     this.theme = null;
     this.zA = 0; this.zB = 0; this.zMix = 0; this.flash = 0;
     this.Z = { fog: [0, 0, 0], abyss: [0, 0, 0], skyMid: [0, 0, 0], sun: [1, 1, 1], stars: 1, haze: 1, dust: [1, 1, 1], c1: [1, 1, 1], c2: [1, 1, 1],
-      floorA: [0, 0, 0], floorB: [1, 1, 1], shafts: 1, drift: [0, 0] };
+      floorA: [0, 0, 0], floorB: [1, 1, 1], shafts: 1, drift: [0, 0], dayK: 0 };
     this.sunDir = new Float32Array([0, 1, 0]);
     this.sky = skyState('day'); this.zones = ZONES.map((z) => skyZone(z, this.sky));   // world palettes under the time of day
     this.initGL();
@@ -165,7 +165,7 @@ class Renderer {
     const A = this.zones[a], B = this.zones[this.zB], Z = this.Z, m = this.zMix;
     const mixv = (o, x, y) => { o[0] = lerp(x[0], y[0], m); o[1] = lerp(x[1], y[1], m); o[2] = lerp(x[2], y[2], m); };
     for (const key of ['fog', 'abyss', 'skyMid', 'sun', 'dust', 'c1', 'c2', 'floorA', 'floorB']) mixv(Z[key], A[key], B[key]);
-    Z.stars = lerp(A.stars, B.stars, m); Z.shafts = lerp(A.shafts, B.shafts, m); Z.haze = lerp(A.haze || 1, B.haze || 1, m);
+    Z.stars = lerp(A.stars, B.stars, m); Z.shafts = lerp(A.shafts, B.shafts, m); Z.dayK = lerp(A.dayK, B.dayK, m); Z.haze = lerp(A.haze || 1, B.haze || 1, m);
     Z.drift[0] = lerp(A.drift[0], B.drift[0], m); Z.drift[1] = lerp(A.drift[1], B.drift[1], m);
     const na = Math.hypot(...A.sunDir), nb = Math.hypot(...B.sunDir);
     const x = lerp(A.sunDir[0] / na, B.sunDir[0] / nb, m), y = lerp(A.sunDir[1] / na, B.sunDir[1] / nb, m), z = lerp(A.sunDir[2] / na, B.sunDir[2] / nb, m);
@@ -397,7 +397,7 @@ class Renderer {
     gl.uniform1f(p.u('u_time'), o.time % 1000); gl.uniform1f(p.u('u_fogDen'), o.fogDen); gl.uniform1f(p.u('u_fogBase'), o.fogBase);
     gl.uniform4fv(p.u('u_ball'), o.ball); gl.uniform3fv(p.u('u_ballGlow'), o.ballGlow);
     gl.uniform1f(p.u('u_ballLight'), o.ballLight); gl.uniform1f(p.u('u_shadow'), o.shadow);
-    gl.uniform1f(p.u('u_collapse'), o.collapse);
+    gl.uniform1f(p.u('u_collapse'), o.collapse); gl.uniform1f(p.u('u_dayK'), Z.dayK);
     gl.uniform3fv(p.u('u_color'), [1, 1, 1]); gl.uniform1f(p.u('u_emis'), 1); gl.uniform1f(p.u('u_fogK'), 1);
     this.setInstConst(this.ident, [1, 1, 1], 1);
     this.bindZoneTex(p, 'blur', 'u_env', 'u_env2', 0, 1); gl.uniform1f(p.u('u_envMix'), this.zMix);

@@ -171,7 +171,11 @@ const ZONE_LEN = 500;
 const ZONES = [
   { id: 'tech', skyTop: hex(0x02040c), skyMid: hex(0x0a1a30), horizon: hex(0x1e4a6a), abyss: hex(0x1a6a8a), fog: hex(0x0c2033),
     neb: [hex(0x1a4a8a), hex(0x0e6a8a), hex(0x2a3a7a), hex(0x3aa0c0)], sun: hex(0xcfeeff), sunDir: [-0.35, 0.5, 0.8], stars: 1.0,
-    c1: hex(0x4ef2ff), c2: hex(0x2a8aff), dust: hex(0x9fe8ff), drift: [0.3, 0.05], floor: 0, floorA: hex(0x07121c), floorB: hex(0x3ad8ff), shafts: 0.9 },
+    c1: hex(0x4ef2ff), c2: hex(0x2a8aff), dust: hex(0x9fe8ff), drift: [0.3, 0.05], floor: 0, floorA: hex(0x07121c), floorB: hex(0x3ad8ff), shafts: 0.9,
+    // by day the city stands under a clear blue sky (its palette above is the night one)
+    day: { skyTop: hex(0x1f5fae), skyMid: hex(0x5d9fd8), horizon: hex(0xcde8f4), abyss: hex(0x557fa0), fog: hex(0x86b0cc), haze: 0.45,
+      neb: [hex(0xffffff), hex(0xeaf6ff), hex(0xdcecf8), hex(0xfff6ea)], sun: hex(0xfff3dc), stars: 0, dust: hex(0xeaf8ff),
+      floorA: hex(0x3c5c74), floorB: hex(0xc8f6ff), shafts: 0.5 } },
   // countryside: a sunny patchwork of fields, cypress rows, wind turbines and hot-air balloons
   { id: 'farm', skyTop: hex(0x1a56b0), skyMid: hex(0x5a98dc), horizon: hex(0xbfdcf0), abyss: hex(0x6a8a58), fog: hex(0x9dbdd0), haze: 0.55,
     neb: [hex(0xffffff), hex(0xfff2dc), hex(0xdfe8f5), hex(0xffe8c8)], sun: hex(0xfff2d8), sunDir: [-0.55, 0.62, -0.55], stars: 0,
@@ -241,10 +245,16 @@ function skyState(mode, date = new Date(), dark = false) {
 }
 // A world's palette under a time of day. Night dims it to a moonlit blue (worlds that are already
 // dark barely change) and swaps sunlight for moonlight; a low sun warms the light and the horizon.
+// A dark world with a `day` palette (the city) switches to it as the sun comes up.
 // `paint` keeps the original colours for the sky painting, which gets dimmed as a whole instead.
 const NIGHT_TINT = [0.12, 0.16, 0.33], MOON_LIGHT = [0.62, 0.72, 1.0], DUSK_SUN = [1.0, 0.56, 0.3];
-function skyZone(Z, S) {
+function skyZone(Z0, S) {
   const mixc = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+  const dayK = Z0.day ? 1 - S.night : 0, Z = Object.assign({}, Z0);
+  if (dayK > 0) for (const key in Z0.day) {
+    const a = Z0[key], b = Z0.day[key];
+    Z[key] = typeof b === 'number' ? lerp(a === undefined ? 1 : a, b, dayK) : typeof b[0] === 'number' ? mixc(a, b, dayK) : dayK > 0.5 ? b : a;
+  }
   const lum = Z.skyMid[0] * 0.2126 + Z.skyMid[1] * 0.7152 + Z.skyMid[2] * 0.0722, zd = clamp((lum - 0.05) / 0.3, 0, 1);
   const k = S.night * zd, dk = S.dusk * (1 - S.night);
   const g = (c, w = 1) => [c[0] * lerp(1, NIGHT_TINT[0], k * w), c[1] * lerp(1, NIGHT_TINT[1], k * w), c[2] * lerp(1, NIGHT_TINT[2], k * w)];
@@ -252,10 +262,10 @@ function skyZone(Z, S) {
   const sun = S.moon ? mixc(Z.sun, moonCol, S.night) : mixc(Z.sun, DUSK_SUN, dk * 0.75);
   const sunDir = S.dir || Z.sunDir;
   return Object.assign({}, Z, {
-    sunDir, moon: S.moon, sun, stars: Math.max(Z.stars, S.night * 0.5), shafts: Z.shafts * (1 - 0.7 * k),
+    sunDir, moon: S.moon, sun, stars: Math.max(Z.stars, S.night * 0.5), shafts: Z.shafts * (1 - 0.7 * k), dayK,
     skyTop: g(Z.skyTop), skyMid: g(Z.skyMid), horizon: g(mixc(Z.horizon, [1, 0.62, 0.4], dk * 0.35)), abyss: g(Z.abyss), fog: g(Z.fog),
     floorA: g(Z.floorA), floorB: g(Z.floorB, 0.85), dust: g(Z.dust, 0.5),
-    paint: Object.assign({}, Z, { sunDir, moon: S.moon, nightK: k, dusk: dk }),
+    paint: Object.assign({}, Z, { sunDir, moon: S.moon, nightK: k, dusk: dk, dayK }),
   });
 }
 
@@ -264,7 +274,7 @@ const I18N = {
   fr: {
     play: 'JOUER', music: 'MUSIQUE', sfx: 'EFFETS', options: 'OPTIONS', done: 'OK', control: 'CONTRÔLE',
     tod: 'MOMENT DE LA JOURNÉE', todReal: 'TEMPS RÉEL', todDay: 'JOUR', todNight: 'NUIT', todSystem: 'SYSTÈME',
-    modeRandom: 'ENTRAÎNEMENT', modeDaily: 'DÉFI DU JOUR', infoRandom: 'Parcours sans fin · vous repartez du dernier checkpoint', infoContinue: 'Reprise au checkpoint {d} m', newTrack: '↻ NOUVEAU PARCOURS', infoDaily: 'Même parcours pour tous · {date}',
+    modeRandom: 'ENTRAÎNEMENT', modeDaily: 'DÉFI DU JOUR', infoRandom: 'Parcours sans fin · vous repartez du dernier checkpoint', infoContinue: 'Reprise au checkpoint {d} m', newTrack: '↻ RÉINITIALISER LE PARCOURS', infoDaily: 'Même parcours pour tous · {date}',
     track: 'PISTE', ball: 'BILLE', pause: 'PAUSE', resume: 'REPRENDRE', recal: 'RECALIBRER LE GYROSCOPE', mainMenu: 'MENU PRINCIPAL',
     gameOver: 'GAME OVER', newRecord: 'NOUVEAU RECORD', retry: 'REJOUER', menu: 'MENU',
     share: 'PARTAGER MON SCORE', shareBusy: 'PRÉPARATION DE LA VIDÉO…', shareSaved: 'VIDÉO ENREGISTRÉE ✓', shareReady: 'PARTAGER LA VIDÉO ▶', shareImg: 'PARTAGER MON SCORE',
@@ -278,11 +288,16 @@ const I18N = {
     starOn: '★ STAR POWER ★', starActive: '★ SCORE ×2', starEnd: 'FIN DU STAR POWER', combo: 'PIÈCES ×{n}', comboLost: 'SÉRIE PERDUE',
     install: 'INSTALLER L’APPLI', iosInstall: 'Touchez Partager ⎋ puis « Sur l’écran d’accueil ».',
     noGL: 'WebGL est indisponible sur cet appareil / navigateur. Activez l’accélération matérielle ou essayez un Chrome / Safari récent.',
+    about: 'À PROPOS', close: 'Fermer', aboutKicker: 'L’HISTOIRE', statLines: 'LIGNES DE CODE', statSize: 'Ko · UN SEUL index.html', statLibs: 'BIBLIOTHÈQUE',
+    aboutLead: 'Une course de bille sans fin, que l’on guide en inclinant son téléphone. La piste flotte dans le vide, tourne, se rétrécit et s’effondre derrière vous. Jusqu’où irez-vous ?',
+    aboutP1: 'GYROLL est né le 25 septembre 2026 d’un seul long prompt, écrit en français : un jeu 3D complet dans un unique fichier HTML, sans bibliothèque ni fichier externe. Erwann Robin l’a ensuite façonné, prompt après prompt, avec Claude Code : neuf mondes, le défi du jour, le star power, le mode enfant, des billes miroirs, le soleil et la lune.',
+    aboutP2: 'Tout tient dans ce seul fichier : HTML, CSS, JavaScript, shaders GLSL, musique et sons créés à la volée. La piste, les mondes et les ciels sont générés par le code, et le jeu marche hors ligne.',
+    linkRepo: 'Code source sur GitHub', linkX: 'Suivre @diwann', aboutFoot: 'Open source · licence MIT',
   },
   en: {
     play: 'PLAY', music: 'MUSIC', sfx: 'SFX', options: 'OPTIONS', done: 'DONE', control: 'CONTROLS',
     tod: 'TIME OF DAY', todReal: 'REAL TIME', todDay: 'DAY', todNight: 'NIGHT', todSystem: 'SYSTEM',
-    modeRandom: 'TRAINING', modeDaily: 'DAILY RUN', infoRandom: 'Endless track · you restart at the last checkpoint', infoContinue: 'Back at the {d} m checkpoint', newTrack: '↻ NEW TRACK', infoDaily: 'Same track for everyone · {date}',
+    modeRandom: 'TRAINING', modeDaily: 'DAILY RUN', infoRandom: 'Endless track · you restart at the last checkpoint', infoContinue: 'Back at the {d} m checkpoint', newTrack: '↻ RESET TRACK', infoDaily: 'Same track for everyone · {date}',
     track: 'TRACK', ball: 'BALL', pause: 'PAUSE', resume: 'RESUME', recal: 'RECALIBRATE GYROSCOPE', mainMenu: 'MAIN MENU',
     gameOver: 'GAME OVER', newRecord: 'NEW RECORD', retry: 'PLAY AGAIN', menu: 'MENU',
     share: 'SHARE MY SCORE', shareBusy: 'PREPARING VIDEO…', shareSaved: 'VIDEO SAVED ✓', shareReady: 'SHARE THE VIDEO ▶', shareImg: 'SHARE MY SCORE',
@@ -296,6 +311,11 @@ const I18N = {
     starOn: '★ STAR POWER ★', starActive: '★ SCORE ×2', starEnd: 'STAR POWER OVER', combo: 'COINS ×{n}', comboLost: 'STREAK LOST',
     install: 'INSTALL THE APP', iosInstall: 'Tap Share ⎋, then “Add to Home Screen”.',
     noGL: 'WebGL is not available on this device / browser. Enable hardware acceleration or try a recent Chrome / Safari.',
+    about: 'ABOUT', close: 'Close', aboutKicker: 'THE STORY', statLines: 'LINES OF CODE', statSize: 'KB · ONE index.html', statLibs: 'LIBRARIES',
+    aboutLead: 'An endless marble run you steer by tilting your phone. The track floats in the void, twists, narrows and falls apart behind you. How far can you go?',
+    aboutP1: 'GYROLL started on 25 September 2026 with one long prompt, written in French: a complete 3D game in a single HTML file, with no libraries and no assets. Erwann Robin then shaped it prompt after prompt with Claude Code: nine worlds, the daily run, star power, kid mode, mirror-like marbles, the sun and the moon.',
+    aboutP2: 'Everything lives in that one file: HTML, CSS, JavaScript, GLSL shaders, and music and sounds made on the fly. The track, the worlds and the skies are generated by code, and the game works offline.',
+    linkRepo: 'Source code on GitHub', linkX: 'Follow @diwann', aboutFoot: 'Open source · MIT license',
   },
 };
 let LANG = 'en';
@@ -310,6 +330,12 @@ const tr = (key, vars) => {
   if (vars) for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);
   return s;
 };
+
+// ---------------------------------------------------------------- about
+// Size of the built index.html, shown on the About screen: scripts/build.mjs writes the numbers.
+const BUILD_INFO = { lines: 0, kb: 0 };
+const REPO_URL = 'https://github.com/ErwannRobin/gyro';
+const X_URL = 'https://x.com/diwann';
 
 // ---------------------------------------------------------------- production URL
 // Used in shared scores (text, video end card). "?mode=daily" opens the daily run directly.

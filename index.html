@@ -132,10 +132,15 @@ body.star #starGlow{opacity:1}
 #menu.opts::before{opacity:1}
 #mLeft{position:absolute;left:calc(var(--sal) + 22px);right:calc(var(--sar) + 22px);top:calc(var(--sat) + clamp(34px,7vh,76px))}
 #mRight{position:absolute;left:calc(var(--sal) + 22px);right:calc(var(--sar) + 22px);top:var(--playY,50%)}
-#title,#tagline,#modeSeg,#modeInfo,#mRight,#menuTop{transition:transform .6s cubic-bezier(.3,1.2,.4,1),opacity .35s,visibility .35s}
+#title,#tagline,#modeSeg,#modeInfo,#mRight,#menuTop,#btnAbout{transition:transform .6s cubic-bezier(.3,1.2,.4,1),opacity .35s,visibility .35s}
 #menu.opts #title{transform:translateY(var(--tY,0px)) scale(.42)}
 #menu.opts #tagline{opacity:0;visibility:hidden;transform:translateY(calc(var(--tY,0px) * .6)) scale(.7)}
-#menu.opts #modeSeg,#menu.opts #modeInfo{transform:translateY(var(--hY,0px))}
+/* options mode: the mode switch gives its place to the About button */
+#modeBox{position:relative;width:100%;margin-top:20px;display:flex;flex-direction:column;align-items:center}
+#menu.opts #modeSeg,#menu.opts #modeInfo{opacity:0;visibility:hidden;transform:translateY(var(--hY,0px)) scale(.86)}
+#btnAbout{position:absolute;top:4px;left:50%;min-width:150px;justify-content:center;font-size:12px;opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,var(--hY,0px)) scale(.8)}
+#menu.opts #btnAbout{opacity:1;visibility:visible;pointer-events:auto;transform:translate(-50%,var(--hY,0px));transition-delay:.08s}
+#menu.opts #btnAbout:active{transform:translate(-50%,var(--hY,0px)) scale(.95)}
 #menu.opts #mRight{opacity:0;visibility:hidden;pointer-events:none;transform:scale(.9)}
 #menuTop{opacity:0;visibility:hidden;transform:translateY(-12px)}
 #menu.opts #menuTop{opacity:1;visibility:visible;transform:none}
@@ -176,7 +181,7 @@ body.star #starGlow{opacity:1}
 #title{font-size:clamp(62px,19vw,150px);font-weight:900;letter-spacing:.04em;line-height:.9;margin-right:-.06em;
   background:linear-gradient(100deg,#fff 0%,#d9fbff 30%,var(--accent) 45%,#fff 52%,var(--accent2) 70%,#fff 100%);background-size:250% 100%;
   -webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 5s ease-in-out infinite;
-  filter:drop-shadow(0 6px 30px rgba(78,242,255,.35)) drop-shadow(0 2px 2px rgba(0,0,0,.6))}
+  filter:drop-shadow(0 6px 30px rgba(78,242,255,.35)) drop-shadow(0 4px 16px rgba(0,12,34,.3)) drop-shadow(0 2px 2px rgba(0,0,0,.6))}
 @keyframes shine{0%,100%{background-position:0% 0}50%{background-position:100% 0}}
 #tagline{margin-top:10px;font-size:clamp(17px,4.6vw,22px);font-style:italic;font-weight:500;letter-spacing:.04em;color:rgba(235,245,255,.9);text-shadow:0 0 3px rgba(0,0,0,.7),0 2px 8px #000}
 .bigBtn{margin-top:30px;height:64px;padding:0 20px;border-radius:20px;font-size:16px;font-weight:900;letter-spacing:.08em;line-height:1.2;
@@ -208,13 +213,15 @@ body.star #starGlow{opacity:1}
 .seg button{position:relative;min-height:38px;padding:6px 12px;border-radius:11px;font-size:12px;font-weight:900;letter-spacing:.12em;color:var(--dim);transition:color .3s}
 .seg button.on{color:#fff}
 .seg button:active{transform:scale(.95)}
-#modeSeg{margin-top:20px}
 #ctrlSeg button{min-width:128px}
 #todSeg{gap:2px;width:300px}
 #todSeg button{flex:1 1 auto;padding:6px 8px;font-size:11px;letter-spacing:.08em;white-space:nowrap}
 #modeSeg button{width:142px;min-height:44px;padding:6px 4px;font-size:13px;white-space:nowrap}
 #tgKid{width:290px;max-width:100%;justify-content:center;white-space:nowrap}
 .linkBtn{background:none;border:0;padding:2px 6px;font:inherit;font-weight:900;letter-spacing:.08em;line-height:16px;color:var(--accent);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+/* reset track: a small dark glass pill keeps the link readable over bright or purple skies */
+#btnNewTrack{margin-top:3px;padding:2px 10px 3px;border-radius:10px;background:rgba(4,6,16,.5);box-shadow:0 2px 12px rgba(0,0,0,.35);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);text-shadow:0 1px 3px rgba(0,0,0,.8)}
 #tgKid:not(.off){color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold));border-color:transparent}
 #ovRails{margin-top:10px;padding:6px 14px;border-radius:12px;font-size:13px;font-weight:800;letter-spacing:.06em;color:#051018;background:linear-gradient(135deg,#ffe9a8,var(--gold))}
 #modeInfo{margin-top:6px;height:40px;width:100%;max-width:380px;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -286,10 +293,48 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 @keyframes rays{0%{opacity:0;transform:scale(.3) rotate(0)}20%{opacity:1}100%{opacity:0;transform:scale(1.3) rotate(60deg)}}
 .row2{display:flex;gap:10px;width:100%;max-width:420px}
 .row2 .ghostBtn{flex:1}
+/* About: a circle opens from the About button; the marble draws its track while the numbers count up
+   and the story rises line after line. */
+#about{position:fixed;inset:0;z-index:30;background:rgba(5,7,16,.8);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);
+  clip-path:circle(0 at var(--ox,50%) var(--oy,50%));-webkit-clip-path:circle(0 at var(--ox,50%) var(--oy,50%));transition:clip-path .7s cubic-bezier(.65,0,.25,1),-webkit-clip-path .7s cubic-bezier(.65,0,.25,1)}
+#about.open{clip-path:circle(150vmax at var(--ox,50%) var(--oy,50%));-webkit-clip-path:circle(150vmax at var(--ox,50%) var(--oy,50%))}
+#abScroll{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;text-align:center;
+  padding:calc(var(--sat) + 56px) calc(var(--sar) + 24px) calc(var(--sab) + 40px) calc(var(--sal) + 24px)}
+#abScroll > *{max-width:440px;margin-left:auto;margin-right:auto}
+.abIn{opacity:0;transform:translateY(24px);filter:blur(6px)}
+#about.open .abIn{animation:rise .9s calc(.28s + var(--d) * .1s) cubic-bezier(.2,.9,.3,1) both}
+#abTrack{display:block;width:min(300px,78vw);height:auto;margin:0 auto;overflow:visible}
+#abPath,#abGlow{fill:none;stroke-linecap:round}
+#abPath{stroke:url(#abGrad);stroke-width:3.5}
+#abGlow{stroke:var(--accent);stroke-width:12;opacity:.18;filter:blur(4px)}
+#abMarble{filter:drop-shadow(0 0 6px rgba(160,230,255,.8))}
+#abKicker{margin-top:14px;font-size:11px;font-weight:900;letter-spacing:.3em;color:var(--accent)}
+#abTitle{margin-top:4px;font-size:clamp(44px,13vw,64px);font-weight:900;letter-spacing:.06em;line-height:1;margin-right:auto;
+  background:linear-gradient(100deg,#fff 0%,#d9fbff 30%,var(--accent) 45%,#fff 52%,var(--accent2) 70%,#fff 100%);background-size:250% 100%;
+  -webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 5s ease-in-out infinite}
+#abStats{display:flex;justify-content:center;gap:10px;margin-top:22px}
+.abStat{flex:1 1 0;min-width:0;padding:12px 6px 10px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;gap:4px}
+.abStat b{font-size:clamp(22px,6.4vw,30px);font-weight:900;line-height:1;background:linear-gradient(180deg,#fff 30%,#bfefff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.abStat span{font-size:9px;font-weight:800;letter-spacing:.14em;line-height:1.35;color:var(--dim)}
+#abScroll p{margin-top:16px;font-size:15px;line-height:1.55;font-weight:500;color:rgba(235,242,255,.86);text-align:left}
+#abScroll #abLead{margin-top:22px;font-size:17px;font-weight:700;font-style:italic;color:#fff;text-align:center}
+#abLinks{margin-top:24px;display:flex;flex-direction:column;gap:10px}
+#abLinks a{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:18px;text-align:left;color:#fff;text-decoration:none;
+  background:var(--glass);border:1px solid var(--glass-brd);transition:transform .25s cubic-bezier(.3,1.4,.4,1),border-color .25s}
+#abLinks a:active{transform:scale(.97)}
+#abLinks a:hover{border-color:rgba(255,255,255,.35)}
+#abLinks .ic{width:26px;height:26px}
+#abLinks span{display:flex;flex-direction:column;gap:2px}
+#abLinks b{font-size:14px;font-weight:800;letter-spacing:.04em}
+#abLinks small{font-size:12px;font-weight:600;color:var(--dim)}
+#abFoot{margin-top:20px;font-size:11px;font-weight:800;letter-spacing:.2em;color:var(--dim)}
+#btnAboutClose{position:absolute;z-index:2;top:calc(var(--sat) + 10px);right:calc(var(--sar) + 12px);opacity:0;transform:scale(.6) rotate(-90deg);transition:opacity .3s,transform .5s cubic-bezier(.3,1.4,.4,1)}
+#about.open #btnAboutClose{opacity:1;transform:none;transition-delay:.35s}
+@media (prefers-reduced-motion:reduce){ #about,#about.open .abIn,#btnAboutClose{transition:none;animation:none;opacity:1;transform:none;filter:none} }
 #noGL{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:30px;text-align:center;z-index:99;background:#05060d;font-weight:700}
 #mLeft,#mRight{display:flex;flex-direction:column;align-items:center}
 #menu .bigBtn{margin:0 auto}
-@media (orientation:portrait) and (max-height:700px){ #tagline{margin-top:4px} #modeSeg{margin-top:12px} #menu .bigBtn{height:56px} .skins{gap:8px} .sw{width:40px;height:40px} .optRow{margin-top:10px} .optRow .seg button{min-height:34px} }
+@media (orientation:portrait) and (max-height:700px){ #tagline{margin-top:4px} #modeBox{margin-top:12px} #menu .bigBtn{height:56px} .skins{gap:8px} .sw{width:40px;height:40px} .optRow{margin-top:10px} .optRow .seg button{min-height:34px} }
 @media (orientation:landscape) and (max-height:560px){
   #mLeft{top:0;bottom:0;right:52%;left:calc(var(--sal) + 24px);display:flex;flex-direction:column;justify-content:center}
   #mRight{top:0;bottom:0;left:52%;right:calc(var(--sar) + 24px);display:flex;flex-direction:column;justify-content:center}
@@ -302,15 +347,16 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   .optLbl{width:74px;text-align:left;line-height:1.4}
   #todSeg{width:284px}
   #todSeg button{padding:6px 6px}
-  #menu.opts #title,#menu.opts #modeSeg,#menu.opts #modeInfo{transform:none}
+  #menu.opts #title{transform:none}
   #menu.opts #tagline{opacity:1;visibility:visible;transform:none}
   #title{font-size:clamp(52px,18vh,110px)}
   .bigBtn{margin-top:0;height:52px;font-size:14px}
   .ghostBtn{min-height:44px;margin-top:10px;padding:8px 18px}
   .hint{margin-top:8px;font-size:12px}
   .skins{margin-top:10px;gap:6px}
-  #modeSeg{margin-top:12px}
-  #pause{flex-direction:row;flex-wrap:wrap;align-content:center;column-gap:4vw}
+  #modeBox{margin-top:12px}
+  #abScroll{padding-top:calc(var(--sat) + 24px)}
+  #pause .skins{display:none}                       /* the pickers stay in the menu options: the pause screen keeps room to breathe */
   #pause > *{max-width:380px}
   .sw{width:38px;height:38px}
   #permMsg{margin-top:8px;font-size:12px}
@@ -365,8 +411,11 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   <div id="mLeft">
     <div id="title">GYROLL</div>
     <div id="tagline">How far can you go?</div>
-    <div class="seg" id="modeSeg"><i class="pill"></i><button data-mode="random" data-i18n="modeRandom"></button><button data-mode="daily" data-i18n="modeDaily"></button></div>
-    <div id="modeInfo"><span id="modeTxt"></span><button class="linkBtn hidden" id="btnNewTrack" data-i18n="newTrack"></button></div>
+    <div id="modeBox">
+      <div class="seg" id="modeSeg"><i class="pill"></i><button data-mode="random" data-i18n="modeRandom"></button><button data-mode="daily" data-i18n="modeDaily"></button></div>
+      <div id="modeInfo"><span id="modeTxt"></span><button class="linkBtn hidden" id="btnNewTrack" data-i18n="newTrack"></button></div>
+      <button class="tg" id="btnAbout" aria-controls="about"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle class="stk" cx="12" cy="12" r="9.2"/><path class="stk" d="M12 11v5.6"/><circle cx="12" cy="7.6" r="1.35"/></svg><span data-i18n="about"></span></button>
+    </div>
   </div>
   <div id="mRight">
     <button class="bigBtn" id="btnPlay" data-i18n="play"></button>
@@ -383,6 +432,36 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     </div>
   </div>
   <button id="btnOpts" aria-controls="sheet" aria-expanded="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M3.5 8h17M3.5 16h17"/><circle class="k1" cx="15" cy="8" r="2.8"/><circle class="k2" cx="9" cy="16" r="2.8"/></svg><span class="lb1" data-i18n="options"></span><span class="lb2" data-i18n="done"></span></button>
+</div>
+
+<div class="hidden" id="about" role="dialog" aria-modal="true" aria-labelledby="abTitle">
+  <div id="abScroll">
+    <div class="abIn" style="--d:0">
+      <svg id="abTrack" viewBox="0 0 300 64" aria-hidden="true">
+        <defs><linearGradient id="abGrad" x1="0" x2="1"><stop offset="0" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent2)"/></linearGradient>
+          <radialGradient id="abBall" cx=".36" cy=".3" r=".75"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#cfe9ff"/><stop offset=".8" stop-color="#3a4a66"/><stop offset="1" stop-color="#9fdcff"/></radialGradient></defs>
+        <path id="abGlow" d="M8 44C52 8 92 10 128 34S196 62 236 32 284 12 292 20"/>
+        <path id="abPath" d="M8 44C52 8 92 10 128 34S196 62 236 32 284 12 292 20"/>
+        <g id="abMarble"><circle r="8.5" fill="url(#abBall)"/><g id="abSpin"><path d="M-8.5 0H8.5" stroke="rgba(10,20,40,.55)" stroke-width="1.4"/></g><circle cx="-2.8" cy="-3.2" r="2.2" fill="#fff" opacity=".85"/></g>
+      </svg>
+      <div id="abKicker" data-i18n="aboutKicker"></div>
+      <h2 id="abTitle">GYROLL</h2>
+    </div>
+    <div id="abStats" class="abIn" style="--d:1">
+      <div class="abStat"><b class="num" data-to="lines">0</b><span data-i18n="statLines"></span></div>
+      <div class="abStat"><b class="num" data-to="kb">0</b><span data-i18n="statSize"></span></div>
+      <div class="abStat"><b class="num" data-to="libs">0</b><span data-i18n="statLibs"></span></div>
+    </div>
+    <p id="abLead" class="abIn" style="--d:2" data-i18n="aboutLead"></p>
+    <p class="abIn" style="--d:3" data-i18n="aboutP1"></p>
+    <p class="abIn" style="--d:4" data-i18n="aboutP2"></p>
+    <div id="abLinks" class="abIn" style="--d:5">
+      <a id="abRepo" target="_blank" rel="noopener"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8a10.2 10.2 0 0 0-3.2 19.9c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.6 1 1.6 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.6-1.4-2.3-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.5-1.3.1-2.7 0 0 .9-.3 2.8 1a9.6 9.6 0 0 1 5.1 0c1.9-1.3 2.8-1 2.8-1 .6 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A10.2 10.2 0 0 0 12 1.8z"/></svg><span><b data-i18n="linkRepo"></b><small>github.com/ErwannRobin/gyro</small></span></a>
+      <a id="abX" target="_blank" rel="noopener"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.8 2.8h3.1l-6.8 7.8 8 10.6h-6.3l-4.9-6.4-5.6 6.4H2.2l7.3-8.3L1.8 2.8h6.4l4.4 5.9zm-1.1 16.5h1.7L7.4 4.6H5.5z"/></svg><span><b data-i18n="linkX"></b><small>x.com/diwann</small></span></a>
+    </div>
+    <div id="abFoot" class="abIn" style="--d:6" data-i18n="aboutFoot"></div>
+  </div>
+  <button class="icoBtn" id="btnAboutClose" data-i18n-aria="close"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M6 6l12 12M18 6L6 18"/></svg></button>
 </div>
 
 <div class="screen hidden" id="calib">
@@ -588,7 +667,11 @@ const ZONE_LEN = 500;
 const ZONES = [
   { id: 'tech', skyTop: hex(0x02040c), skyMid: hex(0x0a1a30), horizon: hex(0x1e4a6a), abyss: hex(0x1a6a8a), fog: hex(0x0c2033),
     neb: [hex(0x1a4a8a), hex(0x0e6a8a), hex(0x2a3a7a), hex(0x3aa0c0)], sun: hex(0xcfeeff), sunDir: [-0.35, 0.5, 0.8], stars: 1.0,
-    c1: hex(0x4ef2ff), c2: hex(0x2a8aff), dust: hex(0x9fe8ff), drift: [0.3, 0.05], floor: 0, floorA: hex(0x07121c), floorB: hex(0x3ad8ff), shafts: 0.9 },
+    c1: hex(0x4ef2ff), c2: hex(0x2a8aff), dust: hex(0x9fe8ff), drift: [0.3, 0.05], floor: 0, floorA: hex(0x07121c), floorB: hex(0x3ad8ff), shafts: 0.9,
+    // by day the city stands under a clear blue sky (its palette above is the night one)
+    day: { skyTop: hex(0x1f5fae), skyMid: hex(0x5d9fd8), horizon: hex(0xcde8f4), abyss: hex(0x557fa0), fog: hex(0x86b0cc), haze: 0.45,
+      neb: [hex(0xffffff), hex(0xeaf6ff), hex(0xdcecf8), hex(0xfff6ea)], sun: hex(0xfff3dc), stars: 0, dust: hex(0xeaf8ff),
+      floorA: hex(0x3c5c74), floorB: hex(0xc8f6ff), shafts: 0.5 } },
   // countryside: a sunny patchwork of fields, cypress rows, wind turbines and hot-air balloons
   { id: 'farm', skyTop: hex(0x1a56b0), skyMid: hex(0x5a98dc), horizon: hex(0xbfdcf0), abyss: hex(0x6a8a58), fog: hex(0x9dbdd0), haze: 0.55,
     neb: [hex(0xffffff), hex(0xfff2dc), hex(0xdfe8f5), hex(0xffe8c8)], sun: hex(0xfff2d8), sunDir: [-0.55, 0.62, -0.55], stars: 0,
@@ -658,10 +741,16 @@ function skyState(mode, date = new Date(), dark = false) {
 }
 // A world's palette under a time of day. Night dims it to a moonlit blue (worlds that are already
 // dark barely change) and swaps sunlight for moonlight; a low sun warms the light and the horizon.
+// A dark world with a `day` palette (the city) switches to it as the sun comes up.
 // `paint` keeps the original colours for the sky painting, which gets dimmed as a whole instead.
 const NIGHT_TINT = [0.12, 0.16, 0.33], MOON_LIGHT = [0.62, 0.72, 1.0], DUSK_SUN = [1.0, 0.56, 0.3];
-function skyZone(Z, S) {
+function skyZone(Z0, S) {
   const mixc = (a, b, t) => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+  const dayK = Z0.day ? 1 - S.night : 0, Z = Object.assign({}, Z0);
+  if (dayK > 0) for (const key in Z0.day) {
+    const a = Z0[key], b = Z0.day[key];
+    Z[key] = typeof b === 'number' ? lerp(a === undefined ? 1 : a, b, dayK) : typeof b[0] === 'number' ? mixc(a, b, dayK) : dayK > 0.5 ? b : a;
+  }
   const lum = Z.skyMid[0] * 0.2126 + Z.skyMid[1] * 0.7152 + Z.skyMid[2] * 0.0722, zd = clamp((lum - 0.05) / 0.3, 0, 1);
   const k = S.night * zd, dk = S.dusk * (1 - S.night);
   const g = (c, w = 1) => [c[0] * lerp(1, NIGHT_TINT[0], k * w), c[1] * lerp(1, NIGHT_TINT[1], k * w), c[2] * lerp(1, NIGHT_TINT[2], k * w)];
@@ -669,10 +758,10 @@ function skyZone(Z, S) {
   const sun = S.moon ? mixc(Z.sun, moonCol, S.night) : mixc(Z.sun, DUSK_SUN, dk * 0.75);
   const sunDir = S.dir || Z.sunDir;
   return Object.assign({}, Z, {
-    sunDir, moon: S.moon, sun, stars: Math.max(Z.stars, S.night * 0.5), shafts: Z.shafts * (1 - 0.7 * k),
+    sunDir, moon: S.moon, sun, stars: Math.max(Z.stars, S.night * 0.5), shafts: Z.shafts * (1 - 0.7 * k), dayK,
     skyTop: g(Z.skyTop), skyMid: g(Z.skyMid), horizon: g(mixc(Z.horizon, [1, 0.62, 0.4], dk * 0.35)), abyss: g(Z.abyss), fog: g(Z.fog),
     floorA: g(Z.floorA), floorB: g(Z.floorB, 0.85), dust: g(Z.dust, 0.5),
-    paint: Object.assign({}, Z, { sunDir, moon: S.moon, nightK: k, dusk: dk }),
+    paint: Object.assign({}, Z, { sunDir, moon: S.moon, nightK: k, dusk: dk, dayK }),
   });
 }
 
@@ -681,7 +770,7 @@ const I18N = {
   fr: {
     play: 'JOUER', music: 'MUSIQUE', sfx: 'EFFETS', options: 'OPTIONS', done: 'OK', control: 'CONTRÔLE',
     tod: 'MOMENT DE LA JOURNÉE', todReal: 'TEMPS RÉEL', todDay: 'JOUR', todNight: 'NUIT', todSystem: 'SYSTÈME',
-    modeRandom: 'ENTRAÎNEMENT', modeDaily: 'DÉFI DU JOUR', infoRandom: 'Parcours sans fin · vous repartez du dernier checkpoint', infoContinue: 'Reprise au checkpoint {d} m', newTrack: '↻ NOUVEAU PARCOURS', infoDaily: 'Même parcours pour tous · {date}',
+    modeRandom: 'ENTRAÎNEMENT', modeDaily: 'DÉFI DU JOUR', infoRandom: 'Parcours sans fin · vous repartez du dernier checkpoint', infoContinue: 'Reprise au checkpoint {d} m', newTrack: '↻ RÉINITIALISER LE PARCOURS', infoDaily: 'Même parcours pour tous · {date}',
     track: 'PISTE', ball: 'BILLE', pause: 'PAUSE', resume: 'REPRENDRE', recal: 'RECALIBRER LE GYROSCOPE', mainMenu: 'MENU PRINCIPAL',
     gameOver: 'GAME OVER', newRecord: 'NOUVEAU RECORD', retry: 'REJOUER', menu: 'MENU',
     share: 'PARTAGER MON SCORE', shareBusy: 'PRÉPARATION DE LA VIDÉO…', shareSaved: 'VIDÉO ENREGISTRÉE ✓', shareReady: 'PARTAGER LA VIDÉO ▶', shareImg: 'PARTAGER MON SCORE',
@@ -695,11 +784,16 @@ const I18N = {
     starOn: '★ STAR POWER ★', starActive: '★ SCORE ×2', starEnd: 'FIN DU STAR POWER', combo: 'PIÈCES ×{n}', comboLost: 'SÉRIE PERDUE',
     install: 'INSTALLER L’APPLI', iosInstall: 'Touchez Partager ⎋ puis « Sur l’écran d’accueil ».',
     noGL: 'WebGL est indisponible sur cet appareil / navigateur. Activez l’accélération matérielle ou essayez un Chrome / Safari récent.',
+    about: 'À PROPOS', close: 'Fermer', aboutKicker: 'L’HISTOIRE', statLines: 'LIGNES DE CODE', statSize: 'Ko · UN SEUL index.html', statLibs: 'BIBLIOTHÈQUE',
+    aboutLead: 'Une course de bille sans fin, que l’on guide en inclinant son téléphone. La piste flotte dans le vide, tourne, se rétrécit et s’effondre derrière vous. Jusqu’où irez-vous ?',
+    aboutP1: 'GYROLL est né le 25 septembre 2026 d’un seul long prompt, écrit en français : un jeu 3D complet dans un unique fichier HTML, sans bibliothèque ni fichier externe. Erwann Robin l’a ensuite façonné, prompt après prompt, avec Claude Code : neuf mondes, le défi du jour, le star power, le mode enfant, des billes miroirs, le soleil et la lune.',
+    aboutP2: 'Tout tient dans ce seul fichier : HTML, CSS, JavaScript, shaders GLSL, musique et sons créés à la volée. La piste, les mondes et les ciels sont générés par le code, et le jeu marche hors ligne.',
+    linkRepo: 'Code source sur GitHub', linkX: 'Suivre @diwann', aboutFoot: 'Open source · licence MIT',
   },
   en: {
     play: 'PLAY', music: 'MUSIC', sfx: 'SFX', options: 'OPTIONS', done: 'DONE', control: 'CONTROLS',
     tod: 'TIME OF DAY', todReal: 'REAL TIME', todDay: 'DAY', todNight: 'NIGHT', todSystem: 'SYSTEM',
-    modeRandom: 'TRAINING', modeDaily: 'DAILY RUN', infoRandom: 'Endless track · you restart at the last checkpoint', infoContinue: 'Back at the {d} m checkpoint', newTrack: '↻ NEW TRACK', infoDaily: 'Same track for everyone · {date}',
+    modeRandom: 'TRAINING', modeDaily: 'DAILY RUN', infoRandom: 'Endless track · you restart at the last checkpoint', infoContinue: 'Back at the {d} m checkpoint', newTrack: '↻ RESET TRACK', infoDaily: 'Same track for everyone · {date}',
     track: 'TRACK', ball: 'BALL', pause: 'PAUSE', resume: 'RESUME', recal: 'RECALIBRATE GYROSCOPE', mainMenu: 'MAIN MENU',
     gameOver: 'GAME OVER', newRecord: 'NEW RECORD', retry: 'PLAY AGAIN', menu: 'MENU',
     share: 'SHARE MY SCORE', shareBusy: 'PREPARING VIDEO…', shareSaved: 'VIDEO SAVED ✓', shareReady: 'SHARE THE VIDEO ▶', shareImg: 'SHARE MY SCORE',
@@ -713,6 +807,11 @@ const I18N = {
     starOn: '★ STAR POWER ★', starActive: '★ SCORE ×2', starEnd: 'STAR POWER OVER', combo: 'COINS ×{n}', comboLost: 'STREAK LOST',
     install: 'INSTALL THE APP', iosInstall: 'Tap Share ⎋, then “Add to Home Screen”.',
     noGL: 'WebGL is not available on this device / browser. Enable hardware acceleration or try a recent Chrome / Safari.',
+    about: 'ABOUT', close: 'Close', aboutKicker: 'THE STORY', statLines: 'LINES OF CODE', statSize: 'KB · ONE index.html', statLibs: 'LIBRARIES',
+    aboutLead: 'An endless marble run you steer by tilting your phone. The track floats in the void, twists, narrows and falls apart behind you. How far can you go?',
+    aboutP1: 'GYROLL started on 25 September 2026 with one long prompt, written in French: a complete 3D game in a single HTML file, with no libraries and no assets. Erwann Robin then shaped it prompt after prompt with Claude Code: nine worlds, the daily run, star power, kid mode, mirror-like marbles, the sun and the moon.',
+    aboutP2: 'Everything lives in that one file: HTML, CSS, JavaScript, GLSL shaders, and music and sounds made on the fly. The track, the worlds and the skies are generated by code, and the game works offline.',
+    linkRepo: 'Source code on GitHub', linkX: 'Follow @diwann', aboutFoot: 'Open source · MIT license',
   },
 };
 let LANG = 'en';
@@ -727,6 +826,12 @@ const tr = (key, vars) => {
   if (vars) for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);
   return s;
 };
+
+// ---------------------------------------------------------------- about
+// Size of the built index.html, shown on the About screen: scripts/build.mjs writes the numbers.
+const BUILD_INFO = { lines: 6007, kb: 375 };
+const REPO_URL = 'https://github.com/ErwannRobin/gyro';
+const X_URL = 'https://x.com/diwann';
 
 // ---------------------------------------------------------------- production URL
 // Used in shared scores (text, video end card). "?mode=daily" opens the daily run directly.
@@ -1215,7 +1320,7 @@ uniform vec3 u_deckA; uniform vec3 u_deckB; uniform vec3 u_trim; uniform vec3 u_
 uniform vec3 u_accent; uniform vec3 u_accent2; uniform vec3 u_hazard;
 uniform float u_pattern; uniform float u_gloss; uniform float u_time; uniform float u_fogDen; uniform float u_fogBase;
 uniform vec4 u_ball; uniform vec3 u_ballGlow; uniform float u_ballLight; uniform float u_shadow;
-uniform float u_fogK;
+uniform float u_fogK; uniform float u_dayK;
 uniform sampler2D u_env; uniform sampler2D u_env2; uniform float u_envMix;
 
 vec3 envLookup(vec3 d){ vec2 q = equirect(d); return mix(texture2D(u_env, q).rgb, texture2D(u_env2, q).rgb, u_envMix); }
@@ -1368,14 +1473,14 @@ void main(){
     base = u_under * 0.7; gloss = 0.2; spec = 0.3;
     float top = smoothstep(0.16, 0.02, v_uv.y);
     emis += u_hazard * top * 1.1; glow += top * 0.8;
-  } else if (mat < 13.5) {                            // tower with lit windows
-    base = vec3(0.05, 0.06, 0.08); gloss = 0.5; spec = 0.6; metal = 0.6;
+  } else if (mat < 13.5) {                            // tower with lit windows (by day: blue glass, few lights)
+    base = mix(vec3(0.05, 0.06, 0.08), vec3(0.16, 0.24, 0.32), u_dayK); gloss = 0.5; spec = 0.6; metal = 0.6;
     vec2 w = v_uv * vec2(7.0, 44.0);
     vec2 f = fract(w);
     float win = step(0.2, f.x) * step(f.x, 0.8) * step(0.25, f.y) * step(f.y, 0.75);
     float on = step(0.55, hash(floor(w) + floor(v_wp.xz * 0.01)));
     float band = smoothstep(0.03, 0.0, abs(fract(v_uv.y * 3.0) - 0.5) - 0.47);
-    emis = v_ic.rgb * (win * on * 0.9 + band * 1.2) * v_ic.a; glow = win * on * 0.5 + band;
+    emis = v_ic.rgb * (win * on * 0.9 + band * 1.2) * v_ic.a * (1.0 - 0.75 * u_dayK); glow = (win * on * 0.5 + band) * (1.0 - 0.85 * u_dayK);
   } else if (mat < 14.5) {                            // floating rock / island with grass top
     float grass = smoothstep(0.55, 0.8, N.y);
     float n = noise(v_wp.xz * 0.8 + v_wp.y);
@@ -2362,7 +2467,7 @@ function makeSkyCanvases(Z, seed) {
   const ridge = (n, amp) => { const ph = []; for (let k = 1; k <= n; k++) ph.push([r.range(0, TAU), amp / Math.pow(k, 0.9) * r.range(0.6, 1.2), k * r.int(1, 3)]); return (x) => ph.reduce((s, [p, a, f]) => s + Math.sin(x / W * TAU * f + p) * a, 0); };
   const sd = Z.sunDir, sl = Math.hypot(sd[0], sd[1], sd[2]);
   const sunX = (Math.atan2(sd[0] / sl, sd[2] / sl) / TAU + 0.5) * W, sunY = Math.acos(sd[1] / sl) / Math.PI * H;
-  const nebK = { tech: 1, land: 0.5, neon: 1, abstract: 0.6, chaos: 0.7, farm: 0.05, forest: 0.1, sea: 0.04, desert: 0.08 }[Z.id];
+  const dayK = Z.dayK || 0, nebK = { tech: lerp(1, 0.05, dayK), land: 0.5, neon: 1, abstract: 0.6, chaos: 0.7, farm: 0.05, forest: 0.1, sea: 0.04, desert: 0.08 }[Z.id];
   g.globalCompositeOperation = 'lighter';
   for (let b = 0; b < 4; b++) {
     const cx = r.range(0, W), cy = r.range(H * 0.12, H * 0.42), col = Z.neb[b % Z.neb.length];
@@ -2426,13 +2531,18 @@ function makeSkyCanvases(Z, seed) {
   // Draws `fn(x)` at x and at its wrapped copies near the seams.
   const wrapX = (x, w, fn) => { fn(x); if (x - w < 0) fn(x + W); if (x + w > W) fn(x - W); };
   if (Z.id === 'tech') {
+    if (dayK > 0) {                                  // by day: sun glow, high streaks and a few clouds over the skyline
+      g.globalCompositeOperation = 'lighter'; blob(sunX, sunY, 120, Z.sun, 0.22 * dayK); g.globalCompositeOperation = 'source-over';
+      streaks(10, [1, 1, 1], 0.3 * dayK);
+      cloudSky(12, mix([1, 1, 1], Z.sun, 0.2), mix(Z.skyMid, Z.horizon, 0.5), 0.9 * dayK, 0.85);
+    }
     for (let L = 0; L < 3; L++) {
       const col = mix(Z.horizon, Z.skyTop, 0.35 + L * 0.2), base = HZ + 5 + L * 3;
       let x = 0;
       while (x < W) {
         const w = r.range(5, 22), h = r.range(6, 26) * (1 + L * 0.45) * (r.chance(0.12) ? 2.2 : 1);
         g.fillStyle = css(col, 0.92); g.fillRect(x, base - h, w, h + 2);
-        g.fillStyle = css(Z.c1, 0.55);
+        g.fillStyle = css(Z.c1, 0.55 * (1 - 0.6 * dayK));
         for (let k = 0; k < h * w / 40; k++) if (r.chance(0.5)) g.fillRect(x + r.range(1, w - 2), base - r.range(2, h), 1, 1);
         if (h > 40) { g.fillStyle = 'rgba(255,60,60,.9)'; g.fillRect(x + w / 2, base - h - 3, 1.5, 1.5); }
         x += w + r.range(0, 4);
@@ -2442,7 +2552,7 @@ function makeSkyCanvases(Z, seed) {
     g.globalCompositeOperation = 'lighter';
     for (let k = 0; k < 7; k++) {
       const x = r.range(0, W), lg = g.createLinearGradient(0, HZ, 0, HZ - 180);
-      lg.addColorStop(0, css(Z.c1, 0.14)); lg.addColorStop(1, css(Z.c1, 0));
+      lg.addColorStop(0, css(Z.c1, 0.14 * (1 - dayK))); lg.addColorStop(1, css(Z.c1, 0));
       g.fillStyle = lg; g.beginPath(); g.moveTo(x - 2, HZ); g.lineTo(x + 2, HZ); g.lineTo(x + r.range(-40, 40), HZ - 180); g.fill();
     }
   } else if (Z.id === 'land') {
@@ -2647,7 +2757,7 @@ class Renderer {
     this.theme = null;
     this.zA = 0; this.zB = 0; this.zMix = 0; this.flash = 0;
     this.Z = { fog: [0, 0, 0], abyss: [0, 0, 0], skyMid: [0, 0, 0], sun: [1, 1, 1], stars: 1, haze: 1, dust: [1, 1, 1], c1: [1, 1, 1], c2: [1, 1, 1],
-      floorA: [0, 0, 0], floorB: [1, 1, 1], shafts: 1, drift: [0, 0] };
+      floorA: [0, 0, 0], floorB: [1, 1, 1], shafts: 1, drift: [0, 0], dayK: 0 };
     this.sunDir = new Float32Array([0, 1, 0]);
     this.sky = skyState('day'); this.zones = ZONES.map((z) => skyZone(z, this.sky));   // world palettes under the time of day
     this.initGL();
@@ -2792,7 +2902,7 @@ class Renderer {
     const A = this.zones[a], B = this.zones[this.zB], Z = this.Z, m = this.zMix;
     const mixv = (o, x, y) => { o[0] = lerp(x[0], y[0], m); o[1] = lerp(x[1], y[1], m); o[2] = lerp(x[2], y[2], m); };
     for (const key of ['fog', 'abyss', 'skyMid', 'sun', 'dust', 'c1', 'c2', 'floorA', 'floorB']) mixv(Z[key], A[key], B[key]);
-    Z.stars = lerp(A.stars, B.stars, m); Z.shafts = lerp(A.shafts, B.shafts, m); Z.haze = lerp(A.haze || 1, B.haze || 1, m);
+    Z.stars = lerp(A.stars, B.stars, m); Z.shafts = lerp(A.shafts, B.shafts, m); Z.dayK = lerp(A.dayK, B.dayK, m); Z.haze = lerp(A.haze || 1, B.haze || 1, m);
     Z.drift[0] = lerp(A.drift[0], B.drift[0], m); Z.drift[1] = lerp(A.drift[1], B.drift[1], m);
     const na = Math.hypot(...A.sunDir), nb = Math.hypot(...B.sunDir);
     const x = lerp(A.sunDir[0] / na, B.sunDir[0] / nb, m), y = lerp(A.sunDir[1] / na, B.sunDir[1] / nb, m), z = lerp(A.sunDir[2] / na, B.sunDir[2] / nb, m);
@@ -3024,7 +3134,7 @@ class Renderer {
     gl.uniform1f(p.u('u_time'), o.time % 1000); gl.uniform1f(p.u('u_fogDen'), o.fogDen); gl.uniform1f(p.u('u_fogBase'), o.fogBase);
     gl.uniform4fv(p.u('u_ball'), o.ball); gl.uniform3fv(p.u('u_ballGlow'), o.ballGlow);
     gl.uniform1f(p.u('u_ballLight'), o.ballLight); gl.uniform1f(p.u('u_shadow'), o.shadow);
-    gl.uniform1f(p.u('u_collapse'), o.collapse);
+    gl.uniform1f(p.u('u_collapse'), o.collapse); gl.uniform1f(p.u('u_dayK'), Z.dayK);
     gl.uniform3fv(p.u('u_color'), [1, 1, 1]); gl.uniform1f(p.u('u_emis'), 1); gl.uniform1f(p.u('u_fogK'), 1);
     this.setInstConst(this.ident, [1, 1, 1], 1);
     this.bindZoneTex(p, 'blur', 'u_env', 'u_env2', 0, 1); gl.uniform1f(p.u('u_envMix'), this.zMix);
@@ -4478,8 +4588,9 @@ class UI {
       calibNum: $('calibNum'), calibTxt: $('calibTxt'), calibSub: $('calibSub'), go: $('go'), pause: $('pause'), over: $('over'),
       record: $('record'), ovDist: $('ovDist'), ovScore: $('ovScore'), ovBest: $('ovBest'), ovMode: $('ovMode'), ovRails: $('ovRails'), mBest: $('mBest'), perm: $('permMsg'),
       btnPlay: $('btnPlay'), btnOpts: $('btnOpts'), sheet: $('sheet'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), modeTxt: $('modeTxt'), newTrack: $('btnNewTrack'), share: $('btnShare'), recal: $('btnRecal'),
-      power: $('power'), pwCoin: $('pwCoin'), pwTxt: $('pwTxt'), pwFill: $('pwFill'),
+      power: $('power'), pwCoin: $('pwCoin'), pwTxt: $('pwTxt'), pwFill: $('pwFill'), about: $('about'), btnAbout: $('btnAbout'),
     };
+    $('abRepo').href = REPO_URL; $('abX').href = X_URL;
     this.cache = {};
     this.flashA = 0; this.flashCol = '#fff';
     this.skinSets = [];
@@ -4502,11 +4613,48 @@ class UI {
     const top = (el) => { let y = 0; for (let e = el; e && e !== m; e = e.offsetParent) y += e.offsetTop; return y; };
     const set = (k, v) => m.style.setProperty(k, Math.round(v) + 'px');
     if (matchMedia('(orientation: landscape) and (max-height: 560px)').matches) { for (const k of ['--playY', '--tY', '--hY', '--sheetTop']) set(k, 0); return; }
-    const title = $('title'), seg = $('modeSeg'), info = this.el.modeInfo, bar = $('menuTop'), head = top(info) + info.offsetHeight;
+    const title = $('title'), seg = $('modeSeg'), info = this.el.modeInfo, bar = $('menuTop'), ab = this.el.btnAbout, head = top(info) + info.offsetHeight;
     set('--playY', Math.max(H / 2 - this.el.btnPlay.offsetHeight / 2, head + 14));
     set('--tY', top(bar) + bar.offsetHeight / 2 - top(title) - title.offsetHeight / 2);
     const hY = top(bar) + bar.offsetHeight + 12 - top(seg);
-    set('--hY', hY); set('--sheetTop', head + hY + 10);
+    set('--hY', hY); set('--sheetTop', top(ab) + ab.offsetHeight + hY + 16);
+  }
+  // About: a circle opens from the About button, the marble draws its track, the numbers count up.
+  get aboutOpen() { return this.el.about.classList.contains('open'); }
+  openAbout() {
+    const a = this.el.about, r = this.el.btnAbout.getBoundingClientRect();
+    if (this.aboutOpen) return;
+    a.style.setProperty('--ox', Math.round(r.left + r.width / 2) + 'px'); a.style.setProperty('--oy', Math.round(r.top + r.height / 2) + 'px');
+    clearTimeout(a._t); a.classList.remove('hidden'); void a.offsetWidth; a.classList.add('open');
+    this.$('abScroll').scrollTop = 0;
+    this.abT0 = performance.now(); cancelAnimationFrame(this.abRaf);
+    const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const loop = (now) => { this.aboutFrame(still ? 1e9 : (now - this.abT0) / 1000); if (!still && this.aboutOpen) this.abRaf = requestAnimationFrame(loop); };
+    loop(this.abT0);
+    this.$('btnAboutClose').focus({ preventScroll: true });
+  }
+  closeAbout() {
+    const a = this.el.about;
+    if (!this.aboutOpen) return;
+    a.classList.remove('open'); cancelAnimationFrame(this.abRaf);
+    clearTimeout(a._t); a._t = setTimeout(() => { if (!this.aboutOpen) a.classList.add('hidden'); }, 700);
+  }
+  // t: seconds since the screen opened. The track draws itself behind the marble, then the marble
+  // keeps rolling to and fro along it like in a half-pipe.
+  aboutFrame(t) {
+    const path = this.$('abPath'), len = this.abLen || (this.abLen = path.getTotalLength());
+    const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+    const draw = clamp((t - 0.35) / 1.5, 0, 1), p = draw < 1 ? ease(draw) : 0.5 + 0.5 * Math.cos((t - 1.85) * Math.PI / 2.6);
+    path.style.strokeDasharray = len; path.style.strokeDashoffset = len * (1 - ease(draw));
+    this.$('abGlow').style.strokeDasharray = len; this.$('abGlow').style.strokeDashoffset = len * (1 - ease(draw));
+    const pt = path.getPointAtLength(len * p);
+    this.$('abMarble').setAttribute('transform', `translate(${pt.x.toFixed(2)} ${pt.y.toFixed(2)})`);
+    this.$('abSpin').setAttribute('transform', `rotate(${(len * p / 8.5 * 180 / Math.PI).toFixed(1)})`);
+    const vals = { lines: BUILD_INFO.lines, kb: BUILD_INFO.kb, libs: 0 };
+    this.el.about.querySelectorAll('[data-to]').forEach((b, i) => {
+      const k = clamp((t - 0.5 - i * 0.12) / 1.6, 0, 1);
+      this.set('ab' + i, b, fmt(vals[b.dataset.to] * (1 - Math.pow(1 - k, 4))));
+    });
   }
   setOpts(on) {
     this.layoutMenu();
@@ -4882,6 +5030,8 @@ class Game {
     if (this.darkMQ && this.darkMQ.addEventListener) this.darkMQ.addEventListener('change', () => { if (this.tod === 'system' && this.state === 'menu') this.updateSky(true); });
     tap($('tgKid'), () => { if (this.state === 'menu') { this.setKid(!this.kid); this.audio.tick(); } });
     tap(E.newTrack, () => { if (this.state === 'menu') { this.newTrack(); this.audio.tick(); } });
+    tap(E.btnAbout, () => { if (this.state === 'menu') { U.openAbout(); this.audio.tick(); } });
+    tap($('btnAboutClose'), () => { U.closeAbout(); this.audio.tick(); });
     for (const b of document.querySelectorAll('#modeSeg button')) tap(b, () => { if (this.state === 'menu' && b.dataset.mode !== this.gameMode) { this.setGameMode(b.dataset.mode); this.audio.tick(); } });
     const toggles = () => U.setToggles(this.audio.musicOn, this.audio.sfxOn);
     for (const b of document.querySelectorAll('.tgMusic')) tap(b, () => { this.audio.init(); this.audio.setMusic(!this.audio.musicOn); toggles(); });
@@ -4912,6 +5062,7 @@ class Game {
     this.refreshTexts();
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
+      if (U.aboutOpen) { if (k === 'escape') U.closeAbout(); return; }
       if ((k === 'escape' || k === 'p') && (this.state === 'play' || this.state === 'calib')) this.pause();
       else if (k === 'escape' && this.state === 'menu') this.setOpts(false);
       else if (k === ' ' && this.state === 'play') this.starKey = true;
@@ -5053,7 +5204,7 @@ class Game {
     });
     window.addEventListener('blur', () => { if (this.state === 'play' && !this.mobile) this.pause(); });
     window.addEventListener('pagehide', () => this.audio.suspend());
-    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement) && !e.target.closest('#sheet')) e.preventDefault(); }, { passive: false });
+    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement) && !e.target.closest('#sheet, #abScroll')) e.preventDefault(); }, { passive: false });
     document.addEventListener('gesturestart', (e) => e.preventDefault());
     document.addEventListener('dblclick', (e) => e.preventDefault());
     this.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.glLost = true; if (this.state === 'play') this.pause(); });

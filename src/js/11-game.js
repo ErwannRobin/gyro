@@ -80,6 +80,8 @@ class Game {
     if (this.darkMQ && this.darkMQ.addEventListener) this.darkMQ.addEventListener('change', () => { if (this.tod === 'system' && this.state === 'menu') this.updateSky(true); });
     tap($('tgKid'), () => { if (this.state === 'menu') { this.setKid(!this.kid); this.audio.tick(); } });
     tap(E.newTrack, () => { if (this.state === 'menu') { this.newTrack(); this.audio.tick(); } });
+    tap(E.btnAbout, () => { if (this.state === 'menu') { U.openAbout(); this.audio.tick(); } });
+    tap($('btnAboutClose'), () => { U.closeAbout(); this.audio.tick(); });
     for (const b of document.querySelectorAll('#modeSeg button')) tap(b, () => { if (this.state === 'menu' && b.dataset.mode !== this.gameMode) { this.setGameMode(b.dataset.mode); this.audio.tick(); } });
     const toggles = () => U.setToggles(this.audio.musicOn, this.audio.sfxOn);
     for (const b of document.querySelectorAll('.tgMusic')) tap(b, () => { this.audio.init(); this.audio.setMusic(!this.audio.musicOn); toggles(); });
@@ -110,6 +112,7 @@ class Game {
     this.refreshTexts();
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
+      if (U.aboutOpen) { if (k === 'escape') U.closeAbout(); return; }
       if ((k === 'escape' || k === 'p') && (this.state === 'play' || this.state === 'calib')) this.pause();
       else if (k === 'escape' && this.state === 'menu') this.setOpts(false);
       else if (k === ' ' && this.state === 'play') this.starKey = true;
@@ -251,7 +254,7 @@ class Game {
     });
     window.addEventListener('blur', () => { if (this.state === 'play' && !this.mobile) this.pause(); });
     window.addEventListener('pagehide', () => this.audio.suspend());
-    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement) && !e.target.closest('#sheet')) e.preventDefault(); }, { passive: false });
+    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement) && !e.target.closest('#sheet, #abScroll')) e.preventDefault(); }, { passive: false });
     document.addEventListener('gesturestart', (e) => e.preventDefault());
     document.addEventListener('dblclick', (e) => e.preventDefault());
     this.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.glLost = true; if (this.state === 'play') this.pause(); });

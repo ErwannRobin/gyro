@@ -62,7 +62,7 @@ uniform vec3 u_deckA; uniform vec3 u_deckB; uniform vec3 u_trim; uniform vec3 u_
 uniform vec3 u_accent; uniform vec3 u_accent2; uniform vec3 u_hazard;
 uniform float u_pattern; uniform float u_gloss; uniform float u_time; uniform float u_fogDen; uniform float u_fogBase;
 uniform vec4 u_ball; uniform vec3 u_ballGlow; uniform float u_ballLight; uniform float u_shadow;
-uniform float u_fogK;
+uniform float u_fogK; uniform float u_dayK;
 uniform sampler2D u_env; uniform sampler2D u_env2; uniform float u_envMix;
 
 vec3 envLookup(vec3 d){ vec2 q = equirect(d); return mix(texture2D(u_env, q).rgb, texture2D(u_env2, q).rgb, u_envMix); }
@@ -215,14 +215,14 @@ void main(){
     base = u_under * 0.7; gloss = 0.2; spec = 0.3;
     float top = smoothstep(0.16, 0.02, v_uv.y);
     emis += u_hazard * top * 1.1; glow += top * 0.8;
-  } else if (mat < 13.5) {                            // tower with lit windows
-    base = vec3(0.05, 0.06, 0.08); gloss = 0.5; spec = 0.6; metal = 0.6;
+  } else if (mat < 13.5) {                            // tower with lit windows (by day: blue glass, few lights)
+    base = mix(vec3(0.05, 0.06, 0.08), vec3(0.16, 0.24, 0.32), u_dayK); gloss = 0.5; spec = 0.6; metal = 0.6;
     vec2 w = v_uv * vec2(7.0, 44.0);
     vec2 f = fract(w);
     float win = step(0.2, f.x) * step(f.x, 0.8) * step(0.25, f.y) * step(f.y, 0.75);
     float on = step(0.55, hash(floor(w) + floor(v_wp.xz * 0.01)));
     float band = smoothstep(0.03, 0.0, abs(fract(v_uv.y * 3.0) - 0.5) - 0.47);
-    emis = v_ic.rgb * (win * on * 0.9 + band * 1.2) * v_ic.a; glow = win * on * 0.5 + band;
+    emis = v_ic.rgb * (win * on * 0.9 + band * 1.2) * v_ic.a * (1.0 - 0.75 * u_dayK); glow = (win * on * 0.5 + band) * (1.0 - 0.85 * u_dayK);
   } else if (mat < 14.5) {                            // floating rock / island with grass top
     float grass = smoothstep(0.55, 0.8, N.y);
     float n = noise(v_wp.xz * 0.8 + v_wp.y);

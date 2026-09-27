@@ -46,8 +46,9 @@ class UI {
       calibNum: $('calibNum'), calibTxt: $('calibTxt'), calibSub: $('calibSub'), go: $('go'), pause: $('pause'), over: $('over'),
       record: $('record'), ovDist: $('ovDist'), ovScore: $('ovScore'), ovBest: $('ovBest'), ovMode: $('ovMode'), ovRails: $('ovRails'), mBest: $('mBest'), perm: $('permMsg'),
       btnPlay: $('btnPlay'), btnOpts: $('btnOpts'), sheet: $('sheet'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), modeTxt: $('modeTxt'), newTrack: $('btnNewTrack'), share: $('btnShare'), recal: $('btnRecal'),
-      power: $('power'), pwCoin: $('pwCoin'), pwTxt: $('pwTxt'), pwFill: $('pwFill'),
+      power: $('power'), pwCoin: $('pwCoin'), pwTxt: $('pwTxt'), pwFill: $('pwFill'), about: $('about'), btnAbout: $('btnAbout'),
     };
+    $('abRepo').href = REPO_URL; $('abX').href = X_URL;
     this.cache = {};
     this.flashA = 0; this.flashCol = '#fff';
     this.skinSets = [];
@@ -70,11 +71,48 @@ class UI {
     const top = (el) => { let y = 0; for (let e = el; e && e !== m; e = e.offsetParent) y += e.offsetTop; return y; };
     const set = (k, v) => m.style.setProperty(k, Math.round(v) + 'px');
     if (matchMedia('(orientation: landscape) and (max-height: 560px)').matches) { for (const k of ['--playY', '--tY', '--hY', '--sheetTop']) set(k, 0); return; }
-    const title = $('title'), seg = $('modeSeg'), info = this.el.modeInfo, bar = $('menuTop'), head = top(info) + info.offsetHeight;
+    const title = $('title'), seg = $('modeSeg'), info = this.el.modeInfo, bar = $('menuTop'), ab = this.el.btnAbout, head = top(info) + info.offsetHeight;
     set('--playY', Math.max(H / 2 - this.el.btnPlay.offsetHeight / 2, head + 14));
     set('--tY', top(bar) + bar.offsetHeight / 2 - top(title) - title.offsetHeight / 2);
     const hY = top(bar) + bar.offsetHeight + 12 - top(seg);
-    set('--hY', hY); set('--sheetTop', head + hY + 10);
+    set('--hY', hY); set('--sheetTop', top(ab) + ab.offsetHeight + hY + 16);
+  }
+  // About: a circle opens from the About button, the marble draws its track, the numbers count up.
+  get aboutOpen() { return this.el.about.classList.contains('open'); }
+  openAbout() {
+    const a = this.el.about, r = this.el.btnAbout.getBoundingClientRect();
+    if (this.aboutOpen) return;
+    a.style.setProperty('--ox', Math.round(r.left + r.width / 2) + 'px'); a.style.setProperty('--oy', Math.round(r.top + r.height / 2) + 'px');
+    clearTimeout(a._t); a.classList.remove('hidden'); void a.offsetWidth; a.classList.add('open');
+    this.$('abScroll').scrollTop = 0;
+    this.abT0 = performance.now(); cancelAnimationFrame(this.abRaf);
+    const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const loop = (now) => { this.aboutFrame(still ? 1e9 : (now - this.abT0) / 1000); if (!still && this.aboutOpen) this.abRaf = requestAnimationFrame(loop); };
+    loop(this.abT0);
+    this.$('btnAboutClose').focus({ preventScroll: true });
+  }
+  closeAbout() {
+    const a = this.el.about;
+    if (!this.aboutOpen) return;
+    a.classList.remove('open'); cancelAnimationFrame(this.abRaf);
+    clearTimeout(a._t); a._t = setTimeout(() => { if (!this.aboutOpen) a.classList.add('hidden'); }, 700);
+  }
+  // t: seconds since the screen opened. The track draws itself behind the marble, then the marble
+  // keeps rolling to and fro along it like in a half-pipe.
+  aboutFrame(t) {
+    const path = this.$('abPath'), len = this.abLen || (this.abLen = path.getTotalLength());
+    const ease = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+    const draw = clamp((t - 0.35) / 1.5, 0, 1), p = draw < 1 ? ease(draw) : 0.5 + 0.5 * Math.cos((t - 1.85) * Math.PI / 2.6);
+    path.style.strokeDasharray = len; path.style.strokeDashoffset = len * (1 - ease(draw));
+    this.$('abGlow').style.strokeDasharray = len; this.$('abGlow').style.strokeDashoffset = len * (1 - ease(draw));
+    const pt = path.getPointAtLength(len * p);
+    this.$('abMarble').setAttribute('transform', `translate(${pt.x.toFixed(2)} ${pt.y.toFixed(2)})`);
+    this.$('abSpin').setAttribute('transform', `rotate(${(len * p / 8.5 * 180 / Math.PI).toFixed(1)})`);
+    const vals = { lines: BUILD_INFO.lines, kb: BUILD_INFO.kb, libs: 0 };
+    this.el.about.querySelectorAll('[data-to]').forEach((b, i) => {
+      const k = clamp((t - 0.5 - i * 0.12) / 1.6, 0, 1);
+      this.set('ab' + i, b, fmt(vals[b.dataset.to] * (1 - Math.pow(1 - k, 4))));
+    });
   }
   setOpts(on) {
     this.layoutMenu();

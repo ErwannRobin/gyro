@@ -9,8 +9,10 @@ test.describe('French browser', () => {
     await expect(page.locator('#btnPlay')).toHaveText('JOUER');
     await expect(page.locator('#modeSeg button[data-mode=random]')).toHaveText('ENTRAÎNEMENT');
     await openOptions(page);
+    await expect(page.locator('#btnAbout')).toHaveText('À PROPOS');
     await page.tap('#langSeg button[data-lang="en"]');
     await expect(page.locator('#btnPlay')).toHaveText('PLAY');
+    await expect(page.locator('#btnAbout')).toHaveText('ABOUT');
     await expect(page.locator('#modeSeg button[data-mode=random]')).toHaveText('TRAINING');
     await page.reload(); await page.waitForFunction(() => window.__game && window.__game.R);
     await page.evaluate(() => { window.__game.halt = true; });

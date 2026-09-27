@@ -19,7 +19,7 @@ const drag = (page, pts) => page.evaluate((pts) => {
 test('the light menu: title, tagline, mode switch and one PLAY in the middle; options swap PLAY for the settings', async ({ page }) => {
   const errors = await openGame(page);
   await still(page);
-  const LIGHT = ['#title', '#tagline', '#modeSeg', '#modeInfo', '#btnPlay', '#btnOpts'], HIDDEN = ['#menuTop', '#sheet', '#tgKid', '#ctrlSeg', '#todSeg', '#skinsMenu'];
+  const LIGHT = ['#title', '#tagline', '#modeSeg', '#modeInfo', '#btnPlay', '#btnOpts'], HIDDEN = ['#menuTop', '#sheet', '#tgKid', '#ctrlSeg', '#todSeg', '#skinsMenu', '#btnAbout'];
   expect(await vis(page, LIGHT)).toEqual(LIGHT.map(() => true));
   expect(await vis(page, HIDDEN)).toEqual(HIDDEN.map(() => false));
   expect(await page.locator('#modeSeg button').allTextContents()).toEqual(['TRAINING', 'DAILY RUN']);
@@ -28,14 +28,16 @@ test('the light menu: title, tagline, mode switch and one PLAY in the middle; op
   expect(Math.abs(play[1] + play[3] / 2 - 360)).toBeLessThan(2);            // PLAY sits in the middle of the screen: the ball shows below
   const t0 = await box(page, '#title');
   await page.click('#btnOpts');
-  expect(await vis(page, ['#title', '#modeSeg', '#btnOpts', ...HIDDEN])).toEqual([true, true, true, ...HIDDEN.map(() => true)]);
-  expect(await vis(page, ['#btnPlay', '#tagline'])).toEqual([false, false]);
+  expect(await vis(page, ['#title', '#btnOpts', ...HIDDEN])).toEqual([true, true, ...HIDDEN.map(() => true)]);
+  expect(await vis(page, ['#btnPlay', '#tagline', '#modeSeg', '#modeInfo'])).toEqual([false, false, false, false]);   // the mode switch gives its place to ABOUT
   expect(await page.locator('#btnOpts').innerText()).toBe('DONE');
-  // the title shrinks into the top bar, between the language and sound buttons; the sheet starts below the mode switch
-  const t1 = await box(page, '#title'), lang = await box(page, '#langSeg'), snd = await box(page, '#menu .tgMusic'), info = await box(page, '#modeInfo'), sheet = await box(page, '#sheet');
+  expect(await page.locator('#btnAbout').innerText()).toBe('ABOUT');
+  // the title shrinks into the top bar, between the language and sound buttons; ABOUT sits below it, then the sheet
+  const t1 = await box(page, '#title'), lang = await box(page, '#langSeg'), snd = await box(page, '#menu .tgMusic'), ab = await box(page, '#btnAbout'), sheet = await box(page, '#sheet');
   expect(t1[2]).toBeLessThan(t0[2] * 0.6); expect(t1[1]).toBeLessThan(t0[1]);
   expect(t1[0]).toBeGreaterThan(lang[0] + lang[2]); expect(t1[0] + t1[2]).toBeLessThan(snd[0]);
-  expect(sheet[1]).toBeGreaterThan(info[1] + info[3] - 1);
+  expect(ab[1]).toBeGreaterThan(lang[1] + lang[3]); expect(Math.abs(ab[0] + ab[2] / 2 - 180)).toBeLessThan(2);
+  expect(sheet[1]).toBeGreaterThan(ab[1] + ab[3] + 4);
   // DONE closes it, and so does a tap outside the sheet
   await page.click('#btnOpts');
   expect(await vis(page, LIGHT)).toEqual(LIGHT.map(() => true));
@@ -92,12 +94,13 @@ test('changing options on the menu never moves the camera', async ({ page }) => 
   const errors = await openGame(page);
   await page.evaluate(() => { const g = window.__game; g.contS = CFG.START_S + 1270; g.newWorld(); });
   await tickN(page, 120);
-  await openOptions(page);
   const view = () => page.evaluate(() => { const g = window.__game, b = g.ball.p, e = g.cam.eye, t = g.cam.tgt, p = [0, 0, 0, 0];
     g.track.pointAt(g.ball.s + 2, 0, 0, p);                      // camera offset in the frame of the track under the ball
     const c = Math.cos(p[3]), s = Math.sin(p[3]), rel = (v) => { const x = v[0] - b[0], z = v[2] - b[2]; return [x * c - z * s, v[1] - b[1], x * s + z * c]; };
     return [...rel(e), ...rel(t)]; });
-  for (const act of ['#modeSeg button[data-mode=daily]', '#tgKid', '#modeSeg button[data-mode=random]', '#btnNewTrack', '#tgKid', '#langSeg button[data-lang=fr]', '#skinsMenu .skinRow:nth-child(2) .sw >> nth=2', '#todSeg button[data-tod=night]', '#ctrlSeg button[data-ctrl=touch]']) {
+  // the mode switch and the reset link on the light menu, then the settings of the options sheet
+  for (const act of ['#modeSeg button[data-mode=daily]', '#modeSeg button[data-mode=random]', '#btnNewTrack', 'options', '#tgKid', '#tgKid', '#langSeg button[data-lang=fr]', '#skinsMenu .skinRow:nth-child(2) .sw >> nth=2', '#todSeg button[data-tod=night]', '#ctrlSeg button[data-ctrl=touch]']) {
+    if (act === 'options') { await openOptions(page); continue; }
     const a = await view();
     await page.click(act);
     await tickN(page, 1);
