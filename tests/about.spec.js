@@ -25,6 +25,9 @@ test('ABOUT opens from the options: the story, the real size of index.html and t
   await expect(page.locator('.abCard h4')).toHaveText(['Roll, and don’t stop', 'Coins and star power', 'Checkpoints and modes', 'Close calls and boosts', 'Nine worlds', 'Tracks and marbles',
     'Written by an AI', '3D engine', 'Physics', 'Sound engine', 'Screenshots and videos', 'Gyroscope']);
   await expect(about).toContainText('Claude Code');
+  // the AI card names the model, the effort level and what it cost
+  await expect(page.locator('.abFacts dt')).toHaveText(['Model', 'Effort', 'Tokens', 'Cost']);
+  await expect(page.locator('.abFacts dd')).toHaveText(['Claude Opus 5.5', 'Ultra code', /million read[^]*million written/, /^≈ US\$\d+ at API prices/]);
   for (const t of ['Erwann', 'Robin', 'prompt', '2026']) await expect(about).not.toContainText(t);
   // the numbers count up to the real values, while the marble rolls along the track it draws
   const marble = () => page.locator('#abMarble').getAttribute('transform');

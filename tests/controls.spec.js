@@ -129,7 +129,7 @@ test('with the gyroscope, a finger turns the camera (it swings back after), a pi
   await page.evaluate(() => { const g = window.__game, I = g.input; I.raw = [0, 0, -1]; I.lastEvt = performance.now(); I.tilt = true; g.startRun('tilt'); });
   await tick(200);
   await page.evaluate(teleport, 150);
-  await page.evaluate(() => { const g = window.__game; g.input.update = function () { this.x = -g.ball.u * 0.8; this.y = 0.2; }; });   // stays on the track
+  await page.evaluate(() => { const g = window.__game; g.input.update = function () { this.x = -g.ball.u * 0.8; this.y = g.ball.speed < 6 ? 0.2 : 0; }; });   // stays on the track (slowly: a random track may bend hard)
   expect(await page.evaluate(() => window.__game.state)).toBe('play');
   const cam = () => page.evaluate(() => { const g = window.__game, c = g.cam, b = g.ball.p; return { yaw: c.offYaw, pitch: c.offPitch, zoom: c.zoom, d: Math.hypot(c.pos[0] - b[0], c.pos[1] - b[1], c.pos[2] - b[2]), joy: g.input.ptr }; });
   const c0 = await cam();
@@ -142,11 +142,11 @@ test('with the gyroscope, a finger turns the camera (it swings back after), a pi
   expect((await cam()).yaw).toBeGreaterThan(0.6);                              // held a moment after the finger lifts…
   await tick(200);
   expect(Math.abs((await cam()).yaw)).toBeLessThan(0.05);                       // …then back behind the ball
-  // pinch: fingers closing move the camera away (and the setting is kept)
+  // pinch: fingers closing move the camera away, up to 3 times the normal distance (and the setting is kept)
   await touch(page, [[1, 120, 500, 'pointerdown'], [2, 280, 500, 'pointerdown'], [1, 160, 500], [2, 240, 500], [1, 190, 500], [2, 210, 500], [1, 190, 500, 'pointerup'], [2, 210, 500, 'pointerup']]);
   await tick(120);
   const c2 = await cam();
-  expect(c2.zoom).toBeGreaterThan(1.7); expect(c2.d).toBeGreaterThan(c0.d * 1.4);
+  expect(c2.zoom).toBeCloseTo(3, 5); expect(c2.d).toBeGreaterThan(c0.d * 2.4);
   // a double tap fires a full star gauge
   await page.evaluate(teleport, 300);
   await page.evaluate(() => { window.__game.power = 1; });
@@ -154,6 +154,6 @@ test('with the gyroscope, a finger turns the camera (it swings back after), a pi
   await tick(2);
   expect(await page.evaluate(() => [window.__game.state, window.__game.star])).toEqual(['play', true]);
   await page.evaluate(() => window.__game.goMenu());
-  expect(await page.evaluate(() => +JSON.parse(localStorage.getItem('gyroll.zoom')))).toBeGreaterThan(1.7);
+  expect(await page.evaluate(() => +JSON.parse(localStorage.getItem('gyroll.zoom')))).toBe(3);
   expect(errors).toEqual([]);
 });

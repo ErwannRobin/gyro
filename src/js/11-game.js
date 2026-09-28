@@ -4,6 +4,7 @@
 // States: menu → calib → play → falling → over  (+ paused)
 // =====================================================================
 const FALL_WARN = 24;   // meters between the ball and the falling edge under which a slow ball is warned
+const END_H = 9;        // a fallen ball stops this high above the landscape (the end frame)
 const GEM_COL = hex(0xffd36b), STAR_COL = [1, 0.82, 0.4], TUFT_COL = hex(0x62b236), TUFT_COL2 = hex(0x8fd24c);
 class Game {
   constructor() {
@@ -38,7 +39,7 @@ class Game {
     this.ctrl = this.mobile && Store.get('ctrl', 'tilt') !== 'touch' ? 'tilt' : 'touch';   // the control PLAY starts with
     const tod = Store.get('tod', 'real'); this.tod = TOD_MODES.includes(tod) ? tod : 'real';
     this.darkMQ = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
-    this.cam.zoom = clamp(+Store.get('zoom', 1) || 1, 0.6, 1.8);
+    this.cam.zoom = clamp(+Store.get('zoom', 1) || 1, ZOOM_PLAY[0], ZOOM_PLAY[1]);
     this.gest = new CamGestures((t, e) => this.camTarget(t, e));
     this.gest.onTap = () => { if (this.state === 'menu' && this.ui.el.menu.classList.contains('opts')) this.setOpts(false); };
     // Random mode is one endless track per player: after a fall the next run starts again at the last checkpoint.
@@ -348,6 +349,7 @@ class Game {
     this.startS = b.s; this.maxS = b.s; this.score = 0; this.dist = 0; this.mult = 1; this.recordShown = false;
     this.danger = 0; this.timeScale = 1; this.acc = 0; this.runT = 0;
     this.fallOn = false; this.fallGap = 99; this.sRate = 0; this.prevS = b.s;
+    this.vc = 0; this.frozen = false; this.overT = 0;
     // star power: coins fill the gauge, a streak of coins raises the coin multiplier
     this.power = 0; this.star = false; this.physics.star = false; this.starK = 0; this.starN = 0;
     this.coinStreak = 0; this.coinMult = 1; this.coins = 0;
@@ -441,7 +443,7 @@ class Game {
     this.state = 'menu'; this.input.enabled = false; this.input.release();
     const U = this.ui;
     U.show('pause', false); U.show('over', false); U.show('calib', false); U.setOpts(false); U.show('menu', true); U.hud(false); U.layoutMenu();
-    this.introMenu(); this.saveZoom(); this.gest.reset();
+    this.introMenu(); this.saveZoom(); this.gest.reset(); this.lookRef = null;   // the menu takes its own phone pose
     U.el.touchHint.classList.add('hidden');
     this.best = this.modeBest(); this.refreshTexts();
     this.audio.resume();
@@ -451,7 +453,7 @@ class Game {
   }
   saveZoom() { if (this.zoomDirty) { this.zoomDirty = false; Store.set('zoom', +this.cam.zoom.toFixed(3)); } }
   finishRun() {
-    this.state = 'over'; this.overT = 0;
+    this.state = 'over'; this.overT = 0; this.cam.endView = true;
     this.input.enabled = false; this.input.release(); this.unlockWake(); this.saveZoom();
     const dist = Math.floor(this.dist), score = Math.floor(this.score);
     const beat = dist > Math.floor(this.best);
@@ -578,7 +580,7 @@ class Game {
     if (this.state !== 'play') return;
     this.state = 'falling'; this.fallT = 0; this.timeScale = 0.3;
     this.endStar(true);
-    this.cam.mode = 'fall';
+    this.cam.fall();
     this.audio.fall(); this.audio.setRoll(0, false);
     const T = TRACK_THEMES[this.themeIdx], sk = BALL_SKINS[this.skinIdx];
     this.parts.burst(b.p[0], b.p[1], b.p[2], 60, 6, sk.glow, { life: 1.4, size: 0.14, grav: 3, mix: T.accent, drag: 1.2 });
@@ -597,7 +599,7 @@ class Game {
     this.frameDt = dtR;
     this.quality.sample(dtR);
     if (this.quality.changed) { this.quality.changed = false; this.applyQuality(); }
-    this.time += dtR;
+    if (!this.frozen) this.time += dtR;
     this.input.update(dtR);
     const st = this.state, b = this.ball;
     // finger camera: drag and pinch on the menu, or during gyroscope play (a double tap there fires star power)
@@ -618,13 +620,16 @@ class Game {
       if (this.fallT > 1.8) this.finishRun();
     } else this.timeScale = st === 'play' ? this.warpScale(dtR) : 1;
     if (st === 'over') this.overT = (this.overT || 0) + dtR;
+    // after a fall the world goes on (the ball falls, the track keeps collapsing, obstacles move)
+    // and stops for good just above the landscape: the end frame
+    if ((st === 'falling' || st === 'over') && !this.frozen && b.lost && (b.p[1] - CFG.R < this.floorY + END_H || (st === 'over' && this.overT > 6))) this.frozen = true;
     const dt = dtR * this.timeScale;
-    const sim = st === 'play' || st === 'falling' || st === 'over';
+    const sim = (st === 'play' || st === 'falling' || st === 'over') && !this.frozen;
 
     if (st === 'play') {
       this.runT += dt;
       const d = this.gen.diff(this.maxS);
-      const vc = lerp(2.4, 6.2, d) * clamp((this.runT - 2) / 4, 0, 1);
+      const vc = this.vc = lerp(2.4, 6.2, d) * clamp((this.runT - 2) / 4, 0, 1);
       this.collapseS = fin(Math.max(this.collapseS + vc * dt, this.maxS - 55), this.maxS - 55);
       this.physics.collapseS = this.collapseS;
       const gap = b.s - this.collapseS;
@@ -637,7 +642,10 @@ class Game {
       const closing = vc - this.sRate, was = this.fallOn;
       this.fallOn = was ? gap < FALL_WARN + 4 && !(closing < -1.5 && gap > 14) : vc > 0 && gap < FALL_WARN && (closing > 0.3 || gap < 12);
       if (this.fallOn && !was) { this.audio.warn(); this.ui.el.touchHint.style.opacity = 0; }
-    } else if (st !== 'paused') this.danger = Math.max(0, this.danger - dtR * 2);
+    } else if (st !== 'paused') {
+      if (sim) { this.collapseS += this.vc * dt; this.physics.collapseS = this.collapseS; }   // the fall does not stop the collapse
+      this.danger = Math.max(0, this.danger - dtR * 2);
+    }
 
     if (sim) {
       const h = 1 / 120; let n = 0;
@@ -646,21 +654,24 @@ class Game {
       while (this.acc >= h && n < 10) { this.physics.step(b, ix, iy, this.cam.yaw, h); this.acc -= h; n++; }
       if (n >= 10) this.acc = 0;
     }
-    if (st === 'menu') this.menuLook(); else this.cam.gyroLook = this.lookRef = null;
+    if (st === 'menu' || st === 'over') this.menuLook(); else this.cam.gyroLook = this.lookRef = null;
     if (st === 'play') { this.progress(dt); this.updateStar(dt); }
     else this.input.flick = this.input.doubleTap = this.starKey = false;
     this.starK += ((this.star ? 1 : 0) - this.starK) * damp(7, dtR);
     if (st !== 'paused') {
-      this.gen.fill(b.s + CFG.AHEAD);
-      this.updateChunks(1);
-      this.updateZones(dtR);
-      this.env.update(this.track, b.s, dt, this.R.meshes, () => this.bolt());
-      this.floorY = lerp(this.floorY, b.surfY - 62, damp(0.4, dtR));
-      this.pruneT -= dtR;
-      if (this.pruneT <= 0) { this.pruneT = 2; const o = this.track.objects, cut = b.s - 60; let w = 0; for (let k = 0; k < o.length; k++) if (o[k].s > cut) o[w++] = o[k]; o.length = w; }
-      this.parts.update(dt); this.updateDebris(dt); this.updateFeel(dt, dtR);
-      this.fx.pushTrail(b.p, dt);
-      this.cam.update(st === 'falling' ? dtR : dtR, b, this.track, this.R.w / this.R.h);
+      if (!this.frozen) {
+        this.gen.fill(b.s + CFG.AHEAD);
+        this.updateChunks(1);
+        this.updateZones(dtR);
+        this.env.update(this.track, b.s, dt, this.R.meshes, () => this.bolt());
+        this.floorY = lerp(this.floorY, b.surfY - 62, damp(0.4, dtR));
+        this.pruneT -= dtR;
+        if (this.pruneT <= 0) { this.pruneT = 2; const o = this.track.objects, cut = b.s - 60; let w = 0; for (let k = 0; k < o.length; k++) if (o[k].s > cut) o[w++] = o[k]; o.length = w; }
+        this.updateDebris(dt); this.updateFeel(dt, dtR);
+        this.fx.pushTrail(b.p, dt);
+      }
+      this.parts.update(dt);                                      // sparks and confetti fade out, even in the end frame
+      this.cam.update(dtR, b, this.track, this.R.w / this.R.h);   // the camera still moves in the end frame
       this.audio.intensity = lerp(this.audio.intensity, st === 'play' ? clamp(b.speed / CFG.VMAX, 0.15, 1) : 0.15, damp(0.5, dtR));
       this.rollT = (this.rollT || 0) + dtR;
       if (this.rollT > 0.05) {
@@ -673,7 +684,7 @@ class Game {
     if (draw && (st === 'menu' || st === 'paused')) this.previews(dtR);
     if (draw) {
       this.render();
-      if (st === 'play' || st === 'falling') this.replay.capture(this.canvas, dtR, this.dist, b.speed, st === 'falling');
+      if (st === 'play' || st === 'falling' || (st === 'over' && !this.frozen)) this.replay.capture(this.canvas, dtR, this.dist, b.speed, st !== 'play');
     }
     this.ui.frame(dtR, this.danger);
     this.ui.fallWarn(st === 'play' && this.fallOn && !b.lost, this.fallGap, this.fallGap / FALL_WARN);
@@ -735,8 +746,8 @@ class Game {
     if (!I.raw || performance.now() - I.lastEvt > 600) { this.cam.gyroLook = this.lookRef = null; return; }
     if (!this.lookRef) this.lookRef = { h: I.heading, p: I.pitch, x: I.sx };
     const R = this.lookRef, L = this.lookV || (this.lookV = { yaw: 0, pitch: 0 });
-    L.yaw = I.heading !== null && R.h !== null ? wrapAngle(I.heading - R.h) : clamp((I.sx - R.x) * 2.2, -1.6, 1.6);
-    L.pitch = wrapAngle(I.pitch - R.p);
+    L.yaw = fin(I.heading !== null && R.h !== null ? wrapAngle(I.heading - R.h) : clamp((I.sx - R.x) * 2.2, -1.6, 1.6));
+    L.pitch = fin(wrapAngle(I.pitch - R.p));
     this.cam.gyroLook = L;
   }
 
@@ -1133,7 +1144,7 @@ class Game {
     };
   }
   // SHARE opens the popup: a screenshot or a video of this run, then download or share it.
-  share() { if (this.state === 'over' && this.shareInfo) this.shareBox.show(this.shareInfo); }
+  share() { if (this.state === 'over' && this.shareInfo) { this.frozen = true; this.shareBox.show(this.shareInfo); } }
   shareText() {
     const info = this.shareInfo, url = PROD_URL + (this.gameMode === 'daily' ? '?mode=daily' : '');
     let text = tr('shareText', { d: fmt(info.dist), s: fmt(info.score) });

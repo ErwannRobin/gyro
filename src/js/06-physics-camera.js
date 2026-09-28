@@ -190,8 +190,10 @@ class Physics {
 // CameraRig — smoothed chase cam with anticipation, roll, FOV kick, a push-in for slow motion and a
 // light rumble at top speed. Fingers can move it: on the
 // menu a drag walks it around the ball and a pinch zooms; in gyroscope play a drag swings it around
-// the ball (it eases back behind once the finger lifts) and a pinch sets the chase distance.
+// the ball (it eases back behind once the finger lifts) and a pinch sets the chase distance. After
+// a fall the camera drops after the ball; on the game over screen the phone turns it around the ball.
 // =====================================================================
+const ZOOM_PLAY = [0.6, 3], ZOOM_MENU = [0.38, 3.4];   // chase (play) and orbit (menu) distance factor ranges
 class CameraRig {
   constructor() {
     this.pos = [0, 3, -6]; this.look = [0, 0, 0]; this.yaw = 0; this.roll = 0; this.fov = 1.2;
@@ -202,7 +204,10 @@ class CameraRig {
     this.zoom = 1; this.zoomM = 1;                 // chase distance factor (play) and orbit distance factor (menu)
     this.offYaw = 0; this.offPitch = 0; this.held = false; this.relT = 9;   // play look-around
     this.mYaw = 0; this.mH = 0; this.swingK = 1;   // menu: drag offsets; the slow automatic swing stops once dragged
+    this.fb = [0, 0, 0]; this.fYaw = 0; this.fPitch = 0;   // fall: where the camera would be, and the phone's turn around the ball
+    this.endView = false; this.lookUp = 0;                  // fall: the game over screen is up (the camera settles near the ball)
   }
+  fall() { this.mode = 'fall'; for (let j = 0; j < 3; j++) this.fb[j] = this.pos[j]; this.fYaw = this.fPitch = this.lookUp = 0; this.endView = false; }
   menuDrag(dx, dy) {
     if (this.swingK > 0 && !this.gyroLook) {       // keep the view where the swing had taken it
       this.mYaw += Math.sin(this.t * 0.13) * 0.95 * this.swingK; this.mH += Math.sin(this.t * 0.21) * 0.6 * this.swingK;
@@ -215,8 +220,9 @@ class CameraRig {
     this.relT = 0;
   }
   zoomBy(f, menu) {
-    if (menu) this.zoomM = clamp(this.zoomM * f, 0.38, 2.2);
-    else this.zoom = clamp(this.zoom * f, 0.6, 1.8);
+    const Z = menu ? ZOOM_MENU : ZOOM_PLAY;
+    if (menu) this.zoomM = clamp(this.zoomM * f, Z[0], Z[1]);
+    else this.zoom = clamp(this.zoom * f, Z[0], Z[1]);
   }
   params(aspect, speed) {
     const portrait = aspect < 0.9;
@@ -261,9 +267,23 @@ class CameraRig {
       this.look[0] = lerp(this.look[0], lx, kl); this.look[1] = lerp(this.look[1], ly, kl); this.look[2] = lerp(this.look[2], lz, kl);
       this.fov = lerp(this.fov, P.fov + this.kick * 0.16 - this.focus * 0.13, damp(this.focus > 0.05 ? 6 : 3, dt));
     } else if (this.mode === 'fall') {
-      this.pos[1] = lerp(this.pos[1], Math.max(ball.p[1] + 3.5, this.pos[1] - 40), damp(1.1, dt));
+      const B = this.fb, L = this.gyroLook, kg = damp(5, dt);
+      if (!this.endView) B[1] = lerp(B[1], Math.max(ball.p[1] + 3.5, B[1] - 40), damp(1.1, dt));
+      else {                                        // game over screen: settle a few meters away, a little above the ball
+        let dx = B[0] - ball.p[0], dz = B[2] - ball.p[2], hr = Math.hypot(dx, dz);
+        if (hr < 0.5) { dx = -Math.sin(this.yaw); dz = -Math.cos(this.yaw); hr = 1; }
+        const k = damp(1.4, dt), h = lerp(Math.hypot(B[0] - ball.p[0], B[2] - ball.p[2]), 6.5, k);
+        B[0] = ball.p[0] + dx / hr * h; B[2] = ball.p[2] + dz / hr * h; B[1] = lerp(B[1], ball.p[1] + 2, k);
+      }
+      // turning the phone walks the camera around the ball, tilting it raises or lowers it (as on the menu)
+      this.fYaw = lerp(this.fYaw, L ? -L.yaw : 0, kg); this.fPitch = lerp(this.fPitch, L ? -L.pitch : 0, kg);
+      const dx = B[0] - ball.p[0], dy = B[1] - ball.p[1], dz = B[2] - ball.p[2], hr = Math.hypot(dx, dz), D = Math.hypot(hr, dy);
+      const a = Math.atan2(dx, dz) + this.fYaw, e = clamp(Math.atan2(dy, hr) + this.fPitch, -0.25, 1.5);
+      this.pos[0] = ball.p[0] + Math.sin(a) * Math.cos(e) * D; this.pos[1] = ball.p[1] + Math.sin(e) * D; this.pos[2] = ball.p[2] + Math.cos(a) * Math.cos(e) * D;
+      // on the game over screen the view looks above the ball: the ball sits low, under the result
       const kl = damp(6, dt);
-      for (let j = 0; j < 3; j++) this.look[j] = lerp(this.look[j], ball.p[j], kl);
+      this.lookUp = lerp(this.lookUp, this.endView ? (aspect < 0.9 ? 3.7 : 1.8) : 0, damp(1.4, dt));
+      for (let j = 0; j < 3; j++) this.look[j] = lerp(this.look[j], ball.p[j] + (j === 1 ? this.lookUp : 0), kl);
       this.roll = lerp(this.roll, 0, damp(2, dt));
       this.fov = lerp(this.fov, P.fov * 0.8, damp(1.5, dt));
     } else {                                          // attract mode: slow swing behind the ball, looking down the track

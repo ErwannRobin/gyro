@@ -78,7 +78,8 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 #speedo .u{font-size:11px;font-weight:800;letter-spacing:.18em;color:var(--dim);margin-bottom:3px}
 #speedBar{position:absolute;left:0;bottom:-7px;height:3px;width:86px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden}
 #speedBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px}
-#power{position:absolute;left:50%;bottom:calc(var(--sab) + 44px);transform:translateX(-50%);width:min(56vw,250px);padding:8px 10px;
+/* the gauge sits in the bottom right corner, its bar on the same line as the speed bar (narrower on small phones) */
+#power{position:absolute;right:calc(var(--sar) + 6px);bottom:calc(var(--sab) + 1px);width:min(250px,calc(100vw - var(--sal) - var(--sar) - 150px));padding:8px 10px;
   text-shadow:0 2px 6px rgba(0,0,0,.85);pointer-events:none;-webkit-tap-highlight-color:transparent}
 #power .row{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;font-size:11px;font-weight:900;letter-spacing:.12em;margin-bottom:5px;white-space:nowrap}
 #pwCoin{color:var(--gold);transition:transform .2s}
@@ -92,8 +93,8 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 #power.ready .bar{animation:pwPulse .6s ease-in-out infinite alternate}
 #power.ready #pwTxt,#power.on #pwTxt{color:#fff3c4}
 #power.on #pwFill{background:linear-gradient(90deg,#fff,#fff3c4,var(--gold));box-shadow:0 0 12px var(--gold)}
-/* landscape: the gauge sits in the bottom right corner, its bar on the same line as the speed bar */
-@media (orientation:landscape){ #power{left:auto;right:calc(var(--sar) + 6px);bottom:calc(var(--sab) + 1px);transform:none;width:min(34vw,250px)} }
+@media (orientation:landscape){ #power{width:min(34vw,250px)} }
+@media (orientation:portrait) and (max-width:400px){ #power .row{font-size:10px;letter-spacing:.08em;gap:6px} }
 @keyframes pwPulse{from{box-shadow:0 0 0 1px rgba(255,211,107,.5),0 0 6px rgba(255,211,107,.4)}to{box-shadow:0 0 0 2px rgba(255,230,160,1),0 0 22px rgba(255,211,107,.95)}}
 #starGlow{position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0;transition:opacity .5s;
   background:radial-gradient(ellipse 90% 80% at 50% 50%,rgba(255,210,110,0) 50%,rgba(255,196,80,.32) 100%)}
@@ -427,6 +428,9 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 .abCard .ic{width:26px;height:26px;color:var(--accent)}
 .abCard h4{margin-top:8px;font-size:15px;font-weight:800;letter-spacing:.02em;line-height:1.3;color:#fff}
 #abScroll .abCard p{margin-top:6px;font-size:13.5px;line-height:1.55;color:rgba(235,242,255,.8)}
+.abFacts{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.09);font-size:12.5px;line-height:1.4}
+.abFacts dt{font-size:10px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);padding-top:2px}
+.abFacts dd{margin:0;color:#fff;font-weight:700;white-space:pre-line}
 @media (min-width:900px){ #abScroll{padding-left:calc(var(--sal) + 40px);padding-right:calc(var(--sar) + 40px)} #abScroll > #abLinks{max-width:640px;flex-direction:row} #abLinks a{flex:1 1 0} }
 #abLinks{margin-top:28px;display:flex;flex-direction:column;gap:10px}
 #abLinks a{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:18px;text-align:left;color:#fff;text-decoration:none;
@@ -753,7 +757,8 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     <section class="abSec abIn" style="--d:4" aria-labelledby="abMadeH">
       <h3 id="abMadeH" data-i18n="abMade"></h3>
       <div class="abGrid">
-        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.2c.7 4.6 4.2 8.1 8.8 8.8-4.6.7-8.1 4.2-8.8 8.8-.7-4.6-4.2-8.1-8.8-8.8 4.6-.7 8.1-4.2 8.8-8.8z"/><path class="stk" d="M19 3v3.6M17.2 4.8h3.6"/></svg><h4 data-i18n="abAiT"></h4><p data-i18n="abAi"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.2c.7 4.6 4.2 8.1 8.8 8.8-4.6.7-8.1 4.2-8.8 8.8-.7-4.6-4.2-8.1-8.8-8.8 4.6-.7 8.1-4.2 8.8-8.8z"/><path class="stk" d="M19 3v3.6M17.2 4.8h3.6"/></svg><h4 data-i18n="abAiT"></h4><p data-i18n="abAi"></p>
+          <dl class="abFacts"><dt data-i18n="abFModel"></dt><dd>Claude Opus 5.5</dd><dt data-i18n="abFEffort"></dt><dd data-i18n="abFEffortV"></dd><dt data-i18n="abFTokens"></dt><dd data-i18n="abFTokensV"></dd><dt data-i18n="abFCost"></dt><dd data-i18n="abFCostV"></dd></dl></article>
         <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"/><path class="stk" d="M4 7.4l8 4.6 8-4.6M12 12v9.2"/></svg><h4 data-i18n="ab3dT"></h4><p data-i18n="ab3d"></p></article>
         <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle class="stk" cx="12" cy="12" r="3.4"/><path class="stk" d="M4.2 12a7.8 7.8 0 0 1 13.4-5.4M19.8 12a7.8 7.8 0 0 1-13.4 5.4"/><path class="stk" d="M18 3.2v3.7h-3.7M6 20.8v-3.7h3.7"/></svg><h4 data-i18n="abPhysT"></h4><p data-i18n="abPhys"></p></article>
         <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M2.8 12h2.4l2.2-5.6 3.2 11.4 3.2-14 3.1 14 2.2-5.8h2.1"/></svg><h4 data-i18n="abSoundT"></h4><p data-i18n="abSound"></p></article>
@@ -1145,7 +1150,9 @@ const I18N = {
     abBonusT: 'Frôlements et boosts', abBonus: 'Passez vite à moins de 35 cm d’un poteau ou d’une glissière sans le toucher : FRÔLÉ ! Des points en plus et un instant de ralenti. Les boosters vous propulsent en avant. Tapez un rail trop fort et vous passez par-dessus.',
     abWorldsT: 'Neuf mondes', abWorlds: 'Le monde change tous les 500 m, en boucle : ville tech, campagne, îles au couchant, forêt, néon, mer, désert, abstrait et chaos. Chacun a son ciel, son décor et sa lumière, et le soleil et la lune suivent l’heure réelle (ou le réglage choisi).',
     abSkinsT: 'Pistes et billes', abSkins: 'Cinq pistes : néon carbone, acier & or, jouet bois, marbre glacé et gazon (plus lent et bosselé, avec des touffes qui font rebondir). Cinq billes : chrome, verre, or, plasma et bonbon, chacune sa matière, et toutes reflètent le monde autour d’elles.',
-    abAiT: 'Écrit par une IA', abAi: 'Le code, les shaders, la musique et les tests ont été écrits par Claude, le modèle d’IA d’Anthropic, dans Claude Code, à partir de demandes en langage courant. Il prépare chaque changement, construit le jeu, y joue dans un navigateur sans écran, regarde ses propres captures et corrige ce qu’il voit.',
+    abAiT: 'Écrit par une IA', abAi: 'Le code, les shaders, la musique et les tests ont été écrits par Claude Opus 5.5, le modèle d’IA d’Anthropic, dans Claude Code avec l’effort « ultra code », à partir de demandes en langage courant. Il prépare chaque changement, construit le jeu, y joue dans un navigateur sans écran, regarde ses propres captures et corrige ce qu’il voit.',
+    abFModel: 'Modèle', abFEffort: 'Effort', abFEffortV: 'Ultra code', abFTokens: 'Jetons', abFCost: 'Coût',
+    abFTokensV: '≈ 400 millions lus, dont 98 % en cache\n≈ 2 millions écrits', abFCostV: '≈ 175 $ US au tarif de l’API, jusqu’ici',
     ab3dT: 'Moteur 3D', ab3d: 'Un moteur WebGL écrit de zéro : shaders GLSL, dessin instancié pour des milliers d’objets, une cube map de reflets en direct dans la bille, bloom, flou de vitesse, brume et ciels peints avec un vrai soleil et une vraie lune. Il adapte sa résolution pour tenir 60 images par seconde.',
     abPhysT: 'Physique', abPhys: 'Sa propre physique à 120 pas par seconde : roulement avec rotation, adhérence et frottement, gravité dans les pentes et les virages relevés, sauts et atterrissages, rebonds sur les poteaux, glissières et rails. La piste est une courbe échantillonnée tous les 50 cm et construite 230 m à l’avance à partir d’une graine : le défi du jour est le même pour tous.',
     abSoundT: 'Moteur sonore', abSound: 'Aucun fichier audio : Web Audio synthétise tout en direct. La musique joue accords, basse et arpèges, accélère avec le star power et s’étouffe au ralenti ; le roulement, le vent, les chocs et la réverbération naissent de bruit et d’oscillateurs.',
@@ -1199,7 +1206,9 @@ const I18N = {
     abBonusT: 'Close calls and boosts', abBonus: 'Pass a post or a slider fast, less than 35 cm away, without touching it: CLOSE CALL! Bonus points and a moment of slow motion. Booster pads launch you forward. Hit a rail too hard and you jump over it.',
     abWorldsT: 'Nine worlds', abWorlds: 'The world changes every 500 m and loops: tech city, countryside, sunset islands, forest, neon, sea, desert, abstract and chaos. Each has its own sky, scenery and light, and the sun and moon follow the real time of day (or the setting you choose).',
     abSkinsT: 'Tracks and marbles', abSkins: 'Five tracks: neon carbon, steel & gold, wooden toy, ice marble and grass (slower and bumpy, with tufts that bounce you). Five marbles: chrome, glass, gold, plasma and candy, each its own material, and all of them mirror the world around them.',
-    abAiT: 'Written by an AI', abAi: 'The code, shaders, music and tests were written by Claude, Anthropic’s AI model, working in Claude Code from requests in plain words. It plans each change, builds the game, plays it in a headless browser, looks at its own screenshots and fixes what it sees.',
+    abAiT: 'Written by an AI', abAi: 'The code, shaders, music and tests were written by Claude Opus 5.5, Anthropic’s AI model, working in Claude Code at the ultra code effort level, from requests in plain words. It plans each change, builds the game, plays it in a headless browser, looks at its own screenshots and fixes what it sees.',
+    abFModel: 'Model', abFEffort: 'Effort', abFEffortV: 'Ultra code', abFTokens: 'Tokens', abFCost: 'Cost',
+    abFTokensV: '≈ 400 million read, 98 % from cache\n≈ 2 million written', abFCostV: '≈ US$175 at API prices, so far',
     ab3dT: '3D engine', ab3d: 'A WebGL renderer written from scratch: GLSL shaders, instanced drawing for thousands of objects, a live reflection cube map in the marble, bloom, speed blur, haze and painted skies with a real sun and moon. It adapts its resolution to hold 60 frames per second.',
     abPhysT: 'Physics', abPhys: 'Its own physics at 120 steps per second: rolling with spin, grip and drag, gravity on slopes and banked turns, jumps and landings, bounces on posts, sliders and rails. The track is a curve sampled every 50 cm and built 230 m ahead from a seed, so the daily run is the same for everyone.',
     abSoundT: 'Sound engine', abSound: 'No audio files: Web Audio synthesizes everything live. The music plays chords, bass and arpeggios, speeds up with star power and goes muffled in slow motion; the rolling, the wind, the impacts and the reverb are made from noise and oscillators.',
@@ -1223,7 +1232,7 @@ const tr = (key, vars) => {
 
 // ---------------------------------------------------------------- about
 // Size of the built index.html, shown on the About screen: scripts/build.mjs writes the numbers.
-const BUILD_INFO = { lines: 7178, kb: 465 };
+const BUILD_INFO = { lines: 7218, kb: 470 };
 const REPO_URL = 'https://github.com/ErwannRobin/gyro';
 const X_URL = 'https://x.com/diwann';
 
@@ -3879,8 +3888,10 @@ class Physics {
 // CameraRig — smoothed chase cam with anticipation, roll, FOV kick, a push-in for slow motion and a
 // light rumble at top speed. Fingers can move it: on the
 // menu a drag walks it around the ball and a pinch zooms; in gyroscope play a drag swings it around
-// the ball (it eases back behind once the finger lifts) and a pinch sets the chase distance.
+// the ball (it eases back behind once the finger lifts) and a pinch sets the chase distance. After
+// a fall the camera drops after the ball; on the game over screen the phone turns it around the ball.
 // =====================================================================
+const ZOOM_PLAY = [0.6, 3], ZOOM_MENU = [0.38, 3.4];   // chase (play) and orbit (menu) distance factor ranges
 class CameraRig {
   constructor() {
     this.pos = [0, 3, -6]; this.look = [0, 0, 0]; this.yaw = 0; this.roll = 0; this.fov = 1.2;
@@ -3891,7 +3902,10 @@ class CameraRig {
     this.zoom = 1; this.zoomM = 1;                 // chase distance factor (play) and orbit distance factor (menu)
     this.offYaw = 0; this.offPitch = 0; this.held = false; this.relT = 9;   // play look-around
     this.mYaw = 0; this.mH = 0; this.swingK = 1;   // menu: drag offsets; the slow automatic swing stops once dragged
+    this.fb = [0, 0, 0]; this.fYaw = 0; this.fPitch = 0;   // fall: where the camera would be, and the phone's turn around the ball
+    this.endView = false; this.lookUp = 0;                  // fall: the game over screen is up (the camera settles near the ball)
   }
+  fall() { this.mode = 'fall'; for (let j = 0; j < 3; j++) this.fb[j] = this.pos[j]; this.fYaw = this.fPitch = this.lookUp = 0; this.endView = false; }
   menuDrag(dx, dy) {
     if (this.swingK > 0 && !this.gyroLook) {       // keep the view where the swing had taken it
       this.mYaw += Math.sin(this.t * 0.13) * 0.95 * this.swingK; this.mH += Math.sin(this.t * 0.21) * 0.6 * this.swingK;
@@ -3904,8 +3918,9 @@ class CameraRig {
     this.relT = 0;
   }
   zoomBy(f, menu) {
-    if (menu) this.zoomM = clamp(this.zoomM * f, 0.38, 2.2);
-    else this.zoom = clamp(this.zoom * f, 0.6, 1.8);
+    const Z = menu ? ZOOM_MENU : ZOOM_PLAY;
+    if (menu) this.zoomM = clamp(this.zoomM * f, Z[0], Z[1]);
+    else this.zoom = clamp(this.zoom * f, Z[0], Z[1]);
   }
   params(aspect, speed) {
     const portrait = aspect < 0.9;
@@ -3950,9 +3965,23 @@ class CameraRig {
       this.look[0] = lerp(this.look[0], lx, kl); this.look[1] = lerp(this.look[1], ly, kl); this.look[2] = lerp(this.look[2], lz, kl);
       this.fov = lerp(this.fov, P.fov + this.kick * 0.16 - this.focus * 0.13, damp(this.focus > 0.05 ? 6 : 3, dt));
     } else if (this.mode === 'fall') {
-      this.pos[1] = lerp(this.pos[1], Math.max(ball.p[1] + 3.5, this.pos[1] - 40), damp(1.1, dt));
+      const B = this.fb, L = this.gyroLook, kg = damp(5, dt);
+      if (!this.endView) B[1] = lerp(B[1], Math.max(ball.p[1] + 3.5, B[1] - 40), damp(1.1, dt));
+      else {                                        // game over screen: settle a few meters away, a little above the ball
+        let dx = B[0] - ball.p[0], dz = B[2] - ball.p[2], hr = Math.hypot(dx, dz);
+        if (hr < 0.5) { dx = -Math.sin(this.yaw); dz = -Math.cos(this.yaw); hr = 1; }
+        const k = damp(1.4, dt), h = lerp(Math.hypot(B[0] - ball.p[0], B[2] - ball.p[2]), 6.5, k);
+        B[0] = ball.p[0] + dx / hr * h; B[2] = ball.p[2] + dz / hr * h; B[1] = lerp(B[1], ball.p[1] + 2, k);
+      }
+      // turning the phone walks the camera around the ball, tilting it raises or lowers it (as on the menu)
+      this.fYaw = lerp(this.fYaw, L ? -L.yaw : 0, kg); this.fPitch = lerp(this.fPitch, L ? -L.pitch : 0, kg);
+      const dx = B[0] - ball.p[0], dy = B[1] - ball.p[1], dz = B[2] - ball.p[2], hr = Math.hypot(dx, dz), D = Math.hypot(hr, dy);
+      const a = Math.atan2(dx, dz) + this.fYaw, e = clamp(Math.atan2(dy, hr) + this.fPitch, -0.25, 1.5);
+      this.pos[0] = ball.p[0] + Math.sin(a) * Math.cos(e) * D; this.pos[1] = ball.p[1] + Math.sin(e) * D; this.pos[2] = ball.p[2] + Math.cos(a) * Math.cos(e) * D;
+      // on the game over screen the view looks above the ball: the ball sits low, under the result
       const kl = damp(6, dt);
-      for (let j = 0; j < 3; j++) this.look[j] = lerp(this.look[j], ball.p[j], kl);
+      this.lookUp = lerp(this.lookUp, this.endView ? (aspect < 0.9 ? 3.7 : 1.8) : 0, damp(1.4, dt));
+      for (let j = 0; j < 3; j++) this.look[j] = lerp(this.look[j], ball.p[j] + (j === 1 ? this.lookUp : 0), kl);
       this.roll = lerp(this.roll, 0, damp(2, dt));
       this.fov = lerp(this.fov, P.fov * 0.8, damp(1.5, dt));
     } else {                                          // attract mode: slow swing behind the ball, looking down the track
@@ -6024,6 +6053,7 @@ class ShareBox {
 // States: menu → calib → play → falling → over  (+ paused)
 // =====================================================================
 const FALL_WARN = 24;   // meters between the ball and the falling edge under which a slow ball is warned
+const END_H = 9;        // a fallen ball stops this high above the landscape (the end frame)
 const GEM_COL = hex(0xffd36b), STAR_COL = [1, 0.82, 0.4], TUFT_COL = hex(0x62b236), TUFT_COL2 = hex(0x8fd24c);
 class Game {
   constructor() {
@@ -6058,7 +6088,7 @@ class Game {
     this.ctrl = this.mobile && Store.get('ctrl', 'tilt') !== 'touch' ? 'tilt' : 'touch';   // the control PLAY starts with
     const tod = Store.get('tod', 'real'); this.tod = TOD_MODES.includes(tod) ? tod : 'real';
     this.darkMQ = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
-    this.cam.zoom = clamp(+Store.get('zoom', 1) || 1, 0.6, 1.8);
+    this.cam.zoom = clamp(+Store.get('zoom', 1) || 1, ZOOM_PLAY[0], ZOOM_PLAY[1]);
     this.gest = new CamGestures((t, e) => this.camTarget(t, e));
     this.gest.onTap = () => { if (this.state === 'menu' && this.ui.el.menu.classList.contains('opts')) this.setOpts(false); };
     // Random mode is one endless track per player: after a fall the next run starts again at the last checkpoint.
@@ -6368,6 +6398,7 @@ class Game {
     this.startS = b.s; this.maxS = b.s; this.score = 0; this.dist = 0; this.mult = 1; this.recordShown = false;
     this.danger = 0; this.timeScale = 1; this.acc = 0; this.runT = 0;
     this.fallOn = false; this.fallGap = 99; this.sRate = 0; this.prevS = b.s;
+    this.vc = 0; this.frozen = false; this.overT = 0;
     // star power: coins fill the gauge, a streak of coins raises the coin multiplier
     this.power = 0; this.star = false; this.physics.star = false; this.starK = 0; this.starN = 0;
     this.coinStreak = 0; this.coinMult = 1; this.coins = 0;
@@ -6461,7 +6492,7 @@ class Game {
     this.state = 'menu'; this.input.enabled = false; this.input.release();
     const U = this.ui;
     U.show('pause', false); U.show('over', false); U.show('calib', false); U.setOpts(false); U.show('menu', true); U.hud(false); U.layoutMenu();
-    this.introMenu(); this.saveZoom(); this.gest.reset();
+    this.introMenu(); this.saveZoom(); this.gest.reset(); this.lookRef = null;   // the menu takes its own phone pose
     U.el.touchHint.classList.add('hidden');
     this.best = this.modeBest(); this.refreshTexts();
     this.audio.resume();
@@ -6471,7 +6502,7 @@ class Game {
   }
   saveZoom() { if (this.zoomDirty) { this.zoomDirty = false; Store.set('zoom', +this.cam.zoom.toFixed(3)); } }
   finishRun() {
-    this.state = 'over'; this.overT = 0;
+    this.state = 'over'; this.overT = 0; this.cam.endView = true;
     this.input.enabled = false; this.input.release(); this.unlockWake(); this.saveZoom();
     const dist = Math.floor(this.dist), score = Math.floor(this.score);
     const beat = dist > Math.floor(this.best);
@@ -6598,7 +6629,7 @@ class Game {
     if (this.state !== 'play') return;
     this.state = 'falling'; this.fallT = 0; this.timeScale = 0.3;
     this.endStar(true);
-    this.cam.mode = 'fall';
+    this.cam.fall();
     this.audio.fall(); this.audio.setRoll(0, false);
     const T = TRACK_THEMES[this.themeIdx], sk = BALL_SKINS[this.skinIdx];
     this.parts.burst(b.p[0], b.p[1], b.p[2], 60, 6, sk.glow, { life: 1.4, size: 0.14, grav: 3, mix: T.accent, drag: 1.2 });
@@ -6617,7 +6648,7 @@ class Game {
     this.frameDt = dtR;
     this.quality.sample(dtR);
     if (this.quality.changed) { this.quality.changed = false; this.applyQuality(); }
-    this.time += dtR;
+    if (!this.frozen) this.time += dtR;
     this.input.update(dtR);
     const st = this.state, b = this.ball;
     // finger camera: drag and pinch on the menu, or during gyroscope play (a double tap there fires star power)
@@ -6638,13 +6669,16 @@ class Game {
       if (this.fallT > 1.8) this.finishRun();
     } else this.timeScale = st === 'play' ? this.warpScale(dtR) : 1;
     if (st === 'over') this.overT = (this.overT || 0) + dtR;
+    // after a fall the world goes on (the ball falls, the track keeps collapsing, obstacles move)
+    // and stops for good just above the landscape: the end frame
+    if ((st === 'falling' || st === 'over') && !this.frozen && b.lost && (b.p[1] - CFG.R < this.floorY + END_H || (st === 'over' && this.overT > 6))) this.frozen = true;
     const dt = dtR * this.timeScale;
-    const sim = st === 'play' || st === 'falling' || st === 'over';
+    const sim = (st === 'play' || st === 'falling' || st === 'over') && !this.frozen;
 
     if (st === 'play') {
       this.runT += dt;
       const d = this.gen.diff(this.maxS);
-      const vc = lerp(2.4, 6.2, d) * clamp((this.runT - 2) / 4, 0, 1);
+      const vc = this.vc = lerp(2.4, 6.2, d) * clamp((this.runT - 2) / 4, 0, 1);
       this.collapseS = fin(Math.max(this.collapseS + vc * dt, this.maxS - 55), this.maxS - 55);
       this.physics.collapseS = this.collapseS;
       const gap = b.s - this.collapseS;
@@ -6657,7 +6691,10 @@ class Game {
       const closing = vc - this.sRate, was = this.fallOn;
       this.fallOn = was ? gap < FALL_WARN + 4 && !(closing < -1.5 && gap > 14) : vc > 0 && gap < FALL_WARN && (closing > 0.3 || gap < 12);
       if (this.fallOn && !was) { this.audio.warn(); this.ui.el.touchHint.style.opacity = 0; }
-    } else if (st !== 'paused') this.danger = Math.max(0, this.danger - dtR * 2);
+    } else if (st !== 'paused') {
+      if (sim) { this.collapseS += this.vc * dt; this.physics.collapseS = this.collapseS; }   // the fall does not stop the collapse
+      this.danger = Math.max(0, this.danger - dtR * 2);
+    }
 
     if (sim) {
       const h = 1 / 120; let n = 0;
@@ -6666,21 +6703,24 @@ class Game {
       while (this.acc >= h && n < 10) { this.physics.step(b, ix, iy, this.cam.yaw, h); this.acc -= h; n++; }
       if (n >= 10) this.acc = 0;
     }
-    if (st === 'menu') this.menuLook(); else this.cam.gyroLook = this.lookRef = null;
+    if (st === 'menu' || st === 'over') this.menuLook(); else this.cam.gyroLook = this.lookRef = null;
     if (st === 'play') { this.progress(dt); this.updateStar(dt); }
     else this.input.flick = this.input.doubleTap = this.starKey = false;
     this.starK += ((this.star ? 1 : 0) - this.starK) * damp(7, dtR);
     if (st !== 'paused') {
-      this.gen.fill(b.s + CFG.AHEAD);
-      this.updateChunks(1);
-      this.updateZones(dtR);
-      this.env.update(this.track, b.s, dt, this.R.meshes, () => this.bolt());
-      this.floorY = lerp(this.floorY, b.surfY - 62, damp(0.4, dtR));
-      this.pruneT -= dtR;
-      if (this.pruneT <= 0) { this.pruneT = 2; const o = this.track.objects, cut = b.s - 60; let w = 0; for (let k = 0; k < o.length; k++) if (o[k].s > cut) o[w++] = o[k]; o.length = w; }
-      this.parts.update(dt); this.updateDebris(dt); this.updateFeel(dt, dtR);
-      this.fx.pushTrail(b.p, dt);
-      this.cam.update(st === 'falling' ? dtR : dtR, b, this.track, this.R.w / this.R.h);
+      if (!this.frozen) {
+        this.gen.fill(b.s + CFG.AHEAD);
+        this.updateChunks(1);
+        this.updateZones(dtR);
+        this.env.update(this.track, b.s, dt, this.R.meshes, () => this.bolt());
+        this.floorY = lerp(this.floorY, b.surfY - 62, damp(0.4, dtR));
+        this.pruneT -= dtR;
+        if (this.pruneT <= 0) { this.pruneT = 2; const o = this.track.objects, cut = b.s - 60; let w = 0; for (let k = 0; k < o.length; k++) if (o[k].s > cut) o[w++] = o[k]; o.length = w; }
+        this.updateDebris(dt); this.updateFeel(dt, dtR);
+        this.fx.pushTrail(b.p, dt);
+      }
+      this.parts.update(dt);                                      // sparks and confetti fade out, even in the end frame
+      this.cam.update(dtR, b, this.track, this.R.w / this.R.h);   // the camera still moves in the end frame
       this.audio.intensity = lerp(this.audio.intensity, st === 'play' ? clamp(b.speed / CFG.VMAX, 0.15, 1) : 0.15, damp(0.5, dtR));
       this.rollT = (this.rollT || 0) + dtR;
       if (this.rollT > 0.05) {
@@ -6693,7 +6733,7 @@ class Game {
     if (draw && (st === 'menu' || st === 'paused')) this.previews(dtR);
     if (draw) {
       this.render();
-      if (st === 'play' || st === 'falling') this.replay.capture(this.canvas, dtR, this.dist, b.speed, st === 'falling');
+      if (st === 'play' || st === 'falling' || (st === 'over' && !this.frozen)) this.replay.capture(this.canvas, dtR, this.dist, b.speed, st !== 'play');
     }
     this.ui.frame(dtR, this.danger);
     this.ui.fallWarn(st === 'play' && this.fallOn && !b.lost, this.fallGap, this.fallGap / FALL_WARN);
@@ -6755,8 +6795,8 @@ class Game {
     if (!I.raw || performance.now() - I.lastEvt > 600) { this.cam.gyroLook = this.lookRef = null; return; }
     if (!this.lookRef) this.lookRef = { h: I.heading, p: I.pitch, x: I.sx };
     const R = this.lookRef, L = this.lookV || (this.lookV = { yaw: 0, pitch: 0 });
-    L.yaw = I.heading !== null && R.h !== null ? wrapAngle(I.heading - R.h) : clamp((I.sx - R.x) * 2.2, -1.6, 1.6);
-    L.pitch = wrapAngle(I.pitch - R.p);
+    L.yaw = fin(I.heading !== null && R.h !== null ? wrapAngle(I.heading - R.h) : clamp((I.sx - R.x) * 2.2, -1.6, 1.6));
+    L.pitch = fin(wrapAngle(I.pitch - R.p));
     this.cam.gyroLook = L;
   }
 
@@ -7153,7 +7193,7 @@ class Game {
     };
   }
   // SHARE opens the popup: a screenshot or a video of this run, then download or share it.
-  share() { if (this.state === 'over' && this.shareInfo) this.shareBox.show(this.shareInfo); }
+  share() { if (this.state === 'over' && this.shareInfo) { this.frozen = true; this.shareBox.show(this.shareInfo); } }
   shareText() {
     const info = this.shareInfo, url = PROD_URL + (this.gameMode === 'daily' ? '?mode=daily' : '');
     let text = tr('shareText', { d: fmt(info.dist), s: fmt(info.score) });

@@ -78,7 +78,8 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 #speedo .u{font-size:11px;font-weight:800;letter-spacing:.18em;color:var(--dim);margin-bottom:3px}
 #speedBar{position:absolute;left:0;bottom:-7px;height:3px;width:86px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden}
 #speedBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px}
-#power{position:absolute;left:50%;bottom:calc(var(--sab) + 44px);transform:translateX(-50%);width:min(56vw,250px);padding:8px 10px;
+/* the gauge sits in the bottom right corner, its bar on the same line as the speed bar (narrower on small phones) */
+#power{position:absolute;right:calc(var(--sar) + 6px);bottom:calc(var(--sab) + 1px);width:min(250px,calc(100vw - var(--sal) - var(--sar) - 150px));padding:8px 10px;
   text-shadow:0 2px 6px rgba(0,0,0,.85);pointer-events:none;-webkit-tap-highlight-color:transparent}
 #power .row{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;font-size:11px;font-weight:900;letter-spacing:.12em;margin-bottom:5px;white-space:nowrap}
 #pwCoin{color:var(--gold);transition:transform .2s}
@@ -92,8 +93,8 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 #power.ready .bar{animation:pwPulse .6s ease-in-out infinite alternate}
 #power.ready #pwTxt,#power.on #pwTxt{color:#fff3c4}
 #power.on #pwFill{background:linear-gradient(90deg,#fff,#fff3c4,var(--gold));box-shadow:0 0 12px var(--gold)}
-/* landscape: the gauge sits in the bottom right corner, its bar on the same line as the speed bar */
-@media (orientation:landscape){ #power{left:auto;right:calc(var(--sar) + 6px);bottom:calc(var(--sab) + 1px);transform:none;width:min(34vw,250px)} }
+@media (orientation:landscape){ #power{width:min(34vw,250px)} }
+@media (orientation:portrait) and (max-width:400px){ #power .row{font-size:10px;letter-spacing:.08em;gap:6px} }
 @keyframes pwPulse{from{box-shadow:0 0 0 1px rgba(255,211,107,.5),0 0 6px rgba(255,211,107,.4)}to{box-shadow:0 0 0 2px rgba(255,230,160,1),0 0 22px rgba(255,211,107,.95)}}
 #starGlow{position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0;transition:opacity .5s;
   background:radial-gradient(ellipse 90% 80% at 50% 50%,rgba(255,210,110,0) 50%,rgba(255,196,80,.32) 100%)}
@@ -427,6 +428,9 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 .abCard .ic{width:26px;height:26px;color:var(--accent)}
 .abCard h4{margin-top:8px;font-size:15px;font-weight:800;letter-spacing:.02em;line-height:1.3;color:#fff}
 #abScroll .abCard p{margin-top:6px;font-size:13.5px;line-height:1.55;color:rgba(235,242,255,.8)}
+.abFacts{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin-top:12px;padding-top:11px;border-top:1px solid rgba(255,255,255,.09);font-size:12.5px;line-height:1.4}
+.abFacts dt{font-size:10px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);padding-top:2px}
+.abFacts dd{margin:0;color:#fff;font-weight:700;white-space:pre-line}
 @media (min-width:900px){ #abScroll{padding-left:calc(var(--sal) + 40px);padding-right:calc(var(--sar) + 40px)} #abScroll > #abLinks{max-width:640px;flex-direction:row} #abLinks a{flex:1 1 0} }
 #abLinks{margin-top:28px;display:flex;flex-direction:column;gap:10px}
 #abLinks a{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:18px;text-align:left;color:#fff;text-decoration:none;
@@ -753,7 +757,8 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     <section class="abSec abIn" style="--d:4" aria-labelledby="abMadeH">
       <h3 id="abMadeH" data-i18n="abMade"></h3>
       <div class="abGrid">
-        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.2c.7 4.6 4.2 8.1 8.8 8.8-4.6.7-8.1 4.2-8.8 8.8-.7-4.6-4.2-8.1-8.8-8.8 4.6-.7 8.1-4.2 8.8-8.8z"/><path class="stk" d="M19 3v3.6M17.2 4.8h3.6"/></svg><h4 data-i18n="abAiT"></h4><p data-i18n="abAi"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.2c.7 4.6 4.2 8.1 8.8 8.8-4.6.7-8.1 4.2-8.8 8.8-.7-4.6-4.2-8.1-8.8-8.8 4.6-.7 8.1-4.2 8.8-8.8z"/><path class="stk" d="M19 3v3.6M17.2 4.8h3.6"/></svg><h4 data-i18n="abAiT"></h4><p data-i18n="abAi"></p>
+          <dl class="abFacts"><dt data-i18n="abFModel"></dt><dd>Claude Opus 5.5</dd><dt data-i18n="abFEffort"></dt><dd data-i18n="abFEffortV"></dd><dt data-i18n="abFTokens"></dt><dd data-i18n="abFTokensV"></dd><dt data-i18n="abFCost"></dt><dd data-i18n="abFCostV"></dd></dl></article>
         <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"/><path class="stk" d="M4 7.4l8 4.6 8-4.6M12 12v9.2"/></svg><h4 data-i18n="ab3dT"></h4><p data-i18n="ab3d"></p></article>
         <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle class="stk" cx="12" cy="12" r="3.4"/><path class="stk" d="M4.2 12a7.8 7.8 0 0 1 13.4-5.4M19.8 12a7.8 7.8 0 0 1-13.4 5.4"/><path class="stk" d="M18 3.2v3.7h-3.7M6 20.8v-3.7h3.7"/></svg><h4 data-i18n="abPhysT"></h4><p data-i18n="abPhys"></p></article>
         <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M2.8 12h2.4l2.2-5.6 3.2 11.4 3.2-14 3.1 14 2.2-5.8h2.1"/></svg><h4 data-i18n="abSoundT"></h4><p data-i18n="abSound"></p></article>

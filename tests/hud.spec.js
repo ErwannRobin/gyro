@@ -6,7 +6,7 @@ async function run(page) {
   await page.evaluate(() => { const g = window.__game; g.halt = true; g.startRun('keys'); g.ui.hideNow('menu'); for (let k = 0; k < 40; k++) g.tick(1 / 30, false); });
 }
 
-test('landscape: the star gauge sits bottom right, its bar on the line of the speed bar; no controls tag in the game', async ({ page }) => {
+test('the star gauge sits bottom right, its bar on the line of the speed bar, in landscape and portrait; no controls tag in the game', async ({ page }) => {
   await page.setViewportSize({ width: 844, height: 390 });
   const errors = await openGame(page);
   await run(page);
@@ -15,11 +15,16 @@ test('landscape: the star gauge sits bottom right, its bar on the line of the sp
   expect(Math.abs(bar.b - sb.b)).toBeLessThan(1.5);
   expect(Math.abs((844 - bar.r) - sp.l)).toBeLessThan(1.5);              // the same margin on both sides
   expect(bar.l).toBeGreaterThan(844 / 2);
-  // portrait keeps it in the middle, above the speed
-  await page.setViewportSize({ width: 390, height: 780 });
-  const p = await box(page, '#power .bar'), sp2 = await box(page, '#speedo');
-  expect(Math.abs(p.cx - 195)).toBeLessThan(1);
-  expect(p.b).toBeLessThan(sp2.t);
+  // portrait too, a little narrower on small phones, never over the speed
+  for (const w of [430, 390, 360, 320]) {
+    await page.setViewportSize({ width: w, height: 780 });
+    await page.evaluate(() => window.__game.ui.updateHud(0, 0, 0, 40, 1, 0));   // 144 km/h: the widest speed
+    const p = await box(page, '#power .bar'), sb2 = await box(page, '#speedBar'), sp2 = await box(page, '#speedo'), pw = await box(page, '#power');
+    expect(Math.abs(p.b - sb2.b), `${w}`).toBeLessThan(1.5);
+    expect(Math.abs((w - p.r) - sp2.l), `${w}`).toBeLessThan(1.5);
+    expect(pw.l, `${w}`).toBeGreaterThan(sp2.r + 12);
+    expect(p.r - p.l, `${w}`).toBeGreaterThan(140);
+  }
   expect(errors).toEqual([]);
 });
 
