@@ -26,7 +26,7 @@ test('ABOUT opens from the options: the story, the real size of index.html and t
   const marble = () => page.locator('#abMarble').getAttribute('transform');
   const m0 = await marble();
   await expect(page.locator('#abStats b')).toHaveText([fmt(lines), fmt(kb), '0']);
-  expect(await marble()).not.toBe(m0);
+  await expect.poll(marble).not.toBe(m0);                           // it keeps rolling (poll: slow CI machines skip frames)
   expect(await page.evaluate(() => +getComputedStyle(document.getElementById('abPath')).strokeDashoffset.replace('px', ''))).toBeLessThan(1);
   await expect(page.locator('#abRepo')).toHaveAttribute('href', 'https://github.com/ErwannRobin/gyro');
   await expect(page.locator('#abX')).toHaveAttribute('href', 'https://x.com/diwann');

@@ -102,12 +102,21 @@ class UI {
     if (!H) return;
     const top = (el) => { let y = 0; for (let e = el; e && e !== m; e = e.offsetParent) y += e.offsetTop; return y; };
     const set = (k, v) => m.style.setProperty(k, Math.round(v) + 'px');
-    if (matchMedia('(orientation: landscape) and (max-height: 560px)').matches) { for (const k of ['--playY', '--tY', '--hY', '--sheetTop']) set(k, 0); return; }
-    const title = $('title'), seg = $('modeSeg'), info = this.el.modeInfo, bar = $('menuTop'), ab = this.el.btnAbout, head = top(info) + info.offsetHeight;
+    const bar = $('menuTop');
+    if (matchMedia('(orientation: landscape) and (max-height: 640px)').matches) {
+      for (const k of ['--playY', '--tY', '--hY', '--sheetTop']) set(k, 0);
+      // OPTIONS sits in its slot under BEST; as DONE it glides to the middle of the top bar
+      const slot = $('optSlot'), left = (el) => { let x = 0; for (let e = el; e && e !== m; e = e.offsetParent) x += e.offsetLeft; return x; };
+      const x = left(slot) + slot.offsetWidth / 2, y = top(slot);
+      set('--optX', x); set('--optY', y);
+      set('--dX', m.clientWidth / 2 - x); set('--dY', top(bar) + bar.offsetHeight / 2 - this.el.btnOpts.offsetHeight / 2 - y);
+      return;
+    }
+    const title = $('title'), seg = $('modeSeg'), info = this.el.modeInfo, links = $('optLinks'), head = top(info) + info.offsetHeight;
     set('--playY', Math.max(H / 2 - this.el.btnPlay.offsetHeight / 2, head + 14));
     set('--tY', top(bar) + bar.offsetHeight / 2 - top(title) - title.offsetHeight / 2);
     const hY = top(bar) + bar.offsetHeight + 12 - top(seg);
-    set('--hY', hY); set('--sheetTop', top(ab) + ab.offsetHeight + hY + 16);
+    set('--hY', hY); set('--sheetTop', top(links) + links.offsetHeight + hY + 16);
   }
   // About: a circle opens from the About button, the marble draws its track, the numbers count up.
   get aboutOpen() { return this.el.about.classList.contains('open'); }

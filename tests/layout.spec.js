@@ -46,6 +46,50 @@ for (const vp of [{ width: 360, height: 640 }, { width: 800, height: 380 }]) {
   });
 }
 
+// Landscape: two columns. Left: title, tagline, mode switch (ABOUT, and INSTALL below it, in options).
+// Right: PLAY, BEST and OPTIONS on one axis. The options panel slides over exactly that right column:
+// nothing is cut, covered or off screen, in English and French, from a 568×320 screen (or a phone
+// with the browser bars showing) to a 1024×600 one.
+for (const [w, h, lang] of [[568, 320, 'fr'], [667, 375, 'en'], [844, 340, 'fr'], [844, 390, 'en'], [932, 430, 'fr'], [1024, 600, 'en']]) {
+  test.describe(`landscape menu ${w}x${h} ${lang}`, () => {
+    test.use({ viewport: { width: w, height: h }, hasTouch: true, isMobile: true });
+    test('two aligned columns; the options panel covers nothing and fits', async ({ page }) => {
+      await page.addInitScript((lang) => localStorage.setItem('gyroll.lang', JSON.stringify(lang)), lang);
+      const errors = await openGame(page);
+      await still(page);
+      await page.evaluate(() => document.getElementById('btnInstall').classList.remove('hidden'));
+      const box = (sel) => page.evaluate((sel) => { const r = document.querySelector(sel).getBoundingClientRect(); return { l: r.left, r: r.right, t: r.top, b: r.bottom, cx: (r.left + r.right) / 2 }; }, sel);
+      const inView = (b, name) => { expect(b.l, name).toBeGreaterThanOrEqual(0); expect(b.r, name).toBeLessThanOrEqual(w); expect(b.t, name).toBeGreaterThanOrEqual(0); expect(b.b, name).toBeLessThanOrEqual(h); };
+      const cut = () => page.evaluate(() => [...document.querySelectorAll('#menu .seg button, #menu .tg, #btnPlay, #btnOpts, #modeInfo')]
+        .filter((e) => e.offsetParent && getComputedStyle(e).visibility === 'visible' && (e.scrollWidth > e.clientWidth + 1 || e.scrollHeight > e.clientHeight + 1)).map((e) => e.id || e.textContent));
+      // light menu
+      const L = {};
+      for (const s of ['#title', '#tagline', '#modeSeg', '#modeInfo', '#btnPlay', '#menuBest', '#btnOpts']) { L[s] = await box(s); inView(L[s], s); }
+      expect(L['#btnPlay'].l).toBeGreaterThan(Math.max(L['#title'].r, L['#modeSeg'].r, L['#modeInfo'].r));
+      for (const s of ['#menuBest', '#btnOpts']) expect(Math.abs(L[s].cx - L['#btnPlay'].cx), s).toBeLessThan(2);
+      for (const s of ['#tagline', '#modeSeg', '#modeInfo']) expect(Math.abs(L[s].cx - L['#title'].cx), s).toBeLessThan(5);   // the title's box ends with the letter spacing
+      expect(L['#btnOpts'].t).toBeGreaterThan(L['#menuBest'].b);
+      expect(await cut()).toEqual([]);
+      // options
+      await page.click('#btnOpts');
+      await page.evaluate(() => window.__game.ui.pills());
+      const O = {};
+      for (const s of ['#title', '#tagline', '#btnAbout', '#btnInstall', '#langSeg', '#menu .tgSfx', '#btnOpts', '#sheet', '#tgKid', '#ctrlSeg', '#todSeg', '#skinsMenu']) { O[s] = await box(s); inView(O[s], s); }
+      for (const s of ['#title', '#tagline', '#btnAbout', '#btnInstall']) expect(O[s].r, s + ' is left of the panel').toBeLessThanOrEqual(O['#sheet'].l);
+      expect(Math.abs(O['#btnOpts'].cx - w / 2)).toBeLessThan(2); expect(O['#btnOpts'].b).toBeLessThanOrEqual(O['#sheet'].t);   // DONE: middle of the top bar
+      expect(O['#btnInstall'].t).toBeGreaterThan(O['#btnAbout'].b); expect(Math.abs(O['#btnInstall'].cx - O['#btnAbout'].cx)).toBeLessThan(1);
+      // one grid: every control starts and ends on the same lines, and the panel shows whole
+      const sw = await page.evaluate(() => [...document.querySelectorAll('#skinsMenu .skinRow')].map((r) => { const s = r.querySelectorAll('.sw'); return [s[0].getBoundingClientRect().left, s[s.length - 1].getBoundingClientRect().right]; }));
+      for (const [l, r] of sw) { expect(Math.abs(l - O['#ctrlSeg'].l)).toBeLessThan(2); expect(Math.abs(r - O['#ctrlSeg'].r)).toBeLessThan(2); }
+      expect(Math.abs(O['#todSeg'].l - O['#ctrlSeg'].l)).toBeLessThan(1); expect(Math.abs(O['#todSeg'].r - O['#ctrlSeg'].r)).toBeLessThan(1);
+      expect(Math.abs(O['#tgKid'].r - O['#ctrlSeg'].r)).toBeLessThan(1);
+      expect(await page.evaluate(() => { const e = document.getElementById('sheet'); return e.scrollHeight <= e.clientHeight + 1; })).toBe(true);
+      expect(await cut()).toEqual([]);
+      expect(errors).toEqual([]);
+    });
+  });
+}
+
 test('sound toggles are white icons without text', async ({ page }) => {
   await openGame(page);
   const r = await page.evaluate(() => [...document.querySelectorAll('.tgMusic, .tgSfx')].map((b) => ({

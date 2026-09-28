@@ -33,10 +33,11 @@ test('the light menu: title, tagline, mode switch and one PLAY in the middle; op
   expect(await page.locator('#btnOpts').innerText()).toBe('DONE');
   expect(await page.locator('#btnAbout').innerText()).toBe('ABOUT');
   expect(await page.locator('#btnInstall').innerText()).toBe('INSTALL');
-  // the title shrinks into the top bar, between the language and sound buttons; ABOUT and INSTALL sit below it, side by side, then the sheet
+  // the title shrinks into the top bar, between the language and sound buttons; ABOUT sits below it, INSTALL
+  // below ABOUT (same width), then the sheet
   const t1 = await box(page, '#title'), lang = await box(page, '#langSeg'), snd = await box(page, '#menu .tgMusic'), ab = await box(page, '#optLinks'), sheet = await box(page, '#sheet');
   const abt = await box(page, '#btnAbout'), ins = await box(page, '#btnInstall');
-  expect(abt[1]).toBe(ins[1]); expect(ins[0]).toBeGreaterThan(abt[0] + abt[2]);
+  expect(ins[0]).toBe(abt[0]); expect(ins[2]).toBe(abt[2]); expect(ins[1]).toBeGreaterThan(abt[1] + abt[3]);
   expect(t1[2]).toBeLessThan(t0[2] * 0.6); expect(t1[1]).toBeLessThan(t0[1]);
   expect(t1[0]).toBeGreaterThan(lang[0] + lang[2]); expect(t1[0] + t1[2]).toBeLessThan(snd[0]);
   expect(ab[1]).toBeGreaterThan(lang[1] + lang[3]); expect(Math.abs(ab[0] + ab[2] / 2 - 180)).toBeLessThan(2);
@@ -45,7 +46,7 @@ test('the light menu: title, tagline, mode switch and one PLAY in the middle; op
   await page.click('#btnOpts');
   expect(await vis(page, LIGHT)).toEqual(LIGHT.map(() => true));
   await page.click('#btnOpts');
-  expect(await drag(page, [[1, 180, 140, 'pointerdown'], [1, 180, 140, 'pointerup']])).not.toBe('sheet');
+  expect(await drag(page, [[1, 180, 215, 'pointerdown'], [1, 180, 215, 'pointerup']])).not.toBe('sheet');
   expect(await page.evaluate(() => document.getElementById('menu').classList.contains('opts'))).toBe(false);
   // a run always comes back to the light menu
   await page.click('#btnOpts');

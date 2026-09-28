@@ -139,10 +139,10 @@ body.star #starGlow{opacity:1}
 /* options mode: the mode switch gives its place to the About button */
 #modeBox{position:relative;width:100%;margin-top:20px;display:flex;flex-direction:column;align-items:center}
 #menu.opts #modeSeg,#menu.opts #modeInfo{opacity:0;visibility:hidden;transform:translateY(var(--hY,0px)) scale(.86)}
-/* options mode: ABOUT and INSTALL take the place of the mode switch */
-#optLinks{position:absolute;top:4px;left:50%;display:flex;gap:8px;opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,var(--hY,0px)) scale(.8)}
+/* options mode: ABOUT, and INSTALL below it, take the place of the mode switch */
+#optLinks{position:absolute;top:4px;left:50%;display:flex;flex-direction:column;align-items:stretch;gap:10px;opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,var(--hY,0px)) scale(.8)}
 #menu.opts #optLinks{opacity:1;visibility:visible;pointer-events:auto;transform:translate(-50%,var(--hY,0px));transition-delay:.08s}
-#optLinks .tg{min-width:136px;justify-content:center;font-size:12px;white-space:nowrap}
+#optLinks .tg{min-width:168px;justify-content:center;font-size:12px;white-space:nowrap}
 /* INSTALL glows softly to be found */
 #btnInstall{border-color:rgba(78,242,255,.55);background:linear-gradient(135deg,rgba(78,242,255,.2),rgba(255,79,216,.14));animation:insGlow 2.4s ease-in-out infinite alternate}
 @keyframes insGlow{from{box-shadow:0 0 0 0 rgba(78,242,255,0),0 6px 18px rgba(0,0,0,.3)}to{box-shadow:0 0 0 1px rgba(78,242,255,.45),0 0 22px rgba(78,242,255,.35)}}
@@ -417,23 +417,45 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 @media (prefers-reduced-motion:reduce){ #about,#about.open .abIn,#btnAboutClose,#install,#install.open .abIn,#btnInstallClose{transition:none;animation:none;opacity:1;transform:none;filter:none} }
 #noGL{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:30px;text-align:center;z-index:99;background:#05060d;font-weight:700}
 #mLeft,#mRight{display:flex;flex-direction:column;align-items:center}
+#optSlot{display:none}
 #menu .bigBtn{margin:0 auto}
 @media (orientation:portrait) and (max-height:700px){ #tagline{margin-top:4px} #modeBox{margin-top:12px} #menu .bigBtn{height:56px} .skins{gap:8px} .sw{width:40px;height:40px} .optRow{margin-top:10px} .optRow .seg button{min-height:34px} }
-@media (orientation:landscape) and (max-height:560px){
-  #mLeft{top:0;bottom:0;right:52%;left:calc(var(--sal) + 24px);display:flex;flex-direction:column;justify-content:center}
-  #mRight{top:0;bottom:0;left:52%;right:calc(var(--sar) + 24px);display:flex;flex-direction:column;justify-content:center}
-  #btnOpts{left:76%;transition:background .3s,color .3s,transform .55s cubic-bezier(.3,1.15,.4,1)}
-  #menu.opts #btnOpts{transform:translate(calc(-50% - 26vw),calc(74px + var(--sab) + var(--sat) - 100vh))}   /* DONE glides to the middle of the top bar */
-  #sheet{left:50%;top:calc(var(--sat) + 62px);max-height:none;border-radius:26px 0 0 0;padding:12px calc(var(--sar) + 16px) calc(var(--sab) + 12px) 16px;transform:translateX(106%)}
+@media (orientation:landscape) and (max-height:640px){
+  /* Landscape: two columns split at --sL. Left: title, tagline, mode switch (ABOUT and INSTALL in
+     options). Right: PLAY, BEST and OPTIONS stacked on one axis; in options the settings panel
+     slides in over exactly that column, so nothing on the left moves or gets covered. */
+  #menu{--sL:max(40vw,calc(100vw - 440px))}
+  #mLeft{top:0;bottom:0;left:calc(var(--sal) + 20px);right:calc(100vw - var(--sL) + 20px);display:flex;flex-direction:column;justify-content:center}
+  #mRight{top:0;bottom:0;left:calc(var(--sL) + 20px);right:calc(var(--sar) + 20px);display:flex;flex-direction:column;justify-content:center}
+  #mRight .bigBtn{max-width:320px}
+  #optSlot{display:block;height:48px;margin-top:14px;flex:none}
+  #mRight #permMsg{position:absolute;left:0;right:0;bottom:calc(var(--sab) + 10px);margin:0}
+  #btnOpts{left:var(--optX,76%);top:var(--optY,auto);bottom:auto;transition:background .3s,color .3s,transform .55s cubic-bezier(.3,1.15,.4,1)}
+  #menu.opts #btnOpts{transform:translate(calc(-50% + var(--dX,0px)),var(--dY,0px))}   /* DONE glides to the middle of the top bar */
+  #sheet{left:var(--sL);top:calc(var(--sat) + 64px);max-height:none;border-radius:26px 0 0 0;padding:14px calc(var(--sar) + 18px) calc(var(--sab) + 14px) 18px;transform:translateX(106%);
+    display:flex;flex-direction:column}
   #sheet::before{display:none}
-  .optRow{flex-direction:row;justify-content:space-between;margin-top:8px}
-  .optRow .skins{gap:6px}
-  .optLbl{width:74px;text-align:left;line-height:1.4}
-  #todSeg{width:284px}
-  #todSeg button{padding:6px 6px}
+  .sheetIn{max-width:none;width:100%;margin:auto 0}
+  /* every setting on one grid: the label, then its control, all with the same left and right edges */
+  .optRow{display:grid;grid-template-columns:78px minmax(0,1fr);column-gap:12px;align-items:center;margin-top:10px}
+  .optRow:first-child{margin-top:0}
+  #tgKid{grid-column:1 / -1;width:100%}
+  .optLbl{text-align:left;line-height:12px}                                  /* three lines at most, never taller than a control */
+  .optRow .seg{width:100%}
+  .optRow .seg button{flex:1 1 auto;min-width:0;padding:4px 6px;line-height:1.15;white-space:normal}
+  #todSeg{width:100%}
+  #todSeg button{padding:4px 4px}
+  #ctrlSeg button{min-width:0;flex:1 1 0}
+  .optRow > .skins{grid-column:1 / -1;align-items:stretch;gap:8px}
+  .skinRow{gap:0}
+  .skinRow .lbl{width:78px;margin-right:12px;flex:none;text-align:left;font-size:10px;letter-spacing:.24em;color:rgba(235,242,255,.6);text-shadow:none}
+  .skinRow .sw + .sw{margin-left:auto}
+  #sheet .skinName{margin-left:90px;text-align:center}
   #menu.opts #title{transform:none}
   #menu.opts #tagline{opacity:1;visibility:visible;transform:none}
-  #title{font-size:clamp(52px,18vh,110px)}
+  #title{font-size:max(40px,min(18vh,110px,calc((var(--sL) - var(--sal) - 40px) / 4.4)))}
+  #modeSeg{width:296px;max-width:100%}
+  #modeSeg button{width:auto;flex:1 1 0;min-width:0;padding:4px 6px;line-height:1.15;white-space:normal}
   .bigBtn{margin-top:0;height:52px;font-size:14px}
   .ghostBtn{min-height:44px;margin-top:10px;padding:8px 18px}
   .hint{margin-top:8px;font-size:12px}
@@ -468,9 +490,37 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   #record{margin-top:6px}
   .volRow{margin-top:12px}
 }
-@media (orientation:landscape) and (max-height:560px) and (max-width:700px){
-  #sheet{left:36%}
-  .optRow{flex-direction:column;gap:4px}
+@media (orientation:landscape) and (max-height:640px) and (max-width:700px){
+  #mLeft{left:calc(var(--sal) + 12px);right:calc(100vw - var(--sL) + 12px)}
+  #modeSeg button{font-size:10px;letter-spacing:.02em;padding:4px 3px}
+  #modeInfo{height:46px;font-size:11px;line-height:15px}
+  .optRow{grid-template-columns:66px minmax(0,1fr);column-gap:10px}
+  .optRow .seg button{font-size:11px;letter-spacing:.06em}
+  .skinRow .lbl{width:66px;margin-right:10px}
+  #sheet .skinName{margin-left:76px}
+  .optLbl,.skinRow .lbl{letter-spacing:.14em}
+}
+@media (orientation:landscape) and (max-height:640px) and (max-width:600px){
+  #sheet{padding-left:12px;padding-right:calc(var(--sar) + 12px)}
+  .optRow{grid-template-columns:58px minmax(0,1fr);column-gap:8px}
+  .skinRow .lbl{width:58px;margin-right:8px}
+  #sheet .skinName{margin-left:66px}
+  .optRow .seg button{font-size:10px;letter-spacing:.02em}
+  #todSeg button{padding:4px 2px}
+}
+@media (orientation:landscape) and (max-height:400px){
+  #sheet{top:calc(var(--sat) + 60px);padding-top:10px;padding-bottom:calc(var(--sab) + 10px)}
+  .optRow{margin-top:6px}
+  #tgKid{min-height:36px}
+  .optRow .seg{padding:3px}
+  .optRow .seg .pill{top:3px;bottom:3px}
+  .optRow .seg button{min-height:32px}
+  #sheet .sw{width:32px;height:32px;border-radius:10px}
+  #sheet .sw.round{border-radius:50%}
+  .optRow > .skins{gap:6px}
+  #sheet .skinName{height:14px;line-height:14px;font-size:11px}
+  #optLinks{gap:8px}
+  #optLinks .tg{min-height:40px}
 }
 </style>
 </head>
@@ -523,6 +573,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   <div id="mRight">
     <button class="bigBtn" id="btnPlay" data-i18n="play"></button>
     <div id="menuBest">BEST <span class="num" id="mBest">0 m</span></div>
+    <div id="optSlot"></div>
     <div id="permMsg" class="hidden"></div>
   </div>
   <div id="sheet">

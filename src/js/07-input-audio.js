@@ -8,8 +8,11 @@ class InputManager {
     this.tiltX = 0; this.tiltY = 0; this.keyX = 0; this.keyY = 0; this.joyX = 0; this.joyY = 0;
     this.tilt = false;              // tilt control active
     this.raw = null;                // screen-space gravity [sx, sy, sz]
-    this.g0 = [0, 0, -1];
+    this.g0 = [0, 0, -1];           // the neutral pose: screen-space gravity when calibrated
     this.calib = null;
+    this.tiltA = [0, 0];            // [steer, pitch] in radians away from the neutral pose
+    this.fr = [1, 0, 0, 0, -1, 0];  // neutral frame: pitch axis a1, steer axis a2 (see tiltAngles)
+    this.driftT = 0; this.drift = 0;
     this.lastEvt = 0;
     this.keys = new Set();
     this.ptr = null; this.enabled = false;
@@ -65,7 +68,9 @@ class InputManager {
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     const onRot = () => {
       const a = this.screenAngle();
-      if (a !== this.angle) { this.angle = a; if (this.tilt) this.startCalibration(); }
+      // the screen turned (auto-rotate while playing in the browser): the phone is held another
+      // way now, so the neutral pose is measured again over a short moment, without stopping
+      if (a !== this.angle) { this.angle = a; this.raw = null; if (this.tilt) this.startCalibration(0.6); }
     };
     window.addEventListener('orientationchange', onRot);
     if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', onRot);
@@ -117,7 +122,8 @@ class InputManager {
     this.raw = [sx, sy, dz];
     this.lastEvt = performance.now();
     // quick "tilt up" (top edge raised towards you): the screen pitch grows by ~20° in a quarter second.
-    // An angle, not sy, so it still works when the phone is held almost upright.
+    // An angle in the phone's own frame, not sy, so it works held flat, upright or above your face
+    // lying down (where the angle passes ±180°: differences are wrapped).
     const now = this.lastEvt, H = this.hist, pitch = Math.atan2(-sy, -dz);
     this.pitch = pitch; this.sx = sx;
     // compass-like heading of the phone (of its top edge plus its back), stable both flat and upright
@@ -128,23 +134,63 @@ class InputManager {
     } else this.heading = null;
     H.push(now, pitch);
     while (H.length > 2 && now - H[0] > 250) H.splice(0, 2);
-    let low = 9; for (let k = 1; k < H.length; k += 2) low = Math.min(low, H[k]);
-    if (pitch - low > 0.35 && now - this.lastFlick > 900) { this.flick = true; this.lastFlick = now; H.length = 0; }
-    if (this.calib) { this.calib.acc[0] += sx; this.calib.acc[1] += sy; this.calib.acc[2] += dz; this.calib.n++; }
+    let rise = 0; for (let k = 1; k < H.length; k += 2) rise = Math.max(rise, wrapAngle(pitch - H[k]));
+    if (rise > 0.35 && now - this.lastFlick > 900) { this.flick = true; this.lastFlick = now; H.length = 0; }
+    const c = this.calib;
+    if (c) {                         // the neutral pose is the last steady one: a move of over ~8° starts the mean again
+      if (c.n > 2 && (c.acc[0] * sx + c.acc[1] * sy + c.acc[2] * dz) / Math.hypot(c.acc[0], c.acc[1], c.acc[2]) < 0.99) { c.acc[0] = c.acc[1] = c.acc[2] = 0; c.n = 0; }
+      c.acc[0] += sx; c.acc[1] += sy; c.acc[2] += dz; c.n++;
+    }
   }
-  startCalibration() { this.calib = { acc: [0, 0, 0], n: 0 }; }
+  // Measures the neutral pose: the mean gravity until endCalibration(), or for `sec` seconds.
+  startCalibration(sec) { this.calib = { acc: [0, 0, 0], n: 0, end: sec ? performance.now() + sec * 1000 : 0 }; }
   endCalibration() {
     const c = this.calib; this.calib = null;
-    if (c && c.n > 0) this.g0 = [c.acc[0] / c.n, c.acc[1] / c.n, c.acc[2] / c.n];
-    else if (this.raw) this.g0 = this.raw.slice();
-    this.tiltX = this.tiltY = 0;
+    const g = c && c.n > 0 ? c.acc : this.raw;
+    if (g) { const l = Math.hypot(g[0], g[1], g[2]); if (l > 1e-6) this.g0 = [g[0] / l, g[1] / l, g[2] / l]; }
+    this.tiltX = this.tiltY = 0; this.driftT = 0; this.drift = 0;
+  }
+  // The phone's tilt away from the neutral pose n, as two angles (radians) in the phone's own frame.
+  // Only gravity is used (the compass heading drifts, and turning your body must not steer).
+  //  - pitch: turning about the screen's x axis. Top edge away from your eyes is forward, whether
+  //    the phone is held flat, upright, or face down above you in bed. (Reading the y part of
+  //    gravity instead goes weak as the phone stands up, dies upright, and flips past it.)
+  //  - steer: the side tilt, right edge lower is right. Held upright it is the steering-wheel turn.
+  // Each is an angle, not a gravity component, so the feel is the same however the phone is held.
+  tiltAngles(g, n, out) {
+    let ax = 1 - n[0] * n[0], ay = -n[0] * n[1], az = -n[0] * n[2];    // screen x, made perpendicular to n
+    let l = Math.hypot(ax, ay, az);
+    if (l < 0.2) { ax = 0; ay = n[2]; az = -n[1]; l = Math.hypot(ay, az) || 1; }   // phone on its side: any axis will do
+    ax /= l; ay /= l; az /= l;
+    const bx = n[1] * az - n[2] * ay, by = n[2] * ax - n[0] * az, bz = n[0] * ay - n[1] * ax;   // n × a1
+    const F = this.fr; F[0] = ax; F[1] = ay; F[2] = az; F[3] = bx; F[4] = by; F[5] = bz;
+    const u = g[0] * ax + g[1] * ay + g[2] * az, v = g[0] * bx + g[1] * by + g[2] * bz, w = g[0] * n[0] + g[1] * n[1] + g[2] * n[2];
+    out[0] = Math.atan2(u, w); out[1] = Math.atan2(-v, w);
+    return out;
+  }
+  // Drift: in a long run the hands relax and the resting pose creeps back, towards braking, so more
+  // and more forward tilt is needed to go. A mild brake held for over a second is taken as that
+  // creep, and the neutral pose follows it (up to ~17°). Forward tilt, hard braking and steering
+  // never move it, so the push you hold does not fade away.
+  settle(p, s, dt) {
+    const mild = p < -0.05 && p > -0.7 && Math.abs(s) < 0.6;
+    this.driftT = mild ? this.driftT + dt : 0;
+    if (this.driftT < 1 || this.drift >= 0.3) return;
+    const d = Math.max(this.tiltA[1] * (1 - Math.exp(-dt / 2.5)), this.drift - 0.3);
+    const n = this.g0, F = this.fr, c = Math.cos(d), sn = Math.sin(d);
+    for (let i = 0; i < 3; i++) n[i] = n[i] * c - F[3 + i] * sn;
+    const l = Math.hypot(n[0], n[1], n[2]); n[0] /= l; n[1] /= l; n[2] /= l;
+    this.drift -= d;
   }
 
   update(dt) {
     const shape = (v) => { const a = Math.abs(v); if (a < 0.035) return 0; return Math.sign(v) * Math.min(1, Math.pow((a - 0.035) / 0.965, 1.15)); };
+    if (this.calib && this.calib.end && this.calib.n > 0 && performance.now() >= this.calib.end) this.endCalibration();   // (waits for a sample)
     if (this.tilt && this.raw && !this.calib) {
-      const SENS = 0.36; // ≈ 21° of tilt for full input
-      const tx = shape((this.raw[0] - this.g0[0]) / SENS), ty = shape((this.raw[1] - this.g0[1]) / SENS);
+      const A = this.tiltAngles(this.raw, this.g0, this.tiltA);
+      const s = A[0] / 0.36, p = A[1] / 0.4;   // full input at ≈ 21° of side tilt, ≈ 23° forward or back
+      if (this.enabled) this.settle(p, s, dt);
+      const tx = shape(s), ty = shape(p);
       const k = damp(16, dt);
       this.tiltX += (tx - this.tiltX) * k; this.tiltY += (ty - this.tiltY) * k;
     } else { this.tiltX *= 1 - damp(10, dt); this.tiltY *= 1 - damp(10, dt); }

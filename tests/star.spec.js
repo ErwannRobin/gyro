@@ -54,13 +54,16 @@ test('a quick tilt up triggers the flick, also with the phone held upright', asy
     const flick = (from, to) => {
       I.flick = false; I.lastFlick = -1e9; I.hist.length = 0;
       for (let k = 0; k < 4; k++) I.onOrient({ beta: from, gamma: 0 });
-      I.onOrient({ beta: (from + to) / 2, gamma: 0 }); I.onOrient({ beta: to, gamma: 0 });
+      const mid = from + (((to - from + 540) % 360) - 180) / 2;              // halfway, the short way round
+      I.onOrient({ beta: mid > 180 ? mid - 360 : mid, gamma: 0 }); I.onOrient({ beta: to, gamma: 0 });
       return I.flick;
     };
     out.push(flick(40, 68), flick(70, 98), flick(40, 50), flick(60, 30));
+    // face down (lying in bed), where the angle passes ±180°: a small move is not a flick, a real one is
+    out.push(flick(-179, 179), flick(170, -165));
     return out;
   });
-  expect(r).toEqual([true, true, false, false]);
+  expect(r).toEqual([true, true, false, false, false, true]);
 });
 
 test('star power: rails on, music faster, then the gauge drains and rails go away', async ({ page }) => {

@@ -139,10 +139,10 @@ body.star #starGlow{opacity:1}
 /* options mode: the mode switch gives its place to the About button */
 #modeBox{position:relative;width:100%;margin-top:20px;display:flex;flex-direction:column;align-items:center}
 #menu.opts #modeSeg,#menu.opts #modeInfo{opacity:0;visibility:hidden;transform:translateY(var(--hY,0px)) scale(.86)}
-/* options mode: ABOUT and INSTALL take the place of the mode switch */
-#optLinks{position:absolute;top:4px;left:50%;display:flex;gap:8px;opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,var(--hY,0px)) scale(.8)}
+/* options mode: ABOUT, and INSTALL below it, take the place of the mode switch */
+#optLinks{position:absolute;top:4px;left:50%;display:flex;flex-direction:column;align-items:stretch;gap:10px;opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,var(--hY,0px)) scale(.8)}
 #menu.opts #optLinks{opacity:1;visibility:visible;pointer-events:auto;transform:translate(-50%,var(--hY,0px));transition-delay:.08s}
-#optLinks .tg{min-width:136px;justify-content:center;font-size:12px;white-space:nowrap}
+#optLinks .tg{min-width:168px;justify-content:center;font-size:12px;white-space:nowrap}
 /* INSTALL glows softly to be found */
 #btnInstall{border-color:rgba(78,242,255,.55);background:linear-gradient(135deg,rgba(78,242,255,.2),rgba(255,79,216,.14));animation:insGlow 2.4s ease-in-out infinite alternate}
 @keyframes insGlow{from{box-shadow:0 0 0 0 rgba(78,242,255,0),0 6px 18px rgba(0,0,0,.3)}to{box-shadow:0 0 0 1px rgba(78,242,255,.45),0 0 22px rgba(78,242,255,.35)}}
@@ -417,23 +417,45 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 @media (prefers-reduced-motion:reduce){ #about,#about.open .abIn,#btnAboutClose,#install,#install.open .abIn,#btnInstallClose{transition:none;animation:none;opacity:1;transform:none;filter:none} }
 #noGL{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:30px;text-align:center;z-index:99;background:#05060d;font-weight:700}
 #mLeft,#mRight{display:flex;flex-direction:column;align-items:center}
+#optSlot{display:none}
 #menu .bigBtn{margin:0 auto}
 @media (orientation:portrait) and (max-height:700px){ #tagline{margin-top:4px} #modeBox{margin-top:12px} #menu .bigBtn{height:56px} .skins{gap:8px} .sw{width:40px;height:40px} .optRow{margin-top:10px} .optRow .seg button{min-height:34px} }
-@media (orientation:landscape) and (max-height:560px){
-  #mLeft{top:0;bottom:0;right:52%;left:calc(var(--sal) + 24px);display:flex;flex-direction:column;justify-content:center}
-  #mRight{top:0;bottom:0;left:52%;right:calc(var(--sar) + 24px);display:flex;flex-direction:column;justify-content:center}
-  #btnOpts{left:76%;transition:background .3s,color .3s,transform .55s cubic-bezier(.3,1.15,.4,1)}
-  #menu.opts #btnOpts{transform:translate(calc(-50% - 26vw),calc(74px + var(--sab) + var(--sat) - 100vh))}   /* DONE glides to the middle of the top bar */
-  #sheet{left:50%;top:calc(var(--sat) + 62px);max-height:none;border-radius:26px 0 0 0;padding:12px calc(var(--sar) + 16px) calc(var(--sab) + 12px) 16px;transform:translateX(106%)}
+@media (orientation:landscape) and (max-height:640px){
+  /* Landscape: two columns split at --sL. Left: title, tagline, mode switch (ABOUT and INSTALL in
+     options). Right: PLAY, BEST and OPTIONS stacked on one axis; in options the settings panel
+     slides in over exactly that column, so nothing on the left moves or gets covered. */
+  #menu{--sL:max(40vw,calc(100vw - 440px))}
+  #mLeft{top:0;bottom:0;left:calc(var(--sal) + 20px);right:calc(100vw - var(--sL) + 20px);display:flex;flex-direction:column;justify-content:center}
+  #mRight{top:0;bottom:0;left:calc(var(--sL) + 20px);right:calc(var(--sar) + 20px);display:flex;flex-direction:column;justify-content:center}
+  #mRight .bigBtn{max-width:320px}
+  #optSlot{display:block;height:48px;margin-top:14px;flex:none}
+  #mRight #permMsg{position:absolute;left:0;right:0;bottom:calc(var(--sab) + 10px);margin:0}
+  #btnOpts{left:var(--optX,76%);top:var(--optY,auto);bottom:auto;transition:background .3s,color .3s,transform .55s cubic-bezier(.3,1.15,.4,1)}
+  #menu.opts #btnOpts{transform:translate(calc(-50% + var(--dX,0px)),var(--dY,0px))}   /* DONE glides to the middle of the top bar */
+  #sheet{left:var(--sL);top:calc(var(--sat) + 64px);max-height:none;border-radius:26px 0 0 0;padding:14px calc(var(--sar) + 18px) calc(var(--sab) + 14px) 18px;transform:translateX(106%);
+    display:flex;flex-direction:column}
   #sheet::before{display:none}
-  .optRow{flex-direction:row;justify-content:space-between;margin-top:8px}
-  .optRow .skins{gap:6px}
-  .optLbl{width:74px;text-align:left;line-height:1.4}
-  #todSeg{width:284px}
-  #todSeg button{padding:6px 6px}
+  .sheetIn{max-width:none;width:100%;margin:auto 0}
+  /* every setting on one grid: the label, then its control, all with the same left and right edges */
+  .optRow{display:grid;grid-template-columns:78px minmax(0,1fr);column-gap:12px;align-items:center;margin-top:10px}
+  .optRow:first-child{margin-top:0}
+  #tgKid{grid-column:1 / -1;width:100%}
+  .optLbl{text-align:left;line-height:12px}                                  /* three lines at most, never taller than a control */
+  .optRow .seg{width:100%}
+  .optRow .seg button{flex:1 1 auto;min-width:0;padding:4px 6px;line-height:1.15;white-space:normal}
+  #todSeg{width:100%}
+  #todSeg button{padding:4px 4px}
+  #ctrlSeg button{min-width:0;flex:1 1 0}
+  .optRow > .skins{grid-column:1 / -1;align-items:stretch;gap:8px}
+  .skinRow{gap:0}
+  .skinRow .lbl{width:78px;margin-right:12px;flex:none;text-align:left;font-size:10px;letter-spacing:.24em;color:rgba(235,242,255,.6);text-shadow:none}
+  .skinRow .sw + .sw{margin-left:auto}
+  #sheet .skinName{margin-left:90px;text-align:center}
   #menu.opts #title{transform:none}
   #menu.opts #tagline{opacity:1;visibility:visible;transform:none}
-  #title{font-size:clamp(52px,18vh,110px)}
+  #title{font-size:max(40px,min(18vh,110px,calc((var(--sL) - var(--sal) - 40px) / 4.4)))}
+  #modeSeg{width:296px;max-width:100%}
+  #modeSeg button{width:auto;flex:1 1 0;min-width:0;padding:4px 6px;line-height:1.15;white-space:normal}
   .bigBtn{margin-top:0;height:52px;font-size:14px}
   .ghostBtn{min-height:44px;margin-top:10px;padding:8px 18px}
   .hint{margin-top:8px;font-size:12px}
@@ -468,9 +490,37 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   #record{margin-top:6px}
   .volRow{margin-top:12px}
 }
-@media (orientation:landscape) and (max-height:560px) and (max-width:700px){
-  #sheet{left:36%}
-  .optRow{flex-direction:column;gap:4px}
+@media (orientation:landscape) and (max-height:640px) and (max-width:700px){
+  #mLeft{left:calc(var(--sal) + 12px);right:calc(100vw - var(--sL) + 12px)}
+  #modeSeg button{font-size:10px;letter-spacing:.02em;padding:4px 3px}
+  #modeInfo{height:46px;font-size:11px;line-height:15px}
+  .optRow{grid-template-columns:66px minmax(0,1fr);column-gap:10px}
+  .optRow .seg button{font-size:11px;letter-spacing:.06em}
+  .skinRow .lbl{width:66px;margin-right:10px}
+  #sheet .skinName{margin-left:76px}
+  .optLbl,.skinRow .lbl{letter-spacing:.14em}
+}
+@media (orientation:landscape) and (max-height:640px) and (max-width:600px){
+  #sheet{padding-left:12px;padding-right:calc(var(--sar) + 12px)}
+  .optRow{grid-template-columns:58px minmax(0,1fr);column-gap:8px}
+  .skinRow .lbl{width:58px;margin-right:8px}
+  #sheet .skinName{margin-left:66px}
+  .optRow .seg button{font-size:10px;letter-spacing:.02em}
+  #todSeg button{padding:4px 2px}
+}
+@media (orientation:landscape) and (max-height:400px){
+  #sheet{top:calc(var(--sat) + 60px);padding-top:10px;padding-bottom:calc(var(--sab) + 10px)}
+  .optRow{margin-top:6px}
+  #tgKid{min-height:36px}
+  .optRow .seg{padding:3px}
+  .optRow .seg .pill{top:3px;bottom:3px}
+  .optRow .seg button{min-height:32px}
+  #sheet .sw{width:32px;height:32px;border-radius:10px}
+  #sheet .sw.round{border-radius:50%}
+  .optRow > .skins{gap:6px}
+  #sheet .skinName{height:14px;line-height:14px;font-size:11px}
+  #optLinks{gap:8px}
+  #optLinks .tg{min-height:40px}
 }
 </style>
 </head>
@@ -523,6 +573,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   <div id="mRight">
     <button class="bigBtn" id="btnPlay" data-i18n="play"></button>
     <div id="menuBest">BEST <span class="num" id="mBest">0 m</span></div>
+    <div id="optSlot"></div>
     <div id="permMsg" class="hidden"></div>
   </div>
   <div id="sheet">
@@ -989,7 +1040,7 @@ const tr = (key, vars) => {
 
 // ---------------------------------------------------------------- about
 // Size of the built index.html, shown on the About screen: scripts/build.mjs writes the numbers.
-const BUILD_INFO = { lines: 6551, kb: 415 };
+const BUILD_INFO = { lines: 6657, kb: 422 };
 const REPO_URL = 'https://github.com/ErwannRobin/gyro';
 const X_URL = 'https://x.com/diwann';
 
@@ -3757,8 +3808,11 @@ class InputManager {
     this.tiltX = 0; this.tiltY = 0; this.keyX = 0; this.keyY = 0; this.joyX = 0; this.joyY = 0;
     this.tilt = false;              // tilt control active
     this.raw = null;                // screen-space gravity [sx, sy, sz]
-    this.g0 = [0, 0, -1];
+    this.g0 = [0, 0, -1];           // the neutral pose: screen-space gravity when calibrated
     this.calib = null;
+    this.tiltA = [0, 0];            // [steer, pitch] in radians away from the neutral pose
+    this.fr = [1, 0, 0, 0, -1, 0];  // neutral frame: pitch axis a1, steer axis a2 (see tiltAngles)
+    this.driftT = 0; this.drift = 0;
     this.lastEvt = 0;
     this.keys = new Set();
     this.ptr = null; this.enabled = false;
@@ -3814,7 +3868,9 @@ class InputManager {
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     const onRot = () => {
       const a = this.screenAngle();
-      if (a !== this.angle) { this.angle = a; if (this.tilt) this.startCalibration(); }
+      // the screen turned (auto-rotate while playing in the browser): the phone is held another
+      // way now, so the neutral pose is measured again over a short moment, without stopping
+      if (a !== this.angle) { this.angle = a; this.raw = null; if (this.tilt) this.startCalibration(0.6); }
     };
     window.addEventListener('orientationchange', onRot);
     if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', onRot);
@@ -3866,7 +3922,8 @@ class InputManager {
     this.raw = [sx, sy, dz];
     this.lastEvt = performance.now();
     // quick "tilt up" (top edge raised towards you): the screen pitch grows by ~20° in a quarter second.
-    // An angle, not sy, so it still works when the phone is held almost upright.
+    // An angle in the phone's own frame, not sy, so it works held flat, upright or above your face
+    // lying down (where the angle passes ±180°: differences are wrapped).
     const now = this.lastEvt, H = this.hist, pitch = Math.atan2(-sy, -dz);
     this.pitch = pitch; this.sx = sx;
     // compass-like heading of the phone (of its top edge plus its back), stable both flat and upright
@@ -3877,23 +3934,63 @@ class InputManager {
     } else this.heading = null;
     H.push(now, pitch);
     while (H.length > 2 && now - H[0] > 250) H.splice(0, 2);
-    let low = 9; for (let k = 1; k < H.length; k += 2) low = Math.min(low, H[k]);
-    if (pitch - low > 0.35 && now - this.lastFlick > 900) { this.flick = true; this.lastFlick = now; H.length = 0; }
-    if (this.calib) { this.calib.acc[0] += sx; this.calib.acc[1] += sy; this.calib.acc[2] += dz; this.calib.n++; }
+    let rise = 0; for (let k = 1; k < H.length; k += 2) rise = Math.max(rise, wrapAngle(pitch - H[k]));
+    if (rise > 0.35 && now - this.lastFlick > 900) { this.flick = true; this.lastFlick = now; H.length = 0; }
+    const c = this.calib;
+    if (c) {                         // the neutral pose is the last steady one: a move of over ~8° starts the mean again
+      if (c.n > 2 && (c.acc[0] * sx + c.acc[1] * sy + c.acc[2] * dz) / Math.hypot(c.acc[0], c.acc[1], c.acc[2]) < 0.99) { c.acc[0] = c.acc[1] = c.acc[2] = 0; c.n = 0; }
+      c.acc[0] += sx; c.acc[1] += sy; c.acc[2] += dz; c.n++;
+    }
   }
-  startCalibration() { this.calib = { acc: [0, 0, 0], n: 0 }; }
+  // Measures the neutral pose: the mean gravity until endCalibration(), or for `sec` seconds.
+  startCalibration(sec) { this.calib = { acc: [0, 0, 0], n: 0, end: sec ? performance.now() + sec * 1000 : 0 }; }
   endCalibration() {
     const c = this.calib; this.calib = null;
-    if (c && c.n > 0) this.g0 = [c.acc[0] / c.n, c.acc[1] / c.n, c.acc[2] / c.n];
-    else if (this.raw) this.g0 = this.raw.slice();
-    this.tiltX = this.tiltY = 0;
+    const g = c && c.n > 0 ? c.acc : this.raw;
+    if (g) { const l = Math.hypot(g[0], g[1], g[2]); if (l > 1e-6) this.g0 = [g[0] / l, g[1] / l, g[2] / l]; }
+    this.tiltX = this.tiltY = 0; this.driftT = 0; this.drift = 0;
+  }
+  // The phone's tilt away from the neutral pose n, as two angles (radians) in the phone's own frame.
+  // Only gravity is used (the compass heading drifts, and turning your body must not steer).
+  //  - pitch: turning about the screen's x axis. Top edge away from your eyes is forward, whether
+  //    the phone is held flat, upright, or face down above you in bed. (Reading the y part of
+  //    gravity instead goes weak as the phone stands up, dies upright, and flips past it.)
+  //  - steer: the side tilt, right edge lower is right. Held upright it is the steering-wheel turn.
+  // Each is an angle, not a gravity component, so the feel is the same however the phone is held.
+  tiltAngles(g, n, out) {
+    let ax = 1 - n[0] * n[0], ay = -n[0] * n[1], az = -n[0] * n[2];    // screen x, made perpendicular to n
+    let l = Math.hypot(ax, ay, az);
+    if (l < 0.2) { ax = 0; ay = n[2]; az = -n[1]; l = Math.hypot(ay, az) || 1; }   // phone on its side: any axis will do
+    ax /= l; ay /= l; az /= l;
+    const bx = n[1] * az - n[2] * ay, by = n[2] * ax - n[0] * az, bz = n[0] * ay - n[1] * ax;   // n × a1
+    const F = this.fr; F[0] = ax; F[1] = ay; F[2] = az; F[3] = bx; F[4] = by; F[5] = bz;
+    const u = g[0] * ax + g[1] * ay + g[2] * az, v = g[0] * bx + g[1] * by + g[2] * bz, w = g[0] * n[0] + g[1] * n[1] + g[2] * n[2];
+    out[0] = Math.atan2(u, w); out[1] = Math.atan2(-v, w);
+    return out;
+  }
+  // Drift: in a long run the hands relax and the resting pose creeps back, towards braking, so more
+  // and more forward tilt is needed to go. A mild brake held for over a second is taken as that
+  // creep, and the neutral pose follows it (up to ~17°). Forward tilt, hard braking and steering
+  // never move it, so the push you hold does not fade away.
+  settle(p, s, dt) {
+    const mild = p < -0.05 && p > -0.7 && Math.abs(s) < 0.6;
+    this.driftT = mild ? this.driftT + dt : 0;
+    if (this.driftT < 1 || this.drift >= 0.3) return;
+    const d = Math.max(this.tiltA[1] * (1 - Math.exp(-dt / 2.5)), this.drift - 0.3);
+    const n = this.g0, F = this.fr, c = Math.cos(d), sn = Math.sin(d);
+    for (let i = 0; i < 3; i++) n[i] = n[i] * c - F[3 + i] * sn;
+    const l = Math.hypot(n[0], n[1], n[2]); n[0] /= l; n[1] /= l; n[2] /= l;
+    this.drift -= d;
   }
 
   update(dt) {
     const shape = (v) => { const a = Math.abs(v); if (a < 0.035) return 0; return Math.sign(v) * Math.min(1, Math.pow((a - 0.035) / 0.965, 1.15)); };
+    if (this.calib && this.calib.end && this.calib.n > 0 && performance.now() >= this.calib.end) this.endCalibration();   // (waits for a sample)
     if (this.tilt && this.raw && !this.calib) {
-      const SENS = 0.36; // ≈ 21° of tilt for full input
-      const tx = shape((this.raw[0] - this.g0[0]) / SENS), ty = shape((this.raw[1] - this.g0[1]) / SENS);
+      const A = this.tiltAngles(this.raw, this.g0, this.tiltA);
+      const s = A[0] / 0.36, p = A[1] / 0.4;   // full input at ≈ 21° of side tilt, ≈ 23° forward or back
+      if (this.enabled) this.settle(p, s, dt);
+      const tx = shape(s), ty = shape(p);
       const k = damp(16, dt);
       this.tiltX += (tx - this.tiltX) * k; this.tiltY += (ty - this.tiltY) * k;
     } else { this.tiltX *= 1 - damp(10, dt); this.tiltY *= 1 - damp(10, dt); }
@@ -5000,12 +5097,21 @@ class UI {
     if (!H) return;
     const top = (el) => { let y = 0; for (let e = el; e && e !== m; e = e.offsetParent) y += e.offsetTop; return y; };
     const set = (k, v) => m.style.setProperty(k, Math.round(v) + 'px');
-    if (matchMedia('(orientation: landscape) and (max-height: 560px)').matches) { for (const k of ['--playY', '--tY', '--hY', '--sheetTop']) set(k, 0); return; }
-    const title = $('title'), seg = $('modeSeg'), info = this.el.modeInfo, bar = $('menuTop'), ab = this.el.btnAbout, head = top(info) + info.offsetHeight;
+    const bar = $('menuTop');
+    if (matchMedia('(orientation: landscape) and (max-height: 640px)').matches) {
+      for (const k of ['--playY', '--tY', '--hY', '--sheetTop']) set(k, 0);
+      // OPTIONS sits in its slot under BEST; as DONE it glides to the middle of the top bar
+      const slot = $('optSlot'), left = (el) => { let x = 0; for (let e = el; e && e !== m; e = e.offsetParent) x += e.offsetLeft; return x; };
+      const x = left(slot) + slot.offsetWidth / 2, y = top(slot);
+      set('--optX', x); set('--optY', y);
+      set('--dX', m.clientWidth / 2 - x); set('--dY', top(bar) + bar.offsetHeight / 2 - this.el.btnOpts.offsetHeight / 2 - y);
+      return;
+    }
+    const title = $('title'), seg = $('modeSeg'), info = this.el.modeInfo, links = $('optLinks'), head = top(info) + info.offsetHeight;
     set('--playY', Math.max(H / 2 - this.el.btnPlay.offsetHeight / 2, head + 14));
     set('--tY', top(bar) + bar.offsetHeight / 2 - top(title) - title.offsetHeight / 2);
     const hY = top(bar) + bar.offsetHeight + 12 - top(seg);
-    set('--hY', hY); set('--sheetTop', top(ab) + ab.offsetHeight + hY + 16);
+    set('--hY', hY); set('--sheetTop', top(links) + links.offsetHeight + hY + 16);
   }
   // About: a circle opens from the About button, the marble draws its track, the numbers count up.
   get aboutOpen() { return this.el.about.classList.contains('open'); }
@@ -5652,7 +5758,7 @@ class Game {
     });
     window.addEventListener('blur', () => { if (this.state === 'play' && !this.mobile) this.pause(); });
     window.addEventListener('pagehide', () => this.audio.suspend());
-    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement) && !e.target.closest('#sheet, #abScroll')) e.preventDefault(); }, { passive: false });
+    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement) && !e.target.closest('#sheet, #abScroll, #insScroll')) e.preventDefault(); }, { passive: false });
     document.addEventListener('gesturestart', (e) => e.preventDefault());
     document.addEventListener('dblclick', (e) => e.preventDefault());
     this.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.glLost = true; if (this.state === 'play') this.pause(); });
@@ -6088,7 +6194,7 @@ class Game {
     if (!this.lookRef) this.lookRef = { h: I.heading, p: I.pitch, x: I.sx };
     const R = this.lookRef, L = this.lookV || (this.lookV = { yaw: 0, pitch: 0 });
     L.yaw = I.heading !== null && R.h !== null ? wrapAngle(I.heading - R.h) : clamp((I.sx - R.x) * 2.2, -1.6, 1.6);
-    L.pitch = I.pitch - R.p;
+    L.pitch = wrapAngle(I.pitch - R.p);
     this.cam.gyroLook = L;
   }
 

@@ -10,7 +10,7 @@ GYROLL is an endless 3D marble game for your phone. Tilt the phone to roll a hea
 
 ![The nine worlds of GYROLL](docs/worlds.jpg)
 
-The whole game is **one self-contained `index.html` file** (about 415 KB, about 6 550 lines): HTML, CSS, JavaScript, GLSL shaders and synthesized audio.
+The whole game is **one self-contained `index.html` file** (about 422 KB, about 6 660 lines): HTML, CSS, JavaScript, GLSL shaders and synthesized audio.
 - It uses no libraries and no external assets, and it needs no network to play.
 - It is assembled from readable source files in [`src/`](src) by a tiny build script that has no dependencies.
 - A few optional files next to it make it installable and nice to share: icons, a manifest, a service worker and a preview image.
@@ -19,7 +19,7 @@ The whole game is **one self-contained `index.html` file** (about 415 KB, about 
 
 ## Features
 
-- **Gyroscope control.** Tilt left/right to steer, forward to speed up, back to brake and roll backwards. It handles the iOS motion permission prompt, calibrates to your natural holding position, and smooths the sensor signal. With the gyroscope your fingers are free: drag on the screen to swing the camera around the ball (it eases back behind the ball when you let go), pinch to move it closer or farther (the distance is remembered), and double-tap to fire star power.
+- **Gyroscope control.** Tilt left/right to steer, forward to speed up, back to brake and roll backwards. It handles the iOS motion permission prompt, calibrates to your natural holding position, and smooths the sensor signal. The tilt is measured as two angles in the phone's own frame, so it feels the same whether you hold the phone almost flat, upright, or above your face lying in bed: forward is always the top edge moving away from your eyes, and the right edge lower is always right (held upright, that is the steering-wheel turn). The neutral pose is the last steady pose before the run starts. In a long run, if your hands slowly creep back, a mild brake held for over a second is taken as that creep and the neutral pose follows it, so you never need more and more tilt to go (a push you hold forward never fades). If the screen rotates during a run, the neutral pose is measured again in a split second. With the gyroscope your fingers are free: drag on the screen to swing the camera around the ball (it eases back behind the ball when you let go), pinch to move it closer or farther (the distance is remembered), and double-tap to fire star power.
 - **Touch control.** Choose **Gyroscope** or **Touch** in the options. Touch control is a floating joystick where you put your finger. If the sensors are missing or the permission is refused, the game switches to touch control and keeps that choice. On desktop you can use the arrow keys, WASD, ZQSD or drag with the mouse, and the mouse wheel zooms the camera.
 - **Endless procedural track** that gets harder with distance:
   - straights, big curves, zigzags, hairpins and narrow passages
@@ -62,7 +62,7 @@ The whole game is **one self-contained `index.html` file** (about 415 KB, about 
 - **5 track skins** (neon carbon, steel & gold, wooden toy, ice marble, grass) **and 5 marble skins** (chrome, glass, gold, plasma, candy). You can change them from the menu options. The pause screen keeps only resume, recalibrate, sound and main menu, so it stays calm in portrait and fits a short landscape screen. The pickers show real pictures drawn with the game's own shaders: each marble as it looks in the current world, and each track skin on a short bend under the current sky. They are redrawn when the world or the track skin changes, one picture per frame.
 - **Grass track.** A lawn with mowing stripes, clover, daisies, a stone curb and turf sides. It is not only a look: the ball rolls slower (on flat ground it tops out near 76 km/h instead of more than 120 km/h), the uneven ground nudges it sideways, and grass tufts on the track slow it down, kick it aside and make it bounce, with clippings flying. Tufts never sit on narrow ground, boosters, checkpoint pads or among obstacles. They are placed from the track seed without changing the track, so the daily run stays the same for everyone.
 - **A light menu.** The menu shows only the GYROLL title, the tagline, the Training / Daily run switch, one **PLAY** button in the middle of the screen (the ball rolls into view below it) and an **Options** toggle at the bottom. Its parts rise into place one after the other when it opens.
-- **Options.** The toggle raises a glass sheet with every setting: kid mode, controls (gyroscope or touch), time of day, track and marble skins, language and sound. PLAY and the Training / Daily run switch hide, the title shrinks into the top bar between the language and sound buttons, and **About** and **Install** buttons take the switch's place. **Done** (or a tap outside the sheet) brings the light menu back. The selected option of each switch is marked by a pill that slides under it.
+- **Options.** The toggle raises a glass sheet with every setting: kid mode, controls (gyroscope or touch), time of day, track and marble skins, language and sound. PLAY and the Training / Daily run switch hide, the title shrinks into the top bar between the language and sound buttons, and the **About** button, with **Install** below it, takes the switch's place. In landscape the settings slide in as a panel on the right, laid out on one grid (every label and control on the same lines). **Done** (or a tap outside the sheet) brings the light menu back. The selected option of each switch is marked by a pill that slides under it.
 - **Time of day.** The sky shows a sun (a bright disc with a lens flare) or a moon (with seas, craters and today's phase, lit on the correct side). Four settings:
   - **Real time** (the default): the sun follows the local clock. It rises on the left, is highest around noon and sets on the right, lower in winter. At night the moon rises opposite it.
   - **Day**: each world keeps its own sun.
@@ -76,11 +76,11 @@ The whole game is **one self-contained `index.html` file** (about 415 KB, about 
 - **English and French**, detected from the browser language. You can switch on the menu; the menu layout never moves when you change the language or an option.
 - **Look around on the menu.** Drag on the background to walk the camera around the ball (up and down too), and pinch (or use the mouse wheel) to zoom in on the marble or out on the world. When motion access is on (Android at once, iPhone after you allowed it once), turning the phone also walks the camera around the ball and tilting it raises or lowers the camera.
 - **Built for phones:**
-  - portrait first, landscape supported (the game over screen puts the result on the left and the buttons on the right)
+  - portrait first, landscape supported: the menu is two aligned columns (title and mode switch on the left; PLAY, best and Options on the right) and the options panel slides over the right one, so nothing is covered, down to a 568 × 320 screen or a phone with its browser bars showing; the game over screen puts the result on the left and the buttons on the right
   - no scrolling or zooming, large touch targets, readable in sunlight
   - screen stays awake while playing, pauses on focus loss
 - **Adaptive quality.** Resolution, bloom, particles and scenery density adjust automatically to hold the frame rate. Repeated scenery is drawn with GPU instancing: about 35 draw calls per frame instead of about 105. The ball's reflection cube map is 256 px on computers and 128 px on phones (half of it redrawn each frame there), and it is turned off on the lowest level.
-- **Installable app (PWA).** Add GYROLL to your home screen. It then opens full screen, locked in portrait so the screen does not rotate while you tilt, and it works offline. The glowing **Install** button sits next to About in the options (it hides once the app is installed, and in a local file copy, which cannot be installed):
+- **Installable app (PWA).** Add GYROLL to your home screen. It then opens full screen, locked in portrait so the screen does not rotate while you tilt, and it works offline. The glowing **Install** button sits right below About in the options (it hides once the app is installed, and in a local file copy, which cannot be installed):
   - When the browser offers its own install prompt (Chrome, Edge, most Android browsers), the button opens it.
   - Otherwise it opens a guide made for the device. It opens like About, from the button. On iPhone, iPad and Android, a small animated phone plays the steps in a loop (tap Share or the ⋮ menu, pick "Add to Home Screen" or "Install app", confirm, then the GYROLL icon pops onto the home screen), and the list below lights up the step being shown.
   - Safari on Mac, Firefox and the in-app browsers of social apps (Instagram, Facebook, TikTok…) get their own steps. A **Copy the link** button helps to open the game in a real browser.
@@ -103,6 +103,10 @@ The whole game is **one self-contained `index.html` file** (about 415 KB, about 
 | Real time: morning sun | Night: moon over the sea | Night: countryside | Day: the city |
 |---|---|---|---|
 | ![Morning sun with a lens flare](docs/sky-sun.jpg) | ![Moon and stars over the sea world](docs/sky-moon.jpg) | ![The countryside world at night](docs/sky-night.jpg) | ![The tech world by day](docs/world-tech-day.jpg) |
+
+| Landscape menu: two columns on one axis each | Landscape options: the panel slides over the right column |
+|---|---|
+| ![Menu in landscape](docs/menu-landscape.jpg) | ![Options in landscape](docs/menu-landscape-options.jpg) |
 
 | Game over in landscape: the result on the left, the buttons on the right |
 |---|
@@ -180,12 +184,13 @@ The tests drive the game loop step by step instead of waiting for real frames, s
 - track feasibility over 4 km on many seeds
 - daily-run determinism
 - tilt directions, the touch fallback (which becomes the setting) and the control setting
+- the gyroscope held flat, upright, above your face in bed and face down: the same forward push and the same steering everywhere; the neutral pose following a slow drift back while a held push or a hard brake never fades; the neutral pose taken from the last steady moment; a screen rotation during a run; the tilt-up flick across the ±180° point
 - the camera under the finger: drag and pinch on the menu, look-around, pinch zoom and double tap in gyroscope play
 - language switching, sound toggles and skins
 - a menu layout that never moves when the language, mode, kid mode, sound, control, time of day or skin changes, and the sliding pills of the switches
 - the share link and the share video
 - all nine worlds rendering, and the loop back to the first one
-- the installable app, including offline play, and the INSTALL button: the browser's prompt when there is one, otherwise the guide for iPhone (the animated phone and the list in step), Android and Firefox, in English and French
+- the installable app, including offline play, and the INSTALL button: the browser's prompt when there is one, otherwise the guide for iPhone (the animated phone and the list in step), Android and Firefox, in English and French, and a finger scrolling the guide to its last button
 - kid mode, safety rails that give way to hard hits (kid rails hold more), and speed past 50 km/h
 - coins, streak multiplier, star gauge, the tilt-up flick and star power, which smashes obstacles
 - the grass track: slower rolling, uneven ground, tufts that slow and push the ball (and that star power mows), tufts only on safe ground, the same for everyone and never changing the track shape
@@ -195,7 +200,8 @@ The tests drive the game loop step by step instead of waiting for real frames, s
 - the ball's reflection cube map facing the right way
 - the share video only being made on request, with a real music track in it
 - the menu camera following the phone
-- the light menu (one PLAY in the middle) and the options sheet (the title moves into the top bar, the mode switch gives its place to About; Done or a tap outside closes it)
+- the light menu (one PLAY in the middle) and the options sheet (the title moves into the top bar, the mode switch gives its place to About, with Install below it; Done or a tap outside closes it)
+- the landscape menu at six sizes from 568 × 320 to 1024 × 600, in English and French: two aligned columns, the options panel covering nothing, its controls on one grid, nothing cut or off screen and no scrolling
 - the About screen: the story in both languages, the line count and size that match the real `index.html`, the links, the marble animation, closing with ✕ or `Esc`, and scrolling on a short landscape screen
 - the pause screen without skin pickers, and in landscape one column that fits a short screen
 - the game over screen with every extra line (kid badge, new record) in English and French: play again, share and menu always show, in two columns in landscape
@@ -236,7 +242,7 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
 | `skyState`, `skyZone` | Time of day: where the sun or moon stands (from the clock), the moon's phase, and each world's palette at night or at dusk (a dark world can carry its own `day` palette, like the city). The sky panoramas are painted again when it changes, only on the menu. |
 | `Physics`, `Ball` | Fixed 120 Hz steps for a sphere rolling without slipping: slope and bank gravity, rails, props, landing and falling. The track skin can change the rolling (grass: drag, uneven ground, tufts). |
 | `CameraRig` | Chase camera with look-ahead, roll in turns, speed FOV, shake, a push-in for slow motion, a rumble at top speed, fall and attract modes, plus the finger offsets and zoom. |
-| `InputManager`, `CamGestures` | DeviceOrientation (with the iOS permission), calibration, low-pass filtering, joystick and keyboard; camera drags, pinches, wheel and taps. |
+| `InputManager`, `CamGestures` | DeviceOrientation (with the iOS permission), the tilt as two angles from the neutral pose (the same feel held flat, upright or face down), calibration on the last steady pose, drift following, low-pass filtering, joystick and keyboard; camera drags, pinches, wheel and taps. |
 | `AudioManager` | Web Audio synthesis and a generative music scheduler, with separate music and SFX buses, speed wind, and a music low-pass for slow motion. |
 | `ParticleSystem`, `FxBuilder` | Pooled particles, trail ribbon, glows, light shafts, speed lines, shockwave rings and lightning. |
 | `Environment` | Zone-driven scenery in three parallax layers (trees, turbines, balloons, boats, lighthouses, cacti, mesas… are built from a few procedural shapes and drawn with instancing). Nothing may enter a keep-out zone around the track; objects that newer track bends towards shrink away, and anything between the camera and the ball is hidden. |
@@ -257,7 +263,8 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
   - The music track needs `MediaStreamAudioDestinationNode` and a recorder that takes sound. A browser that fails to record it gets silent videos from then on.
   - Sharing a file needs Web Share support with files, which mostly means mobile browsers. Otherwise the file is downloaded.
 - **Not yet verified on real devices:**
-  - Landscape tilt directions have not been checked on a real phone. Portrait tilt was checked with simulated sensor events.
+  - Tilt (portrait, landscape, upright, lying in bed) was checked with simulated sensor events, not on a real phone. The drift following is a guess at how hands creep during a long run: a mild brake held for over a second moves the neutral pose (up to about 17°). It may need tuning after real play.
+  - At high speed the forward push fades on purpose (it is halved at 47 km/h, so speed keeps growing but more slowly). This is the game's balance, not the tilt: tilting further does not add more.
   - Development and automated tests ran in headless Chromium (software rendering). Reports from real phones are very welcome.
   - The cost of the ball's reflection probe on real phones is not measured yet. If the frame rate drops, adaptive quality lowers it and then turns it off.
   - The four nature worlds (countryside, forest, sea, desert) and the picker pictures were only checked in headless Chromium. Their cost on real phones is not measured yet.
@@ -897,6 +904,20 @@ And can we have a music in the exported video?
 
 ````markdown
 Let’s do 2.  Also, the “install the app” button in the options is not working as it only show a small text on the main menu. It should be directly visible and better guide the user
+````
+
+</details>
+
+<details>
+<summary><strong>Landscape menu and gyroscope prompt</strong></summary>
+
+````markdown
+The app install guide button should be below the about button in portrait mode. And the install guide should be scrollable to see it to its bottom. 
+Also, the menu layout is quite broken in landscape mode. Buttons are not aligned and not consistent and some are not visible. 
+
+We should also improve the gyroscope calibration and management:
+The accelerator tend to shift along the gameplay and we need to tilt the phone more and more to trigger the acceleration. 
+When the phone is upside down, for example when a user is on its bed and looking up at his phone, the acceleration sensor is reversed. Globally the gyroscope management should be perfect as it’s the core of the product
 ````
 
 </details>

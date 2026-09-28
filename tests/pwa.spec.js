@@ -44,6 +44,14 @@ test.describe('install guide on an iPhone', () => {
     // every step fits on the screen, and Escape closes the guide
     const fit = await page.evaluate(() => [...document.querySelectorAll('#insSteps li')].every((l) => l.scrollWidth <= l.clientWidth + 1));
     expect(fit).toBe(true);
+    // a finger scrolls the guide down to its last button (the page blocks touch scrolling everywhere else)
+    const sc = await page.evaluate(() => {
+      const move = (el) => { const t = new Touch({ identifier: 1, target: el, clientX: 100, clientY: 400 }); return el.dispatchEvent(new TouchEvent('touchmove', { cancelable: true, bubbles: true, touches: [t], targetTouches: [t], changedTouches: [t] })); };
+      const box = document.getElementById('insScroll'), guide = move(document.getElementById('insSteps')), menu = move(document.getElementById('menu'));
+      box.scrollTop = box.scrollHeight;
+      return { guide, menu, scrolls: box.scrollHeight > box.clientHeight, end: document.getElementById('btnCopyLink').getBoundingClientRect().bottom <= innerHeight };
+    });
+    expect(sc).toEqual({ guide: true, menu: false, scrolls: true, end: true });
     await page.keyboard.press('Escape');
     await expect(page.locator('#install')).toBeHidden();
     expect(errors).toEqual([]);

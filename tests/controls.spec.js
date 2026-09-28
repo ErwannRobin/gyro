@@ -18,6 +18,83 @@ test('tilt directions map to the ball after calibration', async ({ page }) => {
   expect(r.back[1]).toBeLessThan(-0.2);
 });
 
+// Runs inside the page: feeds orientation events (beta, gamma in degrees) at 60 Hz and returns the input.
+function tiltKit() {
+  const I = window.__game.input;
+  window.feed = (beta, gamma, sec = 0.4) => { for (let t = 0; t < sec; t += 1 / 60) { I.onOrient({ beta, gamma }); I.update(1 / 60); } return [+I.x.toFixed(2), +I.y.toFixed(2)]; };
+  window.calib = (beta, gamma) => { I.tilt = true; I.startCalibration(); window.feed(beta, gamma, 0.3); I.endCalibration(); };
+}
+
+test('forward is "top edge away from you" however the phone is held: flat, upright, or above your face in bed', async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(tiltKit);
+  const r = await page.evaluate(() => {
+    const out = {};
+    // beta: 20 almost flat, 90 upright, 150 lying on your back with the phone above you, 180 face down
+    for (const b0 of [20, 45, 90, 120, 150, 180]) {
+      window.calib(b0, 0);
+      const n = window.feed(b0, 0), f = window.feed(b0 - 12, 0), k = window.feed(b0 + 12, 0);
+      out[b0] = { n, fwd: f[1], back: k[1] };
+    }
+    // steering: the right edge lower is right, and held upright the steering-wheel turn works too
+    window.calib(40, 0); out.roll = [window.feed(40, 14)[0], window.feed(40, -14)[0]];
+    window.calib(90, 0);
+    const wheel = (deg) => { const a = deg * Math.PI / 180, g = [Math.sin(a), -Math.cos(a), 0];   // gravity, the phone turned clockwise
+      const beta = Math.asin(-g[1]) * 180 / Math.PI, gamma = Math.atan2(g[0], -g[2] || -1e-9) * 180 / Math.PI;
+      return window.feed(beta, Math.abs(gamma) > 90 ? Math.sign(gamma) * 89.9 : gamma)[0]; };
+    out.wheel = [wheel(14), wheel(-14)];
+    return out;
+  });
+  for (const b0 of [20, 45, 90, 120, 150, 180]) {
+    const { n, fwd, back } = r[b0];
+    expect(Math.abs(n[0]) + Math.abs(n[1]), `neutral at ${b0}°`).toBeLessThan(0.05);
+    expect(fwd, `forward at ${b0}°`).toBeGreaterThan(0.4);
+    expect(back, `back at ${b0}°`).toBeLessThan(-0.4);
+    expect(Math.abs(fwd - r[20].fwd), `same feel at ${b0}°`).toBeLessThan(0.08);
+  }
+  expect(r.roll[0]).toBeGreaterThan(0.3); expect(r.roll[1]).toBeLessThan(-0.3);
+  expect(r.wheel[0]).toBeGreaterThan(0.4); expect(r.wheel[1]).toBeLessThan(-0.4);
+});
+
+test('the neutral pose follows a slow drift back, but held forward tilt and hard braking never fade', async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(tiltKit);
+  const r = await page.evaluate(() => {
+    const I = window.__game.input; I.enabled = true;
+    window.calib(40, 0);
+    const fwd = window.feed(28, 0, 8)[1];                   // 8 s of forward: it stays
+    const hard = window.feed(70, 0, 4)[1];                  // 4 s of hard braking: it stays
+    window.feed(40, 0, 0.5);
+    const drift0 = window.feed(48, 0, 0.5)[1];              // the hands creep back 8°: a mild brake at first…
+    const drift1 = window.feed(48, 0, 5)[1];                // …that fades as the neutral pose follows
+    const fwd2 = window.feed(36, 0, 0.5)[1];                // and 12° forward from there pushes about as before
+    window.feed(90, 0, 20);                                 // a long hard brake after that moves nothing more
+    const cap = I.drift;
+    return { fwd, hard, drift0, drift1, fwd2, cap };
+  });
+  expect(r.fwd).toBeGreaterThan(0.45); expect(r.hard).toBe(-1);
+  expect(r.drift0).toBeLessThan(-0.25); expect(r.drift1).toBeGreaterThan(-0.08);
+  expect(Math.abs(r.fwd2 - r.fwd)).toBeLessThan(0.08);
+  expect(r.cap).toBeLessThanOrEqual(0.3001);
+});
+
+test('the neutral pose is the last steady one, and a screen rotation during a run measures it again', async ({ page }) => {
+  await openGame(page);
+  await page.evaluate(tiltKit);
+  // the hand still moving after the tap: only the steady end counts
+  const n = await page.evaluate(() => { const I = window.__game.input; I.tilt = true; I.startCalibration(); window.feed(10, 0, 0.2); window.feed(45, 0, 0.3); I.endCalibration(); return window.feed(45, 0); });
+  expect(Math.abs(n[1])).toBeLessThan(0.05);
+  // the screen turns to landscape: the tilt pauses for a moment, then works from the new pose
+  await page.evaluate(() => { Object.defineProperty(screen.orientation, 'angle', { get: () => 90, configurable: true }); window.dispatchEvent(new Event('orientationchange')); });
+  expect(await page.evaluate(() => !!window.__game.input.calib)).toBe(true);
+  await page.evaluate(() => window.feed(0, -40, 0.2));
+  await page.waitForTimeout(700);
+  const after = await page.evaluate(() => { const I = window.__game.input; const n = window.feed(0, -40, 0.3); return { calib: !!I.calib, n, fwd: window.feed(0, -52)[1], right: window.feed(12, -40)[0] }; });
+  expect(after.calib).toBe(false);
+  expect(Math.abs(after.n[0]) + Math.abs(after.n[1])).toBeLessThan(0.05);
+  expect(Math.abs(after.fwd) + Math.abs(after.right)).toBeGreaterThan(0.4);
+});
+
 test('refused motion permission falls back to touch control', async ({ page }) => {
   await page.addInitScript(() => { window.DeviceOrientationEvent.requestPermission = () => Promise.resolve('denied'); });
   await openGame(page);

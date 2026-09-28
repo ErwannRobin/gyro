@@ -258,7 +258,7 @@ class Game {
     });
     window.addEventListener('blur', () => { if (this.state === 'play' && !this.mobile) this.pause(); });
     window.addEventListener('pagehide', () => this.audio.suspend());
-    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement) && !e.target.closest('#sheet, #abScroll')) e.preventDefault(); }, { passive: false });
+    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement) && !e.target.closest('#sheet, #abScroll, #insScroll')) e.preventDefault(); }, { passive: false });
     document.addEventListener('gesturestart', (e) => e.preventDefault());
     document.addEventListener('dblclick', (e) => e.preventDefault());
     this.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.glLost = true; if (this.state === 'play') this.pause(); });
@@ -694,7 +694,7 @@ class Game {
     if (!this.lookRef) this.lookRef = { h: I.heading, p: I.pitch, x: I.sx };
     const R = this.lookRef, L = this.lookV || (this.lookV = { yaw: 0, pitch: 0 });
     L.yaw = I.heading !== null && R.h !== null ? wrapAngle(I.heading - R.h) : clamp((I.sx - R.x) * 2.2, -1.6, 1.6);
-    L.pitch = I.pitch - R.p;
+    L.pitch = wrapAngle(I.pitch - R.p);
     this.cam.gyroLook = L;
   }
 
