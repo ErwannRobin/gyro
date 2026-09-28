@@ -32,17 +32,20 @@ test('all nine worlds render without WebGL errors and with few draw calls', asyn
   expect(errors).toEqual([]);
 });
 
-test('share builds a video (or an image) of the run', async ({ page }) => {
+test('share builds a video of the run from the rendered pictures', async ({ page }) => {
   await openGame(page);
   const r = await page.evaluate(async () => {
     const g = window.__game, R = g.replay;
     g.halt = true;                                              // the test drives the frames; keep the live loop out of the timing
-    for (let k = 0; k < 10; k++) { g.tick(1 / 30, true); R.capture(g.canvas, 1, 10 * k, false); await new Promise((res) => setTimeout(res, 80)); }
-    const f = await R.make({ dist: 123, score: 4567, best: 200, record: true, recordTxt: 'NEW RECORD', tag: '', accent: '#4ef2ff', accent2: '#ff4fd8', portrait: true }, () => {});
-    return f && { type: f.type, size: f.size, name: f.name };
+    for (let k = 0; k < 10; k++) { g.tick(1 / 30, true); R.capture(g.canvas, 0.5, 10 * k, 10, k > 7); await new Promise((res) => setTimeout(res, 80)); }
+    const info = { dist: 123, score: 4567, best: 200, record: true, recordTxt: 'NEW RECORD', tag: '', accent: '#4ef2ff', accent2: '#ff4fd8' };
+    const f = await R.make(info, { speed: 'fast', fmt: 'wide', res: 480 }, () => {});
+    return f && { type: f.type, size: f.size, name: f.name, pics: R.all().length };
   });
   expect(r).not.toBeNull();
-  expect(r.type).toMatch(/^(video\/(mp4|webm)|image\/png)$/);
+  expect(r.pics).toBe(10);
+  expect(r.type).toMatch(/^video\/(mp4|webm)$/);
+  expect(r.name).toMatch(/^gyroll-123m\.(mp4|webm)$/);
   expect(r.size).toBeGreaterThan(10000);
 });
 

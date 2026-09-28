@@ -78,8 +78,6 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 #speedo .u{font-size:11px;font-weight:800;letter-spacing:.18em;color:var(--dim);margin-bottom:3px}
 #speedBar{position:absolute;left:0;bottom:-7px;height:3px;width:86px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden}
 #speedBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px}
-#ctrlTag{position:absolute;right:calc(var(--sar) + 16px);bottom:calc(var(--sab) + 18px);font-size:11px;font-weight:800;letter-spacing:.16em;color:var(--dim);
-  text-shadow:0 2px 6px rgba(0,0,0,.8)}
 #power{position:absolute;left:50%;bottom:calc(var(--sab) + 44px);transform:translateX(-50%);width:min(56vw,250px);padding:8px 10px;
   text-shadow:0 2px 6px rgba(0,0,0,.85);pointer-events:none;-webkit-tap-highlight-color:transparent}
 #power .row{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;font-size:11px;font-weight:900;letter-spacing:.12em;margin-bottom:5px;white-space:nowrap}
@@ -94,6 +92,8 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 #power.ready .bar{animation:pwPulse .6s ease-in-out infinite alternate}
 #power.ready #pwTxt,#power.on #pwTxt{color:#fff3c4}
 #power.on #pwFill{background:linear-gradient(90deg,#fff,#fff3c4,var(--gold));box-shadow:0 0 12px var(--gold)}
+/* landscape: the gauge sits in the bottom right corner, its bar on the same line as the speed bar */
+@media (orientation:landscape){ #power{left:auto;right:calc(var(--sar) + 6px);bottom:calc(var(--sab) + 1px);transform:none;width:min(34vw,250px)} }
 @keyframes pwPulse{from{box-shadow:0 0 0 1px rgba(255,211,107,.5),0 0 6px rgba(255,211,107,.4)}to{box-shadow:0 0 0 2px rgba(255,230,160,1),0 0 22px rgba(255,211,107,.95)}}
 #starGlow{position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0;transition:opacity .5s;
   background:radial-gradient(ellipse 90% 80% at 50% 50%,rgba(255,210,110,0) 50%,rgba(255,196,80,.32) 100%)}
@@ -106,6 +106,18 @@ body.star #starGlow{opacity:1}
 .toast.cyan{color:var(--accent)}
 .toast.pink{color:var(--accent2)}
 @keyframes toast{0%{opacity:0;transform:translateY(14px) scale(.7)}12%{opacity:1;transform:translateY(0) scale(1.08)}22%{transform:scale(1)}75%{opacity:1}100%{opacity:0;transform:translateY(-26px) scale(.96)}}
+/* collapse warning: the falling edge of the track is catching up with the ball */
+#fallWarn{position:absolute;left:50%;bottom:calc(var(--sab) + 100px);width:min(80vw,300px);display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;
+  opacity:0;transform:translateX(-50%) scale(.85);transition:opacity .25s,transform .4s cubic-bezier(.3,1.5,.4,1)}
+#fallWarn.on{opacity:1;transform:translateX(-50%)}
+#fallWarn b{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:900;letter-spacing:.14em;color:#ff6a86;text-shadow:0 0 2px #000,0 2px 10px rgba(0,0,0,.85)}
+#fallWarn.on b{animation:fwPulse .45s ease-in-out infinite alternate}
+#fallWarn b .ic{width:20px;height:20px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.8))}
+#fallWarn small{font-size:11px;font-weight:800;letter-spacing:.08em;color:#ffdbe2;text-shadow:0 0 2px #000,0 1px 5px rgba(0,0,0,.9)}
+#fallWarn .bar{width:100%;height:5px;border-radius:3px;background:rgba(255,255,255,.16);box-shadow:0 1px 4px rgba(0,0,0,.4);overflow:hidden}
+#fallWarn .bar i{display:block;height:100%;width:100%;border-radius:3px;background:linear-gradient(90deg,#ff2a55,#ff9d5c);transition:width .15s linear}
+@keyframes fwPulse{from{transform:scale(1)}to{transform:scale(1.07)}}
+@media (orientation:landscape){ #fallWarn{bottom:calc(var(--sab) + 12px);width:min(30vw,280px)} #fallWarn b{font-size:16px} }
 #vignette{position:fixed;inset:0;pointer-events:none;z-index:3;background:radial-gradient(ellipse 85% 75% at 50% 48%,rgba(0,0,0,0) 55%,rgba(2,3,10,.5) 100%)}
 #danger{position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0;
   background:radial-gradient(120% 60% at 50% 115%,rgba(255,40,70,.55),rgba(255,40,70,0) 60%)}
@@ -154,8 +166,15 @@ body.star #starGlow{opacity:1}
   background:rgba(9,12,26,.7);backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);
   border-top:1px solid rgba(255,255,255,.14);box-shadow:0 -24px 60px rgba(0,0,0,.4);
   transform:translateY(106%);visibility:hidden;transition:transform .55s cubic-bezier(.32,.72,0,1),visibility .55s}
-#sheet::before{content:"";position:absolute;top:8px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:rgba(255,255,255,.3)}
 #menu.opts #sheet{transform:none;visibility:visible}
+#sheet.drag{transition:none}
+/* the grip: drag it down (or right, for the side panel) to close the settings */
+#sheetGrip{position:absolute;z-index:1;left:0;right:0;top:0;height:32px;touch-action:none;cursor:grab}
+#sheetGrip::before{content:"";position:absolute;top:8px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:rgba(255,255,255,.3);transition:background .2s,width .25s,margin .25s,height .25s}
+#sheetGrip:hover::before,#sheet.drag #sheetGrip::before{background:rgba(255,255,255,.6);width:48px;margin-left:-24px}
+#sheet.drag #sheetGrip{cursor:grabbing}
+/* wide screens: the settings sheet is a centered card, not a full-width band */
+@media (min-width:640px){ #sheet{left:0;right:0;margin:0 auto;width:min(560px,calc(100% - 32px));border:1px solid rgba(255,255,255,.14);border-bottom:0} }
 .sheetIn{max-width:420px;margin:0 auto;display:flex;flex-direction:column;align-items:center}
 .optRow{width:100%;display:flex;flex-direction:column;align-items:center;gap:7px;margin-top:14px;opacity:0;transform:translateY(22px);
   transition:opacity .3s,transform .55s cubic-bezier(.3,1.25,.4,1)}
@@ -249,8 +268,6 @@ body.star #starGlow{opacity:1}
 .shareBtn{position:relative;overflow:hidden}
 .shareBtn .prog{position:absolute;left:0;bottom:0;height:3px;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .2s}
 .shareBtn.busy{opacity:.75}
-.shareBtn.ready{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 0 18px rgba(78,242,255,.35);animation:shReady 1s ease-in-out infinite alternate}
-@keyframes shReady{from{box-shadow:0 0 0 1px var(--accent),0 0 8px rgba(78,242,255,.25)}to{box-shadow:0 0 0 2px var(--accent),0 0 24px rgba(78,242,255,.6)}}
 #ovMode{margin-top:6px;font-size:12px;font-weight:800;letter-spacing:.2em;color:var(--accent)}
 #sheet .skins{margin-top:0}
 #permMsg{margin-left:auto;margin-right:auto}
@@ -299,6 +316,82 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 @keyframes rays{0%{opacity:0;transform:scale(.3) rotate(0)}20%{opacity:1}100%{opacity:0;transform:scale(1.3) rotate(60deg)}}
 .row2{display:flex;gap:10px;width:100%;max-width:420px}
 .row2 .ghostBtn{flex:1}
+/* SHARE popup: the preview on top (on the left in landscape), then the choice between a screenshot
+   and a video, their settings, and DOWNLOAD / SHARE at the bottom (off until there is a file) */
+#btnShare{display:flex;align-items:center;justify-content:center;gap:9px}
+#btnShare .ic{width:20px;height:20px}
+#shareBox{position:fixed;inset:0;z-index:30;display:flex;align-items:flex-end;justify-content:center;background:rgba(3,4,12,.55);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;transition:opacity .3s}
+#shareBox.open{opacity:1}
+#shPanel{position:relative;width:100%;max-width:560px;height:100%;display:flex;flex-direction:column;gap:12px;
+  padding:calc(var(--sat) + 12px) calc(var(--sar) + 16px) calc(var(--sab) + 16px) calc(var(--sal) + 16px);
+  background:rgba(9,12,26,.94);box-shadow:0 -20px 60px rgba(0,0,0,.5);transform:translateY(40px);transition:transform .45s cubic-bezier(.3,1.2,.4,1)}
+#shareBox.open #shPanel{transform:none}
+#shHead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:none}
+#shHead h3{font-size:14px;font-weight:900;letter-spacing:.22em}
+#shView{position:relative;flex:1 1 auto;min-height:120px;display:flex;align-items:center;justify-content:center}
+#shCanvas,#shVideo{display:block;border-radius:16px;background:#05060d;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 12px 40px rgba(0,0,0,.5)}
+#shSide{display:flex;flex-direction:column;gap:12px;flex:none;min-height:0}
+#shKinds{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.shTile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:12px 10px;border-radius:18px;text-align:center;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);transition:background .25s,border-color .25s}
+.shTile span{display:flex;flex-direction:column;gap:4px}
+.shTile .ic{width:28px;height:28px;color:var(--accent)}
+.shTile b{font-size:13px;font-weight:900;letter-spacing:.12em}
+.shTile small{font-size:11.5px;font-weight:600;line-height:1.35;color:var(--dim)}
+.shTile.on{background:rgba(78,242,255,.14);border-color:var(--accent)}
+.shTile:disabled{opacity:.45;cursor:default}
+.shTile:not(:disabled):active{transform:scale(.97)}
+#shareBox:not([data-kind=""]) .shTile{flex-direction:row;gap:8px;padding:6px 10px}
+#shareBox:not([data-kind=""]) .shTile small{display:none}
+#shareBox:not([data-kind=""]) .shTile .ic{width:20px;height:20px}
+#shCtrls{display:flex;flex-direction:column;gap:10px}
+#shareBox[data-kind=""] #shCtrls{display:none}
+#shareBox[data-kind="image"] .vOnly,#shareBox[data-kind="video"] .iOnly{display:none!important}
+.shRow{display:grid;grid-template-columns:76px minmax(0,1fr);align-items:center;column-gap:10px}
+.shRow .optLbl{text-align:left}
+.shRow .seg{width:100%}
+.shRow .seg button{flex:1 1 0;min-width:0;padding:6px 4px;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.shp{display:inline-block;border:2px solid currentColor;border-radius:3px;flex:none}
+[data-fmt="story"] .shp{width:10px;height:16px}
+[data-fmt="square"] .shp{width:14px;height:14px}
+[data-fmt="wide"] .shp{width:18px;height:11px}
+#shPicker{grid-template-columns:44px minmax(0,1fr) 64px}
+#shPicker input{width:100%}
+#shFrameLbl{font-size:12px;font-weight:800;letter-spacing:.06em;text-align:right;color:var(--dim)}
+#btnShPlay .pa,#btnShPlay.on .pl{display:none}
+#btnShPlay.on .pa{display:inline}
+#shInfo{font-size:12px;font-weight:700;line-height:1.4;color:var(--dim);text-align:center}
+#btnShMake{margin:0;max-width:none}
+#shFoot{display:flex;gap:10px}
+#shFoot > button{flex:1 1 0;margin:0;height:54px;min-height:0;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;transition:opacity .3s,filter .3s}
+#shFoot .ic{width:20px;height:20px}
+#shFoot > button:disabled{opacity:.35;filter:saturate(.2);cursor:default;box-shadow:none}
+#shFoot > button:disabled::after{display:none}
+/* phones in portrait: a sheet from the bottom with rounded top corners */
+@media (orientation:portrait){ #shPanel{height:calc(100% - var(--sat) - 10px);border-radius:26px 26px 0 0;border:1px solid rgba(255,255,255,.12);border-bottom:0;padding-top:12px} }
+/* landscape: the preview on the left, the choices on the right */
+@media (orientation:landscape){
+  #shPanel{max-width:none;display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);grid-template-rows:auto minmax(0,1fr) auto;column-gap:22px;row-gap:12px}
+  #shHead{grid-column:2;grid-row:1}
+  #shView{grid-column:1;grid-row:1 / span 3;min-height:0}
+  #shSide{grid-column:2;grid-row:2;overflow-y:auto;overscroll-behavior:contain;justify-content:flex-start}
+  #shFoot{grid-column:2;grid-row:3}
+}
+/* big screens: a floating card */
+@media (orientation:landscape) and (min-height:641px){
+  #shareBox{align-items:center}
+  #shPanel{width:min(1000px,calc(100% - 48px));height:min(700px,calc(100% - 48px));padding:20px 22px 22px;border-radius:26px;border:1px solid rgba(255,255,255,.12)}
+}
+@media (orientation:landscape) and (max-height:430px){
+  #shPanel{row-gap:8px;padding-top:calc(var(--sat) + 10px);padding-bottom:calc(var(--sab) + 12px)}
+  #shHead .icoBtn{width:36px;height:36px;border-radius:12px}
+  .shTile{min-height:40px} #shSide,#shCtrls{gap:8px}
+  #shFoot > button{height:46px}
+  .shRow .seg{padding:3px} .shRow .seg .pill{top:3px;bottom:3px} .shRow .seg button{min-height:32px}
+  #shInfo{font-size:11px}
+  #btnShMake{min-height:42px;padding:8px 18px}
+}
 /* About: a circle opens from the About button; the marble draws its track while the numbers count up
    and the story rises line after line. */
 #about,#install{position:fixed;inset:0;z-index:30;background:rgba(5,7,16,.8);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);
@@ -307,6 +400,8 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 #abScroll,#insScroll{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;text-align:center;
   padding:calc(var(--sat) + 56px) calc(var(--sar) + 24px) calc(var(--sab) + 40px) calc(var(--sal) + 24px)}
 #abScroll > *,#insScroll > *{max-width:440px;margin-left:auto;margin-right:auto}
+#abScroll > .abSec{max-width:1060px}
+#abScroll > #abLead{max-width:600px}
 .abIn{opacity:0;transform:translateY(24px);filter:blur(6px)}
 #about.open .abIn,#install.open .abIn{animation:rise .9s calc(.28s + var(--d) * .1s) cubic-bezier(.2,.9,.3,1) both}
 #abTrack{display:block;width:min(300px,78vw);height:auto;margin:0 auto;overflow:visible}
@@ -324,7 +419,16 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 .abStat span{font-size:9px;font-weight:800;letter-spacing:.14em;line-height:1.35;color:var(--dim)}
 #abScroll p{margin-top:16px;font-size:15px;line-height:1.55;font-weight:500;color:rgba(235,242,255,.86);text-align:left}
 #abScroll #abLead{margin-top:22px;font-size:17px;font-weight:700;font-style:italic;color:#fff;text-align:center}
-#abLinks{margin-top:24px;display:flex;flex-direction:column;gap:10px}
+/* the rules and the making of, as cards: one column on a phone, up to three on a wide screen */
+.abSec{margin-top:30px}
+.abSec h3{margin:0 0 12px 4px;font-size:11px;font-weight:900;letter-spacing:.3em;color:var(--accent);text-align:left}
+.abGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:12px}
+.abCard{padding:16px 18px 18px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);text-align:left}
+.abCard .ic{width:26px;height:26px;color:var(--accent)}
+.abCard h4{margin-top:8px;font-size:15px;font-weight:800;letter-spacing:.02em;line-height:1.3;color:#fff}
+#abScroll .abCard p{margin-top:6px;font-size:13.5px;line-height:1.55;color:rgba(235,242,255,.8)}
+@media (min-width:900px){ #abScroll{padding-left:calc(var(--sal) + 40px);padding-right:calc(var(--sar) + 40px)} #abScroll > #abLinks{max-width:640px;flex-direction:row} #abLinks a{flex:1 1 0} }
+#abLinks{margin-top:28px;display:flex;flex-direction:column;gap:10px}
 #abLinks a{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:18px;text-align:left;color:#fff;text-decoration:none;
   background:var(--glass);border:1px solid var(--glass-brd);transition:transform .25s cubic-bezier(.3,1.4,.4,1),border-color .25s}
 #abLinks a:active{transform:scale(.97)}
@@ -434,7 +538,10 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   #menu.opts #btnOpts{transform:translate(calc(-50% + var(--dX,0px)),var(--dY,0px))}   /* DONE glides to the middle of the top bar */
   #sheet{left:var(--sL);top:calc(var(--sat) + 64px);max-height:none;border-radius:26px 0 0 0;padding:14px calc(var(--sar) + 18px) calc(var(--sab) + 14px) 18px;transform:translateX(106%);
     display:flex;flex-direction:column}
-  #sheet::before{display:none}
+  #sheet{width:auto;margin:0;right:0;border:0;border-top:1px solid rgba(255,255,255,.14);border-left:1px solid rgba(255,255,255,.1)}
+  #sheetGrip{right:auto;bottom:0;width:14px;height:auto}
+  #sheetGrip::before{top:50%;left:5px;width:5px;height:36px;margin:-18px 0 0}
+  #sheetGrip:hover::before,#sheet.drag #sheetGrip::before{width:5px;height:48px;margin:-24px 0 0}
   .sheetIn{max-width:none;width:100%;margin:auto 0}
   /* every setting on one grid: the label, then its control, all with the same left and right edges */
   .optRow{display:grid;grid-template-columns:78px minmax(0,1fr);column-gap:12px;align-items:center;margin-top:10px}
@@ -548,8 +655,8 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     <button class="icoBtn" id="btnPause" aria-label="Pause">❚❚</button>
   </div>
   <div id="speedo"><span class="v num" id="hSpeed">0</span><span class="u">KM/H</span><div id="speedBar"><i id="hSpeedBar"></i></div></div>
-  <div id="ctrlTag"></div>
   <div id="power" role="button" aria-label="Star power"><div class="row"><span id="pwCoin" class="num">×1</span><span id="pwTxt"></span></div><div class="bar"><i id="pwFill"></i></div></div>
+  <div id="fallWarn" aria-live="polite"><b><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.6l9.4 16.3H2.6z"/><path class="stk" d="M12 9.6v4.8"/><circle cx="12" cy="17.2" r="1.2"/></svg><span data-i18n="fallWarn"></span></b><small id="fwTxt"></small><div class="bar"><i id="fwBar"></i></div></div>
   <div id="toasts"></div>
 </div>
 
@@ -577,6 +684,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     <div id="permMsg" class="hidden"></div>
   </div>
   <div id="sheet">
+    <div id="sheetGrip" aria-hidden="true"></div>
     <div class="sheetIn">
       <div class="optRow" style="--i:0"><button class="tg" id="tgKid"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 2.9l7.4 2.8v5.5c0 4.6-3 8.5-7.4 9.9-4.4-1.4-7.4-5.3-7.4-9.9V5.7z"/><path class="stk" d="M8.6 12.1l2.4 2.4 4.5-4.6"/></svg><span data-i18n="kid"></span></button></div>
       <div class="optRow" id="ctrlRow" style="--i:1"><span class="optLbl" data-i18n="control"></span><div class="seg" id="ctrlSeg"><i class="pill"></i><button data-ctrl="tilt" data-i18n="ctrlTilt"></button><button data-ctrl="touch" data-i18n="ctrlTouch"></button></div></div>
@@ -585,6 +693,31 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     </div>
   </div>
   <button id="btnOpts" aria-controls="sheet" aria-expanded="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M3.5 8h17M3.5 16h17"/><circle class="k1" cx="15" cy="8" r="2.8"/><circle class="k2" cx="9" cy="16" r="2.8"/></svg><span class="lb1" data-i18n="options"></span><span class="lb2" data-i18n="done"></span></button>
+</div>
+
+<div class="hidden" id="shareBox" role="dialog" aria-modal="true" aria-labelledby="shTitle" data-kind="">
+  <div id="shPanel">
+    <div id="shHead"><h3 id="shTitle" data-i18n="shTitle"></h3><button class="icoBtn" id="btnShClose" data-i18n-aria="close"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div id="shView"><canvas id="shCanvas"></canvas><video id="shVideo" class="hidden" playsinline muted loop controls></video></div>
+    <div id="shSide">
+      <div id="shKinds">
+        <button class="shTile" data-kind="image"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M4.5 7.5h3l1.6-2.3h5.8l1.6 2.3h3a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18V9a1.5 1.5 0 0 1 1.5-1.5z"/><circle class="stk" cx="12" cy="13.2" r="3.6"/></svg><span><b data-i18n="shImg"></b><small data-i18n="shImgSub"></small></span></button>
+        <button class="shTile" data-kind="video"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect class="stk" x="2.8" y="6" width="13.4" height="12" rx="2.6"/><path class="stk" d="M16.2 10.4l5-2.9v9l-5-2.9z"/></svg><span><b data-i18n="shVid"></b><small data-i18n="shVidSub"></small></span></button>
+      </div>
+      <div id="shCtrls">
+        <div class="shRow iOnly" id="shPicker"><button class="tg icon" id="btnShPlay" data-i18n-aria="shPlay"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="pl" d="M8 5.2v13.6l11-6.8z"/><path class="pa" d="M7 5.2h3.4v13.6H7zM13.6 5.2H17v13.6h-3.4z"/></svg></button><input type="range" id="shFrame" min="0" max="0" value="0" data-i18n-aria="shFrame"><span id="shFrameLbl" class="num"></span></div>
+        <div class="shRow"><span class="optLbl" data-i18n="shFormat"></span><div class="seg" id="shFmt"><i class="pill"></i><button data-fmt="story"><i class="shp"></i>9:16</button><button data-fmt="square"><i class="shp"></i>1:1</button><button data-fmt="wide"><i class="shp"></i>16:9</button></div></div>
+        <div class="shRow vOnly"><span class="optLbl" data-i18n="shSpeed"></span><div class="seg" id="shSpeed"><i class="pill"></i><button data-speed="fast" data-i18n="shFast"></button><button data-speed="real" data-i18n="shReal"></button></div></div>
+        <div class="shRow vOnly"><span class="optLbl" data-i18n="shQuality"></span><div class="seg" id="shRes"><i class="pill"></i><button data-res="480">480p</button><button data-res="720">720p</button><button data-res="1080">1080p</button></div></div>
+        <p id="shInfo" class="vOnly"></p>
+        <button class="ghostBtn shareBtn vOnly" id="btnShMake"><span class="lbl"></span><i class="prog"></i></button>
+      </div>
+    </div>
+    <div id="shFoot">
+      <button class="ghostBtn" id="btnShDl" disabled><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5M4.5 19.5h15"/></svg><span data-i18n="shDownload"></span></button>
+      <button class="bigBtn" id="btnShShare" disabled><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.5v10.5M8.2 7.3L12 3.5l3.8 3.8"/><path class="stk" d="M8 10H5.8v10.2h12.4V10H16"/></svg><span data-i18n="shShare"></span></button>
+    </div>
+  </div>
 </div>
 
 <div class="hidden" id="about" role="dialog" aria-modal="true" aria-labelledby="abTitle">
@@ -606,10 +739,30 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
       <div class="abStat"><b class="num" data-to="libs">0</b><span data-i18n="statLibs"></span></div>
     </div>
     <p id="abLead" class="abIn" style="--d:2" data-i18n="aboutLead"></p>
-    <p class="abIn" style="--d:3" data-i18n="aboutP1"></p>
-    <p class="abIn" style="--d:4" data-i18n="aboutP2"></p>
+    <section class="abSec abIn" style="--d:3" aria-labelledby="abPlayH">
+      <h3 id="abPlayH" data-i18n="abPlay"></h3>
+      <div class="abGrid">
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle class="stk" cx="12" cy="10.2" r="5.2"/><path class="stk" d="M2.8 19.4h18.4M9.6 8.4a3 3 0 0 1 3.6-1"/></svg><h4 data-i18n="abRulesT"></h4><p data-i18n="abRules"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.3l2.7 5.4 6 .9-4.35 4.2 1 5.95L12 16.95l-5.35 2.8 1-5.95L3.3 9.6l6-.9z"/></svg><h4 data-i18n="abStarT"></h4><p data-i18n="abStar"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M5.5 21V3.6M5.5 4.2h11.8l-2.4 4.1 2.4 4.1H5.5"/></svg><h4 data-i18n="abModesT"></h4><p data-i18n="abModes"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M13.4 2.6L5 13.6h6.2l-1 7.8 8.4-11.2h-6.3z"/></svg><h4 data-i18n="abBonusT"></h4><p data-i18n="abBonus"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle class="stk" cx="12" cy="12" r="9"/><path class="stk" d="M3 12h18M12 3c3.2 3.3 3.2 14.7 0 18M12 3c-3.2 3.3-3.2 14.7 0 18"/></svg><h4 data-i18n="abWorldsT"></h4><p data-i18n="abWorlds"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle class="stk" cx="8.2" cy="14.6" r="4.6"/><path class="stk" d="M13.8 19.2h7.4M15.4 14.4h5.8M17 9.6h4.2M6.6 12.9a2 2 0 0 1 2.2-.6"/></svg><h4 data-i18n="abSkinsT"></h4><p data-i18n="abSkins"></p></article>
+      </div>
+    </section>
+    <section class="abSec abIn" style="--d:4" aria-labelledby="abMadeH">
+      <h3 id="abMadeH" data-i18n="abMade"></h3>
+      <div class="abGrid">
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.2c.7 4.6 4.2 8.1 8.8 8.8-4.6.7-8.1 4.2-8.8 8.8-.7-4.6-4.2-8.1-8.8-8.8 4.6-.7 8.1-4.2 8.8-8.8z"/><path class="stk" d="M19 3v3.6M17.2 4.8h3.6"/></svg><h4 data-i18n="abAiT"></h4><p data-i18n="abAi"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"/><path class="stk" d="M4 7.4l8 4.6 8-4.6M12 12v9.2"/></svg><h4 data-i18n="ab3dT"></h4><p data-i18n="ab3d"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle class="stk" cx="12" cy="12" r="3.4"/><path class="stk" d="M4.2 12a7.8 7.8 0 0 1 13.4-5.4M19.8 12a7.8 7.8 0 0 1-13.4 5.4"/><path class="stk" d="M18 3.2v3.7h-3.7M6 20.8v-3.7h3.7"/></svg><h4 data-i18n="abPhysT"></h4><p data-i18n="abPhys"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M2.8 12h2.4l2.2-5.6 3.2 11.4 3.2-14 3.1 14 2.2-5.8h2.1"/></svg><h4 data-i18n="abSoundT"></h4><p data-i18n="abSound"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect class="stk" x="2.8" y="6" width="13.4" height="12" rx="2.6"/><path class="stk" d="M16.2 10.4l5-2.9v9l-5-2.9z"/></svg><h4 data-i18n="abVideoT"></h4><p data-i18n="abVideo"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect class="stk" x="7.4" y="3.2" width="9.2" height="17.6" rx="2.4" transform="rotate(-16 12 12)"/><path class="stk" d="M3.4 16.2a9.4 9.4 0 0 1 .3-9M20.6 7.8a9.4 9.4 0 0 1-.3 9"/></svg><h4 data-i18n="abGyroT"></h4><p data-i18n="abGyro"></p></article>
+      </div>
+    </section>
     <div id="abLinks" class="abIn" style="--d:5">
-      <a id="abRepo" target="_blank" rel="noopener"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8a10.2 10.2 0 0 0-3.2 19.9c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.6 1 1.6 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.6-1.4-2.3-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.5-1.3.1-2.7 0 0 .9-.3 2.8 1a9.6 9.6 0 0 1 5.1 0c1.9-1.3 2.8-1 2.8-1 .6 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A10.2 10.2 0 0 0 12 1.8z"/></svg><span><b data-i18n="linkRepo"></b><small>github.com/ErwannRobin/gyro</small></span></a>
+      <a id="abRepo" target="_blank" rel="noopener"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8a10.2 10.2 0 0 0-3.2 19.9c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.6 1 1.6 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.6-1.4-2.3-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.5-1.3.1-2.7 0 0 .9-.3 2.8 1a9.6 9.6 0 0 1 5.1 0c1.9-1.3 2.8-1 2.8-1 .6 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A10.2 10.2 0 0 0 12 1.8z"/></svg><span><b data-i18n="linkRepo"></b><small data-i18n="linkRepoSub"></small></span></a>
       <a id="abX" target="_blank" rel="noopener"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.8 2.8h3.1l-6.8 7.8 8 10.6h-6.3l-4.9-6.4-5.6 6.4H2.2l7.3-8.3L1.8 2.8h6.4l4.4 5.9zm-1.1 16.5h1.7L7.4 4.6H5.5z"/></svg><span><b data-i18n="linkX"></b><small>x.com/diwann</small></span></a>
     </div>
     <div id="abFoot" class="abIn" style="--d:6" data-i18n="aboutFoot"></div>
@@ -668,7 +821,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   </div>
   <div id="ovBtns">
     <button class="bigBtn" id="btnRetry" data-i18n="retry"></button>
-    <button class="ghostBtn shareBtn" id="btnShare"><span class="lbl"></span><i class="prog"></i></button>
+    <button class="ghostBtn" id="btnShare" aria-controls="shareBox"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.5v10.5M8.2 7.3L12 3.5l3.8 3.8"/><path class="stk" d="M8 10H5.8v10.2h12.4V10H16"/></svg><span data-i18n="share"></span></button>
     <button class="ghostBtn" id="btnMenu" data-i18n="menu"></button>
   </div>
 </div>

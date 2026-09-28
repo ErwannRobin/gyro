@@ -10,7 +10,7 @@ GYROLL is an endless 3D marble game for your phone. Tilt the phone to roll a hea
 
 ![The nine worlds of GYROLL](docs/worlds.jpg)
 
-The whole game is **one self-contained `index.html` file** (about 422 KB, about 6 660 lines): HTML, CSS, JavaScript, GLSL shaders and synthesized audio.
+The whole game is **one self-contained `index.html` file** (about 465 KB, about 7 180 lines): HTML, CSS, JavaScript, GLSL shaders and synthesized audio.
 - It uses no libraries and no external assets, and it needs no network to play.
 - It is assembled from readable source files in [`src/`](src) by a tiny build script that has no dependencies.
 - A few optional files next to it make it installable and nice to share: icons, a manifest, a service worker and a preview image.
@@ -20,7 +20,7 @@ The whole game is **one self-contained `index.html` file** (about 422 KB, about 
 ## Features
 
 - **Gyroscope control.** Tilt left/right to steer, forward to speed up, back to brake and roll backwards. It handles the iOS motion permission prompt, calibrates to your natural holding position, and smooths the sensor signal. The tilt is measured as two angles in the phone's own frame, so it feels the same whether you hold the phone almost flat, upright, or above your face lying in bed: forward is always the top edge moving away from your eyes, and the right edge lower is always right (held upright, that is the steering-wheel turn). The neutral pose is the last steady pose before the run starts. In a long run, if your hands slowly creep back, a mild brake held for over a second is taken as that creep and the neutral pose follows it, so you never need more and more tilt to go (a push you hold forward never fades). If the screen rotates during a run, the neutral pose is measured again in a split second. With the gyroscope your fingers are free: drag on the screen to swing the camera around the ball (it eases back behind the ball when you let go), pinch to move it closer or farther (the distance is remembered), and double-tap to fire star power.
-- **Touch control.** Choose **Gyroscope** or **Touch** in the options. Touch control is a floating joystick where you put your finger. If the sensors are missing or the permission is refused, the game switches to touch control and keeps that choice. On desktop you can use the arrow keys, WASD, ZQSD or drag with the mouse, and the mouse wheel zooms the camera.
+- **Touch control.** Choose **Gyroscope** or **Touch** in the options. Touch control is a floating joystick where you put your finger. If the sensors are missing or the permission is refused, the game switches to touch control and keeps that choice. On desktop you can use the arrow keys, WASD, ZQSD or drag with the left mouse button. The camera is yours too: drag with the middle or right button to look around the ball (it eases back behind the ball when you let go), and the mouse wheel zooms. On a trackpad, a two-finger swipe turns the view and a pinch zooms.
 - **Endless procedural track** that gets harder with distance:
   - straights, big curves, zigzags, hairpins and narrow passages
   - banked platforms, holes, gaps with jumps, boosters, posts and moving sliders
@@ -29,7 +29,8 @@ The whole game is **one self-contained `index.html` file** (about 422 KB, about 
 - **Two game modes:**
   - **Training**: one endless track to explore. After a fall, the next run (and the menu scene) starts again at the last checkpoint you passed, so you can go further each time. The track and the restart point are saved on the device. **↻ Reset track** on the menu (a text link with a dark halo, readable over any sky) starts a fresh track from 0 m.
   - **Daily run**: everyone gets the same track on the same day, and every run starts from the beginning. The seed comes from the UTC date, and the daily best is saved separately. The link `?mode=daily` opens the daily run directly.
-- **Star power.** Coins fill a gauge at the bottom of the screen. Coins taken in a row raise the coin multiplier (×2 after 4, ×3 after 8, ×4 after 12), so the gauge fills faster; missing a single coin resets it. When the gauge is full, flick the phone up quickly (or double-tap, press Space, or tap the gauge): glowing side rails appear, the ball lights up, the music speeds up and the score is doubled. The ball also smashes every post and moving slider it touches into flying pieces (+500 points each, doubled by star power) instead of bouncing off, and it mows grass tufts flat. The gauge then drains in about 6 seconds and the rails go away.
+- **Collapse warning.** The track falls apart behind you. When the ball is too slow and the falling edge gains on it, a red **SPEED UP!** banner with a short beep appears about 24 m before the edge reaches you (usually several seconds ahead), with the meters left and a shrinking bar. It goes away once you are faster than the edge again.
+- **Star power.** Coins fill a gauge at the bottom of the screen (in landscape, in the bottom right corner, its bar on the same line as the speed bar). Coins taken in a row raise the coin multiplier (×2 after 4, ×3 after 8, ×4 after 12), so the gauge fills faster; missing a single coin resets it. When the gauge is full, flick the phone up quickly (or double-tap, press Space, or tap the gauge): glowing side rails appear, the ball lights up, the music speeds up and the score is doubled. The ball also smashes every post and moving slider it touches into flying pieces (+500 points each, doubled by star power) instead of bouncing off, and it mows grass tufts flat. The gauge then drains in about 6 seconds and the rails go away.
 - **Kid mode (side rails).** A menu toggle adds a bumper fence along both edges of the track: a low bar, short posts and a glowing top bar as high as the ball's center. The ball bounces back instead of falling off the side. A very hard hit (above about 32 km/h sideways) still jumps the fence, and holes and gaps still count. Kid-mode runs keep their own best scores, and the game over screen, the share text and the share video all say "with side rails".
 - **Nine worlds** that change every 500 m of track and blend smoothly into each other. After the last one, the list starts again:
   - **Tech** (0–500 m): towers with lit windows, beacons, a glowing grid below. By day it is a glass city under a clear blue sky with clouds; at night it keeps its dark neon look. The daily run always starts here, so the time of day shows from the first meter.
@@ -62,17 +63,23 @@ The whole game is **one self-contained `index.html` file** (about 422 KB, about 
 - **5 track skins** (neon carbon, steel & gold, wooden toy, ice marble, grass) **and 5 marble skins** (chrome, glass, gold, plasma, candy). You can change them from the menu options. The pause screen keeps only resume, recalibrate, sound and main menu, so it stays calm in portrait and fits a short landscape screen. The pickers show real pictures drawn with the game's own shaders: each marble as it looks in the current world, and each track skin on a short bend under the current sky. They are redrawn when the world or the track skin changes, one picture per frame.
 - **Grass track.** A lawn with mowing stripes, clover, daisies, a stone curb and turf sides. It is not only a look: the ball rolls slower (on flat ground it tops out near 76 km/h instead of more than 120 km/h), the uneven ground nudges it sideways, and grass tufts on the track slow it down, kick it aside and make it bounce, with clippings flying. Tufts never sit on narrow ground, boosters, checkpoint pads or among obstacles. They are placed from the track seed without changing the track, so the daily run stays the same for everyone.
 - **A light menu.** The menu shows only the GYROLL title, the tagline, the Training / Daily run switch, one **PLAY** button in the middle of the screen (the ball rolls into view below it) and an **Options** toggle at the bottom. Its parts rise into place one after the other when it opens.
-- **Options.** The toggle raises a glass sheet with every setting: kid mode, controls (gyroscope or touch), time of day, track and marble skins, language and sound. PLAY and the Training / Daily run switch hide, the title shrinks into the top bar between the language and sound buttons, and the **About** button, with **Install** below it, takes the switch's place. In landscape the settings slide in as a panel on the right, laid out on one grid (every label and control on the same lines). **Done** (or a tap outside the sheet) brings the light menu back. The selected option of each switch is marked by a pill that slides under it.
+- **Options.** The toggle raises a glass sheet with every setting: kid mode, controls (gyroscope or touch), time of day, track and marble skins, language and sound. PLAY and the Training / Daily run switch hide, the title shrinks into the top bar between the language and sound buttons, and the **About** button, with **Install** below it, sits in the middle of the free space above the sheet. On a computer or a tablet the sheet is a centered card (560 px wide at most), not a full-width band. Drag its grip (the small bar at the top) down to close it; it follows the finger or the mouse and springs back if you let go early. In landscape the settings slide in as a panel on the right, laid out on one grid (every label and control on the same lines); drag its left edge to the right to close it. **Done** (or a tap outside the sheet) brings the light menu back. The selected option of each switch is marked by a pill that slides under it.
 - **Time of day.** The sky shows a sun (a bright disc with a lens flare) or a moon (with seas, craters and today's phase, lit on the correct side). Four settings:
   - **Real time** (the default): the sun follows the local clock. It rises on the left, is highest around noon and sets on the right, lower in winter. At night the moon rises opposite it.
   - **Day**: each world keeps its own sun.
   - **Night**: a moon in each world.
   - **System**: day or night, following the dark mode of the device.
   At night the bright worlds turn to a moonlit blue with stars and a faint Milky Way, sunlight becomes moonlight, and neon lights, coins and the track lines glow. The city (the first world) switches to its own day look; the other worlds that are already dark stay almost the same. A low sun warms the light and the horizon.
-- **About.** The story of the project and its concept, the real line count and size of `index.html` (the build writes them into the file), and links to the source code on GitHub and to [@diwann](https://x.com/diwann) on X. It opens with its own animation: a circle grows from the About button, a marble draws a neon track and keeps rolling along it, the numbers count up and the text rises line after line. ✕ or `Esc` closes it.
+- **About.** How to play (the rules, coins and star power, checkpoints and modes, close calls and boosts, the nine worlds, tracks and marbles) and how it is made (written by an AI, the 3D engine, the physics, the sound engine, screenshots and videos, the gyroscope), as cards: one column on a phone, up to three on a wide screen. Also the real line count and size of `index.html` (the build writes them into the file), and links to the source code on GitHub and to [@diwann](https://x.com/diwann) on X. It opens with its own animation: a circle grows from the About button, a marble draws a neon track and keeps rolling along it, the numbers count up and the text rises line after line. ✕ or `Esc` closes it.
 - **A still menu camera.** Changing the mode, kid mode, the track, a skin or the time of day on the menu never moves the camera: the camera keeps its place next to the ball, and the new world or sky appears with a short cross-fade. Kid mode only adds the rails to the same track.
 - **Sound.** Every sound is synthesized with the Web Audio API, including the rolling sound, impacts, coins, checkpoints, boosts, falls, thunder and generative ambient music. Music and sound effects have separate toggles (white icons) and volume sliders.
-- **Share my score.** During the run the game records a light timelapse. When you press **Share my score** at game over, it builds a short accelerated video (intro, run, fall, score card) with `MediaRecorder`, with its own music; press **Share the video** when it is ready. The music (a 124 BPM tune in A minor) is synthesized for each video and fitted to its parts: a riser under the intro, a house groove under the fast timelapse with a clap roll into the fall, a boom and a falling whoosh over the real-time ending, and a last chord with a bell arpeggio under the score card (in A major after a new record). It is rendered offline, streamed only into the recording (never to the speakers) and added even when the game music is off. On phones it is shared through the Web Share API; elsewhere it is downloaded. If video is not supported, a score-card image is used instead.
+- **Share.** During the run the game keeps pictures of the action, about 24 a second: the last 10 seconds stay complete, and the run before thins out into an even timelapse (90 pictures at most). **Share** on the game over screen opens a popup with a live preview:
+  - **Screenshot**: scrub the replay with a slider (or play it) to pick the best moment. It starts on the fastest moment before the fall. The picture carries the result, the score and the link.
+  - **Video**: **Timelapse** (the whole run sped up, then the fall at real speed) or **Real speed** (the last 10 seconds as you played them), and a quality of 480p, 720p or 1080p. The line under the settings gives the file type, the length and the size. **Create the video** records it; the preview then plays the real file.
+  - Both come in three formats: **9:16** (story), **1:1** (square) or **16:9** (wide). The default follows the screen.
+  - **Download** and **Share** turn on once there is a file: a screenshot is ready at once, a video once it is made (changing a setting asks to make it again). **Share** opens the phone's share sheet with the file, the text and the link; without a share sheet (most computers), it saves the file and copies the text.
+
+  The video is drawn on a 2D canvas and recorded with `MediaRecorder`, in real time, with its own music. The music (a 124 BPM tune in A minor) is synthesized for each video and fitted to its parts: a riser under the intro, a house groove under the fast timelapse with a clap roll into the fall, a boom and a falling whoosh over the real-time ending, and a last chord with a bell arpeggio under the score card (in A major after a new record). It is rendered offline, streamed only into the recording (never to the speakers) and added even when the game music is off. If the browser cannot record video, only the screenshot is offered.
 - **English and French**, detected from the browser language. You can switch on the menu; the menu layout never moves when you change the language or an option.
 - **Look around on the menu.** Drag on the background to walk the camera around the ball (up and down too), and pinch (or use the mouse wheel) to zoom in on the marble or out on the world. When motion access is on (Android at once, iPhone after you allowed it once), turning the phone also walks the camera around the ball and tilting it raises or lowers the camera.
 - **Built for phones:**
@@ -116,6 +123,18 @@ The whole game is **one self-contained `index.html` file** (about 422 KB, about 
 |---|---|
 | ![A near miss: CLOSE CALL, slow motion, drained colours](docs/near-miss.jpg) | ![The install guide: an animated phone and the steps](docs/install.jpg) |
 
+| Share: pick the moment of a screenshot | Share a video: speed, format and quality |
+|---|---|
+| ![The share popup: a screenshot of the chosen moment, the replay slider and the formats](docs/share.jpg) | ![The share popup in landscape: video settings next to the preview](docs/share-video.jpg) |
+
+| Landscape game: the star gauge bottom right, and the collapse warning |
+|---|
+| ![Playing in landscape: SPEED UP! banner above the gauge and the speed](docs/hud-landscape.jpg) |
+
+| About on a computer: the rules and how it is made | Settings on a computer: a centered card |
+|---|---|
+| ![The About screen on a wide screen, cards in three columns](docs/about-desktop.jpg) | ![The settings card on a computer, About and Install centered above it](docs/options-desktop.jpg) |
+
 ## Controls
 
 | Input | Action |
@@ -124,11 +143,13 @@ The whole game is **one self-contained `index.html` file** (about 422 KB, about 
 | Tilt phone forward / back | Accelerate / brake and roll backwards |
 | Touch and drag (touch control) | Virtual joystick |
 | Drag · pinch (gyroscope control) | Turn the camera · zoom |
+| Middle or right mouse drag · trackpad swipe | Turn the camera (desktop) |
+| Mouse wheel · trackpad pinch | Zoom (desktop) |
 | Drag · pinch · mouse wheel (menu) | Walk the camera around the ball · zoom |
 | Arrows · WASD · ZQSD | Keyboard control (desktop) |
-| Mouse drag | Joystick (desktop) |
+| Left mouse drag | Joystick (desktop) |
 | Quick tilt up · double-tap · `Space` · tap the gauge | Start star power (when the gauge is full) |
-| `P` / `Esc` | Pause / resume (`Esc` also closes the options, the About screen and the install guide) |
+| `P` / `Esc` | Pause / resume (`Esc` also closes the options, the About screen, the install guide and the share popup) |
 | `Space` / `Enter` | Start / play again |
 
 ## Scoring
@@ -188,7 +209,7 @@ The tests drive the game loop step by step instead of waiting for real frames, s
 - the camera under the finger: drag and pinch on the menu, look-around, pinch zoom and double tap in gyroscope play
 - language switching, sound toggles and skins
 - a menu layout that never moves when the language, mode, kid mode, sound, control, time of day or skin changes, and the sliding pills of the switches
-- the share link and the share video
+- the share link
 - all nine worlds rendering, and the loop back to the first one
 - the installable app, including offline play, and the INSTALL button: the browser's prompt when there is one, otherwise the guide for iPhone (the animated phone and the list in step), Android and Firefox, in English and French, and a finger scrolling the guide to its last button
 - kid mode, safety rails that give way to hard hits (kid rails hold more), and speed past 50 km/h
@@ -198,11 +219,14 @@ The tests drive the game loop step by step instead of waiting for real frames, s
 - training mode restarting at the last checkpoint (and "reset track"), daily runs restarting from 0
 - checkpoints on safe pads, at round distances
 - the ball's reflection cube map facing the right way
-- the share video only being made on request, with a real music track in it
+- the share popup: nothing to send before a choice; a screenshot of the picked moment in 9:16 or 1:1; a real speed 480p video with its size, length and a real music track; a changed setting asking for a new video; without a share sheet, a saved file and the copied link; the wide card with the preview on the left on a computer
+- the replay: the last 10 seconds kept whole, an even timelapse before, the best moment, and the video plans at real speed and sped up
+- the landscape HUD (the star gauge in the bottom right corner, on the speed bar's line) and the collapse warning (about 20 m ahead for a slow ball, none for a fast one)
+- on a computer: the middle and right mouse buttons turn the camera while the left one steers, the wheel zooms, a trackpad swipe turns the view and its pinch zooms; the centered settings card with About and Install in the middle of the space above; the grip that closes the sheet (and the side panel in landscape) when dragged far enough
 - the menu camera following the phone
 - the light menu (one PLAY in the middle) and the options sheet (the title moves into the top bar, the mode switch gives its place to About, with Install below it; Done or a tap outside closes it)
 - the landscape menu at six sizes from 568 × 320 to 1024 × 600, in English and French: two aligned columns, the options panel covering nothing, its controls on one grid, nothing cut or off screen and no scrolling
-- the About screen: the story in both languages, the line count and size that match the real `index.html`, the links, the marble animation, closing with ✕ or `Esc`, and scrolling on a short landscape screen
+- the About screen: the rules and how it is made in both languages (no author name or prompt story), the line count and size that match the real `index.html`, the links, the marble animation, closing with ✕ or `Esc`, scrolling on a short landscape screen and three columns of cards on a wide screen
 - the pause screen without skin pickers, and in landscape one column that fits a short screen
 - the game over screen with every extra line (kid badge, new record) in English and French: play again, share and menu always show, in two columns in landscape
 - the time of day: the sun's path over the day and the year, the moon and its phase, night palettes, the city's day look, the setting and dark mode, the sun and moon discs, and all worlds rendering at night
@@ -225,7 +249,7 @@ If you fork the project, change the `PROD_URL` constant in `src/js/01-core.js`. 
 - **Anonymous statistics, official site only.** On `gyroll.vercel.app`, and only when "Do Not Track" is off, the game loads Vercel Web Analytics. It counts page views and sends a few anonymous game events:
   - `run_start`: game mode and control type
   - `game_over`: mode, world reached, distance rounded to 50 m
-  - `share`: how the score was shared
+  - `share`: what was shared (screenshot or video) and how (share sheet or download); `share_make`: the settings of a video made
   - `install`: whether the app was installed, or which install guide was opened
 - Local copies, forks and other domains send nothing.
 
@@ -246,7 +270,7 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
 | `AudioManager` | Web Audio synthesis and a generative music scheduler, with separate music and SFX buses, speed wind, and a music low-pass for slow motion. |
 | `ParticleSystem`, `FxBuilder` | Pooled particles, trail ribbon, glows, light shafts, speed lines, shockwave rings and lightning. |
 | `Environment` | Zone-driven scenery in three parallax layers (trees, turbines, balloons, boats, lighthouses, cacti, mesas… are built from a few procedural shapes and drawn with instancing). Nothing may enter a keep-out zone around the track; objects that newer track bends towards shrink away, and anything between the camera and the ball is hidden. |
-| `Replay` | Timelapse capture and share-video composition. |
+| `Replay`, `ShareBox` | Picture capture during the run (the last 10 s whole, a timelapse before), the video plans, screenshot and video composition; the share popup. |
 | `QualityManager`, `UI`, `Game` | Adaptive quality, DOM overlay with FR/EN strings (and the install guides), and the state machine / main loop with the game feel: time warps (hit-stop, slow motion), squash and stretch, shockwaves. |
 | `Analytics`, `sw.js` | Opt-out-friendly stats on the official site, and the offline cache for the installable app. |
 
@@ -258,8 +282,10 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
   - iOS asks for permission when you tap PLAY with the gyroscope control.
   - Android Chrome gives access directly.
 - **Sound on iPhone.** The silent switch mutes Web Audio.
-- **Share video:**
-  - The format depends on the browser: MP4 where supported, otherwise WebM.
+- **Share:**
+  - The video's file type depends on the browser: MP4 where supported, otherwise WebM.
+  - The pictures are kept at up to 1280 px on phones (1920 px on computers; less when adaptive quality has lowered the level), so a 1080p video from a phone is slightly upscaled. Keeping about 24 pictures a second costs some memory (roughly 10 to 40 MB for the last 10 seconds) and some work on the phone; it was measured in headless Chromium only.
+  - Making a video takes as long as the video itself (it is recorded in real time).
   - The music track needs `MediaStreamAudioDestinationNode` and a recorder that takes sound. A browser that fails to record it gets silent videos from then on.
   - Sharing a file needs Web Share support with files, which mostly means mobile browsers. Otherwise the file is downloaded.
 - **Not yet verified on real devices:**
@@ -270,7 +296,8 @@ The game code lives in `src/js/` and is built into `index.html`. It is split int
   - The four nature worlds (countryside, forest, sea, desert) and the picker pictures were only checked in headless Chromium. Their cost on real phones is not measured yet.
   - The grass track's feel (how slow, how bumpy) was tuned with automated runs, not by playing on a phone. It may need adjusting.
   - The finger camera, pinch zoom and the options sheet were tested with simulated pointer events, not on a real touch screen.
-  - The share video's music was checked by its levels and by decoding the recorded file, not yet by ear on a real phone.
+  - The share video's music was checked by its levels and by decoding the recorded file, not yet by ear on a real phone. The share popup, the drag to close the settings and the collapse warning were checked with simulated input, not on a real phone.
+  - Telling a trackpad from a mouse wheel is a guess (small first steps, or sideways steps, mean a trackpad). On some systems a mouse may be taken for a trackpad: its wheel then turns the view, and Ctrl + wheel still zooms.
   - The game feel (hit-stop length, slow motion, squash, wind level) was tuned with automated runs and screenshots, not by playing on a phone. The wind was checked by its level, not by ear.
   - The install guide's steps follow the browsers' menus as we know them (on iOS 26, Safari may keep Share inside the ··· menu; Android labels differ between browsers). They were checked in headless Chromium with other browsers' user agents, not on the real browsers. In-app browsers are recognised by their user agent, so some may be missed.
 - **Real-time sky, simplified on purpose.** The game does not ask for your location. The sun's path is computed for a place at 45° of latitude (south of the equator when the time zone says so), and it is squeezed towards the front of the view so you can see it more often. Only the moon's phase is real; the moon itself simply stands opposite the sun at night.
@@ -918,6 +945,28 @@ Also, the menu layout is quite broken in landscape mode. Buttons are not aligned
 We should also improve the gyroscope calibration and management:
 The accelerator tend to shift along the gameplay and we need to tilt the phone more and more to trigger the acceleration. 
 When the phone is upside down, for example when a user is on its bed and looking up at his phone, the acceleration sensor is reversed. Globally the gyroscope management should be perfect as it’s the core of the product
+````
+
+</details>
+
+<details>
+<summary><strong>HUD, About, desktop and share prompt</strong></summary>
+
+````markdown
+In landscape mode, the star power gauge should be at the bottom of the screen and aligned with the left and right buttons. Actually, we don’t need to show the selected game options during the game. So the star power gauge could go on the bottom right. 
+
+The about screen don’t need to mention my name or the prompt that started the project but more technical detail about how it’s made (model capacity, 3d physic engine, sound engine, video generation) and the game play itself (game rules, the different worlds, the track and balls, star power behavior…). 
+Also, the about and install buttons should be centered in their half view. And the about screen could better use the screen real estate on desktop. 
+Also, on desktop, the option menu is full width, which let many empty space around. 
+And there is a handle at the top of the menu, so we should be able to slide it smoothly to close the menu. 
+Again on desktop, we should be able to control the camera with the mouse middle click or with the trackpad. 
+
+And during the gameplay, if we stop the ball, the track collapse behind us. We should be warned before it happen that we have to move faster. 
+
+And could we add an option to export the video at real speed or accelerated ? And to choose the export resolution ? We could replace the “share my score” CTA of the game over screen by just “share” that would popup different options : 
+- generate screenshot, with the ability to select the best frame on a game replay
+- generate video, with different possibilities of formats and video quality
+After one of those options was selected, the bottom download and share buttons become active
 ````
 
 </details>

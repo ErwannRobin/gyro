@@ -78,8 +78,6 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 #speedo .u{font-size:11px;font-weight:800;letter-spacing:.18em;color:var(--dim);margin-bottom:3px}
 #speedBar{position:absolute;left:0;bottom:-7px;height:3px;width:86px;border-radius:2px;background:rgba(255,255,255,.14);overflow:hidden}
 #speedBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px}
-#ctrlTag{position:absolute;right:calc(var(--sar) + 16px);bottom:calc(var(--sab) + 18px);font-size:11px;font-weight:800;letter-spacing:.16em;color:var(--dim);
-  text-shadow:0 2px 6px rgba(0,0,0,.8)}
 #power{position:absolute;left:50%;bottom:calc(var(--sab) + 44px);transform:translateX(-50%);width:min(56vw,250px);padding:8px 10px;
   text-shadow:0 2px 6px rgba(0,0,0,.85);pointer-events:none;-webkit-tap-highlight-color:transparent}
 #power .row{display:flex;justify-content:space-between;align-items:flex-end;gap:8px;font-size:11px;font-weight:900;letter-spacing:.12em;margin-bottom:5px;white-space:nowrap}
@@ -94,6 +92,8 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 #power.ready .bar{animation:pwPulse .6s ease-in-out infinite alternate}
 #power.ready #pwTxt,#power.on #pwTxt{color:#fff3c4}
 #power.on #pwFill{background:linear-gradient(90deg,#fff,#fff3c4,var(--gold));box-shadow:0 0 12px var(--gold)}
+/* landscape: the gauge sits in the bottom right corner, its bar on the same line as the speed bar */
+@media (orientation:landscape){ #power{left:auto;right:calc(var(--sar) + 6px);bottom:calc(var(--sab) + 1px);transform:none;width:min(34vw,250px)} }
 @keyframes pwPulse{from{box-shadow:0 0 0 1px rgba(255,211,107,.5),0 0 6px rgba(255,211,107,.4)}to{box-shadow:0 0 0 2px rgba(255,230,160,1),0 0 22px rgba(255,211,107,.95)}}
 #starGlow{position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0;transition:opacity .5s;
   background:radial-gradient(ellipse 90% 80% at 50% 50%,rgba(255,210,110,0) 50%,rgba(255,196,80,.32) 100%)}
@@ -106,6 +106,18 @@ body.star #starGlow{opacity:1}
 .toast.cyan{color:var(--accent)}
 .toast.pink{color:var(--accent2)}
 @keyframes toast{0%{opacity:0;transform:translateY(14px) scale(.7)}12%{opacity:1;transform:translateY(0) scale(1.08)}22%{transform:scale(1)}75%{opacity:1}100%{opacity:0;transform:translateY(-26px) scale(.96)}}
+/* collapse warning: the falling edge of the track is catching up with the ball */
+#fallWarn{position:absolute;left:50%;bottom:calc(var(--sab) + 100px);width:min(80vw,300px);display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center;
+  opacity:0;transform:translateX(-50%) scale(.85);transition:opacity .25s,transform .4s cubic-bezier(.3,1.5,.4,1)}
+#fallWarn.on{opacity:1;transform:translateX(-50%)}
+#fallWarn b{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:900;letter-spacing:.14em;color:#ff6a86;text-shadow:0 0 2px #000,0 2px 10px rgba(0,0,0,.85)}
+#fallWarn.on b{animation:fwPulse .45s ease-in-out infinite alternate}
+#fallWarn b .ic{width:20px;height:20px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.8))}
+#fallWarn small{font-size:11px;font-weight:800;letter-spacing:.08em;color:#ffdbe2;text-shadow:0 0 2px #000,0 1px 5px rgba(0,0,0,.9)}
+#fallWarn .bar{width:100%;height:5px;border-radius:3px;background:rgba(255,255,255,.16);box-shadow:0 1px 4px rgba(0,0,0,.4);overflow:hidden}
+#fallWarn .bar i{display:block;height:100%;width:100%;border-radius:3px;background:linear-gradient(90deg,#ff2a55,#ff9d5c);transition:width .15s linear}
+@keyframes fwPulse{from{transform:scale(1)}to{transform:scale(1.07)}}
+@media (orientation:landscape){ #fallWarn{bottom:calc(var(--sab) + 12px);width:min(30vw,280px)} #fallWarn b{font-size:16px} }
 #vignette{position:fixed;inset:0;pointer-events:none;z-index:3;background:radial-gradient(ellipse 85% 75% at 50% 48%,rgba(0,0,0,0) 55%,rgba(2,3,10,.5) 100%)}
 #danger{position:fixed;inset:0;pointer-events:none;z-index:4;opacity:0;
   background:radial-gradient(120% 60% at 50% 115%,rgba(255,40,70,.55),rgba(255,40,70,0) 60%)}
@@ -154,8 +166,15 @@ body.star #starGlow{opacity:1}
   background:rgba(9,12,26,.7);backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);
   border-top:1px solid rgba(255,255,255,.14);box-shadow:0 -24px 60px rgba(0,0,0,.4);
   transform:translateY(106%);visibility:hidden;transition:transform .55s cubic-bezier(.32,.72,0,1),visibility .55s}
-#sheet::before{content:"";position:absolute;top:8px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:rgba(255,255,255,.3)}
 #menu.opts #sheet{transform:none;visibility:visible}
+#sheet.drag{transition:none}
+/* the grip: drag it down (or right, for the side panel) to close the settings */
+#sheetGrip{position:absolute;z-index:1;left:0;right:0;top:0;height:32px;touch-action:none;cursor:grab}
+#sheetGrip::before{content:"";position:absolute;top:8px;left:50%;width:36px;height:5px;margin-left:-18px;border-radius:3px;background:rgba(255,255,255,.3);transition:background .2s,width .25s,margin .25s,height .25s}
+#sheetGrip:hover::before,#sheet.drag #sheetGrip::before{background:rgba(255,255,255,.6);width:48px;margin-left:-24px}
+#sheet.drag #sheetGrip{cursor:grabbing}
+/* wide screens: the settings sheet is a centered card, not a full-width band */
+@media (min-width:640px){ #sheet{left:0;right:0;margin:0 auto;width:min(560px,calc(100% - 32px));border:1px solid rgba(255,255,255,.14);border-bottom:0} }
 .sheetIn{max-width:420px;margin:0 auto;display:flex;flex-direction:column;align-items:center}
 .optRow{width:100%;display:flex;flex-direction:column;align-items:center;gap:7px;margin-top:14px;opacity:0;transform:translateY(22px);
   transition:opacity .3s,transform .55s cubic-bezier(.3,1.25,.4,1)}
@@ -249,8 +268,6 @@ body.star #starGlow{opacity:1}
 .shareBtn{position:relative;overflow:hidden}
 .shareBtn .prog{position:absolute;left:0;bottom:0;height:3px;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .2s}
 .shareBtn.busy{opacity:.75}
-.shareBtn.ready{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),0 0 18px rgba(78,242,255,.35);animation:shReady 1s ease-in-out infinite alternate}
-@keyframes shReady{from{box-shadow:0 0 0 1px var(--accent),0 0 8px rgba(78,242,255,.25)}to{box-shadow:0 0 0 2px var(--accent),0 0 24px rgba(78,242,255,.6)}}
 #ovMode{margin-top:6px;font-size:12px;font-weight:800;letter-spacing:.2em;color:var(--accent)}
 #sheet .skins{margin-top:0}
 #permMsg{margin-left:auto;margin-right:auto}
@@ -299,6 +316,82 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 @keyframes rays{0%{opacity:0;transform:scale(.3) rotate(0)}20%{opacity:1}100%{opacity:0;transform:scale(1.3) rotate(60deg)}}
 .row2{display:flex;gap:10px;width:100%;max-width:420px}
 .row2 .ghostBtn{flex:1}
+/* SHARE popup: the preview on top (on the left in landscape), then the choice between a screenshot
+   and a video, their settings, and DOWNLOAD / SHARE at the bottom (off until there is a file) */
+#btnShare{display:flex;align-items:center;justify-content:center;gap:9px}
+#btnShare .ic{width:20px;height:20px}
+#shareBox{position:fixed;inset:0;z-index:30;display:flex;align-items:flex-end;justify-content:center;background:rgba(3,4,12,.55);
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);opacity:0;transition:opacity .3s}
+#shareBox.open{opacity:1}
+#shPanel{position:relative;width:100%;max-width:560px;height:100%;display:flex;flex-direction:column;gap:12px;
+  padding:calc(var(--sat) + 12px) calc(var(--sar) + 16px) calc(var(--sab) + 16px) calc(var(--sal) + 16px);
+  background:rgba(9,12,26,.94);box-shadow:0 -20px 60px rgba(0,0,0,.5);transform:translateY(40px);transition:transform .45s cubic-bezier(.3,1.2,.4,1)}
+#shareBox.open #shPanel{transform:none}
+#shHead{display:flex;align-items:center;justify-content:space-between;gap:10px;flex:none}
+#shHead h3{font-size:14px;font-weight:900;letter-spacing:.22em}
+#shView{position:relative;flex:1 1 auto;min-height:120px;display:flex;align-items:center;justify-content:center}
+#shCanvas,#shVideo{display:block;border-radius:16px;background:#05060d;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 12px 40px rgba(0,0,0,.5)}
+#shSide{display:flex;flex-direction:column;gap:12px;flex:none;min-height:0}
+#shKinds{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.shTile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:48px;padding:12px 10px;border-radius:18px;text-align:center;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);transition:background .25s,border-color .25s}
+.shTile span{display:flex;flex-direction:column;gap:4px}
+.shTile .ic{width:28px;height:28px;color:var(--accent)}
+.shTile b{font-size:13px;font-weight:900;letter-spacing:.12em}
+.shTile small{font-size:11.5px;font-weight:600;line-height:1.35;color:var(--dim)}
+.shTile.on{background:rgba(78,242,255,.14);border-color:var(--accent)}
+.shTile:disabled{opacity:.45;cursor:default}
+.shTile:not(:disabled):active{transform:scale(.97)}
+#shareBox:not([data-kind=""]) .shTile{flex-direction:row;gap:8px;padding:6px 10px}
+#shareBox:not([data-kind=""]) .shTile small{display:none}
+#shareBox:not([data-kind=""]) .shTile .ic{width:20px;height:20px}
+#shCtrls{display:flex;flex-direction:column;gap:10px}
+#shareBox[data-kind=""] #shCtrls{display:none}
+#shareBox[data-kind="image"] .vOnly,#shareBox[data-kind="video"] .iOnly{display:none!important}
+.shRow{display:grid;grid-template-columns:76px minmax(0,1fr);align-items:center;column-gap:10px}
+.shRow .optLbl{text-align:left}
+.shRow .seg{width:100%}
+.shRow .seg button{flex:1 1 0;min-width:0;padding:6px 4px;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.shp{display:inline-block;border:2px solid currentColor;border-radius:3px;flex:none}
+[data-fmt="story"] .shp{width:10px;height:16px}
+[data-fmt="square"] .shp{width:14px;height:14px}
+[data-fmt="wide"] .shp{width:18px;height:11px}
+#shPicker{grid-template-columns:44px minmax(0,1fr) 64px}
+#shPicker input{width:100%}
+#shFrameLbl{font-size:12px;font-weight:800;letter-spacing:.06em;text-align:right;color:var(--dim)}
+#btnShPlay .pa,#btnShPlay.on .pl{display:none}
+#btnShPlay.on .pa{display:inline}
+#shInfo{font-size:12px;font-weight:700;line-height:1.4;color:var(--dim);text-align:center}
+#btnShMake{margin:0;max-width:none}
+#shFoot{display:flex;gap:10px}
+#shFoot > button{flex:1 1 0;margin:0;height:54px;min-height:0;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;transition:opacity .3s,filter .3s}
+#shFoot .ic{width:20px;height:20px}
+#shFoot > button:disabled{opacity:.35;filter:saturate(.2);cursor:default;box-shadow:none}
+#shFoot > button:disabled::after{display:none}
+/* phones in portrait: a sheet from the bottom with rounded top corners */
+@media (orientation:portrait){ #shPanel{height:calc(100% - var(--sat) - 10px);border-radius:26px 26px 0 0;border:1px solid rgba(255,255,255,.12);border-bottom:0;padding-top:12px} }
+/* landscape: the preview on the left, the choices on the right */
+@media (orientation:landscape){
+  #shPanel{max-width:none;display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);grid-template-rows:auto minmax(0,1fr) auto;column-gap:22px;row-gap:12px}
+  #shHead{grid-column:2;grid-row:1}
+  #shView{grid-column:1;grid-row:1 / span 3;min-height:0}
+  #shSide{grid-column:2;grid-row:2;overflow-y:auto;overscroll-behavior:contain;justify-content:flex-start}
+  #shFoot{grid-column:2;grid-row:3}
+}
+/* big screens: a floating card */
+@media (orientation:landscape) and (min-height:641px){
+  #shareBox{align-items:center}
+  #shPanel{width:min(1000px,calc(100% - 48px));height:min(700px,calc(100% - 48px));padding:20px 22px 22px;border-radius:26px;border:1px solid rgba(255,255,255,.12)}
+}
+@media (orientation:landscape) and (max-height:430px){
+  #shPanel{row-gap:8px;padding-top:calc(var(--sat) + 10px);padding-bottom:calc(var(--sab) + 12px)}
+  #shHead .icoBtn{width:36px;height:36px;border-radius:12px}
+  .shTile{min-height:40px} #shSide,#shCtrls{gap:8px}
+  #shFoot > button{height:46px}
+  .shRow .seg{padding:3px} .shRow .seg .pill{top:3px;bottom:3px} .shRow .seg button{min-height:32px}
+  #shInfo{font-size:11px}
+  #btnShMake{min-height:42px;padding:8px 18px}
+}
 /* About: a circle opens from the About button; the marble draws its track while the numbers count up
    and the story rises line after line. */
 #about,#install{position:fixed;inset:0;z-index:30;background:rgba(5,7,16,.8);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);
@@ -307,6 +400,8 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 #abScroll,#insScroll{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;text-align:center;
   padding:calc(var(--sat) + 56px) calc(var(--sar) + 24px) calc(var(--sab) + 40px) calc(var(--sal) + 24px)}
 #abScroll > *,#insScroll > *{max-width:440px;margin-left:auto;margin-right:auto}
+#abScroll > .abSec{max-width:1060px}
+#abScroll > #abLead{max-width:600px}
 .abIn{opacity:0;transform:translateY(24px);filter:blur(6px)}
 #about.open .abIn,#install.open .abIn{animation:rise .9s calc(.28s + var(--d) * .1s) cubic-bezier(.2,.9,.3,1) both}
 #abTrack{display:block;width:min(300px,78vw);height:auto;margin:0 auto;overflow:visible}
@@ -324,7 +419,16 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
 .abStat span{font-size:9px;font-weight:800;letter-spacing:.14em;line-height:1.35;color:var(--dim)}
 #abScroll p{margin-top:16px;font-size:15px;line-height:1.55;font-weight:500;color:rgba(235,242,255,.86);text-align:left}
 #abScroll #abLead{margin-top:22px;font-size:17px;font-weight:700;font-style:italic;color:#fff;text-align:center}
-#abLinks{margin-top:24px;display:flex;flex-direction:column;gap:10px}
+/* the rules and the making of, as cards: one column on a phone, up to three on a wide screen */
+.abSec{margin-top:30px}
+.abSec h3{margin:0 0 12px 4px;font-size:11px;font-weight:900;letter-spacing:.3em;color:var(--accent);text-align:left}
+.abGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:12px}
+.abCard{padding:16px 18px 18px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);text-align:left}
+.abCard .ic{width:26px;height:26px;color:var(--accent)}
+.abCard h4{margin-top:8px;font-size:15px;font-weight:800;letter-spacing:.02em;line-height:1.3;color:#fff}
+#abScroll .abCard p{margin-top:6px;font-size:13.5px;line-height:1.55;color:rgba(235,242,255,.8)}
+@media (min-width:900px){ #abScroll{padding-left:calc(var(--sal) + 40px);padding-right:calc(var(--sar) + 40px)} #abScroll > #abLinks{max-width:640px;flex-direction:row} #abLinks a{flex:1 1 0} }
+#abLinks{margin-top:28px;display:flex;flex-direction:column;gap:10px}
 #abLinks a{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:18px;text-align:left;color:#fff;text-decoration:none;
   background:var(--glass);border:1px solid var(--glass-brd);transition:transform .25s cubic-bezier(.3,1.4,.4,1),border-color .25s}
 #abLinks a:active{transform:scale(.97)}
@@ -434,7 +538,10 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   #menu.opts #btnOpts{transform:translate(calc(-50% + var(--dX,0px)),var(--dY,0px))}   /* DONE glides to the middle of the top bar */
   #sheet{left:var(--sL);top:calc(var(--sat) + 64px);max-height:none;border-radius:26px 0 0 0;padding:14px calc(var(--sar) + 18px) calc(var(--sab) + 14px) 18px;transform:translateX(106%);
     display:flex;flex-direction:column}
-  #sheet::before{display:none}
+  #sheet{width:auto;margin:0;right:0;border:0;border-top:1px solid rgba(255,255,255,.14);border-left:1px solid rgba(255,255,255,.1)}
+  #sheetGrip{right:auto;bottom:0;width:14px;height:auto}
+  #sheetGrip::before{top:50%;left:5px;width:5px;height:36px;margin:-18px 0 0}
+  #sheetGrip:hover::before,#sheet.drag #sheetGrip::before{width:5px;height:48px;margin:-24px 0 0}
   .sheetIn{max-width:none;width:100%;margin:auto 0}
   /* every setting on one grid: the label, then its control, all with the same left and right edges */
   .optRow{display:grid;grid-template-columns:78px minmax(0,1fr);column-gap:12px;align-items:center;margin-top:10px}
@@ -548,8 +655,8 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     <button class="icoBtn" id="btnPause" aria-label="Pause">❚❚</button>
   </div>
   <div id="speedo"><span class="v num" id="hSpeed">0</span><span class="u">KM/H</span><div id="speedBar"><i id="hSpeedBar"></i></div></div>
-  <div id="ctrlTag"></div>
   <div id="power" role="button" aria-label="Star power"><div class="row"><span id="pwCoin" class="num">×1</span><span id="pwTxt"></span></div><div class="bar"><i id="pwFill"></i></div></div>
+  <div id="fallWarn" aria-live="polite"><b><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.6l9.4 16.3H2.6z"/><path class="stk" d="M12 9.6v4.8"/><circle cx="12" cy="17.2" r="1.2"/></svg><span data-i18n="fallWarn"></span></b><small id="fwTxt"></small><div class="bar"><i id="fwBar"></i></div></div>
   <div id="toasts"></div>
 </div>
 
@@ -577,6 +684,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     <div id="permMsg" class="hidden"></div>
   </div>
   <div id="sheet">
+    <div id="sheetGrip" aria-hidden="true"></div>
     <div class="sheetIn">
       <div class="optRow" style="--i:0"><button class="tg" id="tgKid"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 2.9l7.4 2.8v5.5c0 4.6-3 8.5-7.4 9.9-4.4-1.4-7.4-5.3-7.4-9.9V5.7z"/><path class="stk" d="M8.6 12.1l2.4 2.4 4.5-4.6"/></svg><span data-i18n="kid"></span></button></div>
       <div class="optRow" id="ctrlRow" style="--i:1"><span class="optLbl" data-i18n="control"></span><div class="seg" id="ctrlSeg"><i class="pill"></i><button data-ctrl="tilt" data-i18n="ctrlTilt"></button><button data-ctrl="touch" data-i18n="ctrlTouch"></button></div></div>
@@ -585,6 +693,31 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     </div>
   </div>
   <button id="btnOpts" aria-controls="sheet" aria-expanded="false"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M3.5 8h17M3.5 16h17"/><circle class="k1" cx="15" cy="8" r="2.8"/><circle class="k2" cx="9" cy="16" r="2.8"/></svg><span class="lb1" data-i18n="options"></span><span class="lb2" data-i18n="done"></span></button>
+</div>
+
+<div class="hidden" id="shareBox" role="dialog" aria-modal="true" aria-labelledby="shTitle" data-kind="">
+  <div id="shPanel">
+    <div id="shHead"><h3 id="shTitle" data-i18n="shTitle"></h3><button class="icoBtn" id="btnShClose" data-i18n-aria="close"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <div id="shView"><canvas id="shCanvas"></canvas><video id="shVideo" class="hidden" playsinline muted loop controls></video></div>
+    <div id="shSide">
+      <div id="shKinds">
+        <button class="shTile" data-kind="image"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M4.5 7.5h3l1.6-2.3h5.8l1.6 2.3h3a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18V9a1.5 1.5 0 0 1 1.5-1.5z"/><circle class="stk" cx="12" cy="13.2" r="3.6"/></svg><span><b data-i18n="shImg"></b><small data-i18n="shImgSub"></small></span></button>
+        <button class="shTile" data-kind="video"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect class="stk" x="2.8" y="6" width="13.4" height="12" rx="2.6"/><path class="stk" d="M16.2 10.4l5-2.9v9l-5-2.9z"/></svg><span><b data-i18n="shVid"></b><small data-i18n="shVidSub"></small></span></button>
+      </div>
+      <div id="shCtrls">
+        <div class="shRow iOnly" id="shPicker"><button class="tg icon" id="btnShPlay" data-i18n-aria="shPlay"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="pl" d="M8 5.2v13.6l11-6.8z"/><path class="pa" d="M7 5.2h3.4v13.6H7zM13.6 5.2H17v13.6h-3.4z"/></svg></button><input type="range" id="shFrame" min="0" max="0" value="0" data-i18n-aria="shFrame"><span id="shFrameLbl" class="num"></span></div>
+        <div class="shRow"><span class="optLbl" data-i18n="shFormat"></span><div class="seg" id="shFmt"><i class="pill"></i><button data-fmt="story"><i class="shp"></i>9:16</button><button data-fmt="square"><i class="shp"></i>1:1</button><button data-fmt="wide"><i class="shp"></i>16:9</button></div></div>
+        <div class="shRow vOnly"><span class="optLbl" data-i18n="shSpeed"></span><div class="seg" id="shSpeed"><i class="pill"></i><button data-speed="fast" data-i18n="shFast"></button><button data-speed="real" data-i18n="shReal"></button></div></div>
+        <div class="shRow vOnly"><span class="optLbl" data-i18n="shQuality"></span><div class="seg" id="shRes"><i class="pill"></i><button data-res="480">480p</button><button data-res="720">720p</button><button data-res="1080">1080p</button></div></div>
+        <p id="shInfo" class="vOnly"></p>
+        <button class="ghostBtn shareBtn vOnly" id="btnShMake"><span class="lbl"></span><i class="prog"></i></button>
+      </div>
+    </div>
+    <div id="shFoot">
+      <button class="ghostBtn" id="btnShDl" disabled><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5M4.5 19.5h15"/></svg><span data-i18n="shDownload"></span></button>
+      <button class="bigBtn" id="btnShShare" disabled><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.5v10.5M8.2 7.3L12 3.5l3.8 3.8"/><path class="stk" d="M8 10H5.8v10.2h12.4V10H16"/></svg><span data-i18n="shShare"></span></button>
+    </div>
+  </div>
 </div>
 
 <div class="hidden" id="about" role="dialog" aria-modal="true" aria-labelledby="abTitle">
@@ -606,10 +739,30 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
       <div class="abStat"><b class="num" data-to="libs">0</b><span data-i18n="statLibs"></span></div>
     </div>
     <p id="abLead" class="abIn" style="--d:2" data-i18n="aboutLead"></p>
-    <p class="abIn" style="--d:3" data-i18n="aboutP1"></p>
-    <p class="abIn" style="--d:4" data-i18n="aboutP2"></p>
+    <section class="abSec abIn" style="--d:3" aria-labelledby="abPlayH">
+      <h3 id="abPlayH" data-i18n="abPlay"></h3>
+      <div class="abGrid">
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle class="stk" cx="12" cy="10.2" r="5.2"/><path class="stk" d="M2.8 19.4h18.4M9.6 8.4a3 3 0 0 1 3.6-1"/></svg><h4 data-i18n="abRulesT"></h4><p data-i18n="abRules"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.3l2.7 5.4 6 .9-4.35 4.2 1 5.95L12 16.95l-5.35 2.8 1-5.95L3.3 9.6l6-.9z"/></svg><h4 data-i18n="abStarT"></h4><p data-i18n="abStar"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M5.5 21V3.6M5.5 4.2h11.8l-2.4 4.1 2.4 4.1H5.5"/></svg><h4 data-i18n="abModesT"></h4><p data-i18n="abModes"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M13.4 2.6L5 13.6h6.2l-1 7.8 8.4-11.2h-6.3z"/></svg><h4 data-i18n="abBonusT"></h4><p data-i18n="abBonus"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle class="stk" cx="12" cy="12" r="9"/><path class="stk" d="M3 12h18M12 3c3.2 3.3 3.2 14.7 0 18M12 3c-3.2 3.3-3.2 14.7 0 18"/></svg><h4 data-i18n="abWorldsT"></h4><p data-i18n="abWorlds"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle class="stk" cx="8.2" cy="14.6" r="4.6"/><path class="stk" d="M13.8 19.2h7.4M15.4 14.4h5.8M17 9.6h4.2M6.6 12.9a2 2 0 0 1 2.2-.6"/></svg><h4 data-i18n="abSkinsT"></h4><p data-i18n="abSkins"></p></article>
+      </div>
+    </section>
+    <section class="abSec abIn" style="--d:4" aria-labelledby="abMadeH">
+      <h3 id="abMadeH" data-i18n="abMade"></h3>
+      <div class="abGrid">
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.2c.7 4.6 4.2 8.1 8.8 8.8-4.6.7-8.1 4.2-8.8 8.8-.7-4.6-4.2-8.1-8.8-8.8 4.6-.7 8.1-4.2 8.8-8.8z"/><path class="stk" d="M19 3v3.6M17.2 4.8h3.6"/></svg><h4 data-i18n="abAiT"></h4><p data-i18n="abAi"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 2.8l8 4.6v9.2l-8 4.6-8-4.6V7.4z"/><path class="stk" d="M4 7.4l8 4.6 8-4.6M12 12v9.2"/></svg><h4 data-i18n="ab3dT"></h4><p data-i18n="ab3d"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle class="stk" cx="12" cy="12" r="3.4"/><path class="stk" d="M4.2 12a7.8 7.8 0 0 1 13.4-5.4M19.8 12a7.8 7.8 0 0 1-13.4 5.4"/><path class="stk" d="M18 3.2v3.7h-3.7M6 20.8v-3.7h3.7"/></svg><h4 data-i18n="abPhysT"></h4><p data-i18n="abPhys"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M2.8 12h2.4l2.2-5.6 3.2 11.4 3.2-14 3.1 14 2.2-5.8h2.1"/></svg><h4 data-i18n="abSoundT"></h4><p data-i18n="abSound"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect class="stk" x="2.8" y="6" width="13.4" height="12" rx="2.6"/><path class="stk" d="M16.2 10.4l5-2.9v9l-5-2.9z"/></svg><h4 data-i18n="abVideoT"></h4><p data-i18n="abVideo"></p></article>
+        <article class="abCard"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect class="stk" x="7.4" y="3.2" width="9.2" height="17.6" rx="2.4" transform="rotate(-16 12 12)"/><path class="stk" d="M3.4 16.2a9.4 9.4 0 0 1 .3-9M20.6 7.8a9.4 9.4 0 0 1-.3 9"/></svg><h4 data-i18n="abGyroT"></h4><p data-i18n="abGyro"></p></article>
+      </div>
+    </section>
     <div id="abLinks" class="abIn" style="--d:5">
-      <a id="abRepo" target="_blank" rel="noopener"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8a10.2 10.2 0 0 0-3.2 19.9c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.6 1 1.6 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.6-1.4-2.3-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.5-1.3.1-2.7 0 0 .9-.3 2.8 1a9.6 9.6 0 0 1 5.1 0c1.9-1.3 2.8-1 2.8-1 .6 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A10.2 10.2 0 0 0 12 1.8z"/></svg><span><b data-i18n="linkRepo"></b><small>github.com/ErwannRobin/gyro</small></span></a>
+      <a id="abRepo" target="_blank" rel="noopener"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8a10.2 10.2 0 0 0-3.2 19.9c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.3-3.4-1.3-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.6 1 1.6 1 .9 1.6 2.4 1.1 3 .9.1-.7.4-1.1.6-1.4-2.3-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.5-1.3.1-2.7 0 0 .9-.3 2.8 1a9.6 9.6 0 0 1 5.1 0c1.9-1.3 2.8-1 2.8-1 .6 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.4 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5A10.2 10.2 0 0 0 12 1.8z"/></svg><span><b data-i18n="linkRepo"></b><small data-i18n="linkRepoSub"></small></span></a>
       <a id="abX" target="_blank" rel="noopener"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M17.8 2.8h3.1l-6.8 7.8 8 10.6h-6.3l-4.9-6.4-5.6 6.4H2.2l7.3-8.3L1.8 2.8h6.4l4.4 5.9zm-1.1 16.5h1.7L7.4 4.6H5.5z"/></svg><span><b data-i18n="linkX"></b><small>x.com/diwann</small></span></a>
     </div>
     <div id="abFoot" class="abIn" style="--d:6" data-i18n="aboutFoot"></div>
@@ -668,7 +821,7 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   </div>
   <div id="ovBtns">
     <button class="bigBtn" id="btnRetry" data-i18n="retry"></button>
-    <button class="ghostBtn shareBtn" id="btnShare"><span class="lbl"></span><i class="prog"></i></button>
+    <button class="ghostBtn" id="btnShare" aria-controls="shareBox"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path class="stk" d="M12 3.5v10.5M8.2 7.3L12 3.5l3.8 3.8"/><path class="stk" d="M8 10H5.8v10.2h12.4V10H16"/></svg><span data-i18n="share"></span></button>
     <button class="ghostBtn" id="btnMenu" data-i18n="menu"></button>
   </div>
 </div>
@@ -952,15 +1105,19 @@ const I18N = {
     modeRandom: 'ENTRAÎNEMENT', modeDaily: 'DÉFI DU JOUR', infoRandom: 'Parcours sans fin · vous repartez du dernier checkpoint', infoContinue: 'Reprise au checkpoint {d} m', newTrack: '↻ RÉINITIALISER LE PARCOURS', infoDaily: 'Même parcours pour tous · {date}',
     track: 'PISTE', ball: 'BILLE', pause: 'PAUSE', resume: 'REPRENDRE', recal: 'RECALIBRER LE GYROSCOPE', mainMenu: 'MENU PRINCIPAL',
     gameOver: 'GAME OVER', newRecord: 'NOUVEAU RECORD', retry: 'REJOUER', menu: 'MENU',
-    share: 'PARTAGER MON SCORE', shareBusy: 'PRÉPARATION DE LA VIDÉO…', shareSaved: 'VIDÉO ENREGISTRÉE ✓', shareReady: 'PARTAGER LA VIDÉO ▶', shareImg: 'PARTAGER MON SCORE',
+    share: 'PARTAGER', shTitle: 'PARTAGER LA PARTIE', shImg: 'CAPTURE', shImgSub: 'Choisissez le meilleur moment du replay', shVid: 'VIDÉO', shVidSub: 'Accélérée ou à vitesse réelle, en musique',
+    shNoVideo: 'Ce navigateur ne sait pas enregistrer de vidéo', shFormat: 'FORMAT', shSpeed: 'VITESSE', shQuality: 'QUALITÉ', shFast: 'ACCÉLÉRÉE', shReal: 'VITESSE RÉELLE',
+    shFastInfo: 'Toute la partie en accéléré', shRealInfo: 'Les {s} dernières secondes', shSpecs: '{type} · {s} s · ~{mb} Mo', shMake: 'CRÉER LA VIDÉO', shMaking: 'CRÉATION… {p} %',
+    shDownload: 'TÉLÉCHARGER', shShare: 'PARTAGER', shSaved: 'ENREGISTRÉ ✓', shCopied: 'LIEN COPIÉ ✓', shPlay: 'Lire le replay', shFrame: 'Image du replay',
     shareText: 'J’ai roulé {d} m sur GYROLL (score {s}) ! Tu fais mieux ?', shareDaily: 'Défi du jour {date}',
     calib: 'CALIBRATION', calibSub: 'Tenez le téléphone dans une position naturelle', ready: 'PRÊT ?',
-    touchHint: 'Glissez le doigt pour guider la bille', camHint: 'Glissez pour tourner la caméra · pincez pour zoomer', keysHint: 'Flèches / WASD / ZQSD · ou glisser à la souris',
+    touchHint: 'Glissez le doigt pour guider la bille', camHint: 'Glissez pour tourner la caméra · pincez pour zoomer', keysHint: 'Flèches / WASD / ZQSD ou glisser pour diriger · clic molette, clic droit ou pavé tactile pour la caméra',
     permDenied: 'Accès au gyroscope refusé — contrôle tactile activé.', permNone: 'Gyroscope indisponible — contrôle tactile activé.',
-    ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TACTILE', ctrlKeys: 'CLAVIER', record: 'NOUVEAU RECORD !', dailyTag: 'DÉFI DU JOUR · {date}', randomTag: 'ENTRAÎNEMENT',
-    kid: 'MODE ENFANT · RAILS LATÉRAUX', kidInfo: 'Des petits rails rattrapent la bille sur les côtés', kidBadge: '🛡 Réalisé avec les rails latéraux', kidShare: 'avec les rails latéraux', kidTag: 'RAILS', tooFast: 'TROP VITE !',
+    ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TACTILE', record: 'NOUVEAU RECORD !', dailyTag: 'DÉFI DU JOUR · {date}', randomTag: 'ENTRAÎNEMENT',
+    kid: 'MODE ENFANT · RAILS LATÉRAUX', kidInfo: 'Des petits rails rattrapent la bille sur les côtés', kidBadge: '🛡 Réalisé avec les rails latéraux', kidShare: 'avec les rails latéraux', tooFast: 'TROP VITE !',
     star: 'STAR POWER', starGo: 'LEVEZ D’UN COUP ↑', starGoTouch: 'TAPEZ 2 FOIS', starGoKeys: 'ESPACE', starReady: 'STAR POWER PRÊT !',
     starOn: '★ STAR POWER ★', starActive: '★ SCORE ×2', starEnd: 'FIN DU STAR POWER', combo: 'PIÈCES ×{n}', comboLost: 'SÉRIE PERDUE', nearMiss: 'FRÔLÉ ! +{n}',
+    fallWarn: 'ACCÉLÉREZ !', fallWarnSub: 'La piste s’effondre · {m} m',
     install: 'INSTALLER',
     insKicker: 'L’APPLI', insTitle: 'Installer GYROLL', insLead: 'Sur votre écran d’accueil : plein écran, sans les barres du navigateur, et même hors ligne.',
     insIos1: 'Touchez Partager', insIos1h: 'Dans Safari : dans la barre d’outils, ou dans le menu ···',
@@ -979,11 +1136,22 @@ const I18N = {
     insIn2: 'Puis installez-la depuis Safari ou Chrome', insIn2h: 'Le bouton INSTALLER est dans les options',
     insHelp: 'Bloqué ? Ouvrez {host} dans Safari (iPhone, iPad) ou Chrome (Android).', copyLink: 'COPIER LE LIEN', linkCopied: 'LIEN COPIÉ ✓', installed: 'APPLI INSTALLÉE ✓',
     noGL: 'WebGL est indisponible sur cet appareil / navigateur. Activez l’accélération matérielle ou essayez un Chrome / Safari récent.',
-    about: 'À PROPOS', close: 'Fermer', aboutKicker: 'L’HISTOIRE', statLines: 'LIGNES DE CODE', statSize: 'Ko · UN SEUL index.html', statLibs: 'BIBLIOTHÈQUE',
+    about: 'À PROPOS', close: 'Fermer', aboutKicker: 'LE JEU', statLines: 'LIGNES DE CODE', statSize: 'Ko · UN SEUL index.html', statLibs: 'BIBLIOTHÈQUE',
     aboutLead: 'Une course de bille sans fin, que l’on guide en inclinant son téléphone. La piste flotte dans le vide, tourne, se rétrécit et s’effondre derrière vous. Jusqu’où irez-vous ?',
-    aboutP1: 'GYROLL est né le 25 septembre 2026 d’un seul long prompt, écrit en français : un jeu 3D complet dans un unique fichier HTML, sans bibliothèque ni fichier externe. Erwann Robin l’a ensuite façonné, prompt après prompt, avec Claude Code : neuf mondes, le défi du jour, le star power, le mode enfant, des billes miroirs, le soleil et la lune.',
-    aboutP2: 'Tout tient dans ce seul fichier : HTML, CSS, JavaScript, shaders GLSL, musique et sons créés à la volée. La piste, les mondes et les ciels sont générés par le code, et le jeu marche hors ligne.',
-    linkRepo: 'Code source sur GitHub', linkX: 'Suivre @diwann', aboutFoot: 'Open source · licence MIT',
+    abPlay: 'COMMENT JOUER', abMade: 'COMMENT C’EST FAIT',
+    abRulesT: 'Roulez sans vous arrêter', abRules: 'Inclinez le téléphone pour faire rouler la bille (ou glissez le doigt, ou utilisez les flèches). La piste s’effondre derrière vous : si vous traînez, elle vous rattrape. Tombez du bord et la partie s’arrête. Les points montent avec la distance, multipliés par la vitesse : ×2 dès 29 km/h, jusqu’à ×5 dès 108 km/h.',
+    abStarT: 'Pièces et star power', abStar: 'Chaque pièce remplit la jauge d’étoile. Des pièces à la suite montent le multiplicateur jusqu’à ×4 ; une seule pièce ratée le remet à zéro. Jauge pleine, levez le téléphone d’un coup (ou tapez deux fois, ou Espace) : pendant 6 secondes environ, des rails lumineux gardent les bords, la bille pulvérise poteaux et glissières (+500), la musique accélère et chaque point compte double.',
+    abModesT: 'Checkpoints et modes', abModes: 'Une arche de checkpoint tous les 250 m rapporte 1 000 points. L’entraînement est une piste sans fin : après une chute, vous repartez du dernier checkpoint. Le défi du jour est la même piste pour tous, toute la journée, depuis 0 m. Le mode enfant ajoute des rails sur les côtés et garde ses propres records.',
+    abBonusT: 'Frôlements et boosts', abBonus: 'Passez vite à moins de 35 cm d’un poteau ou d’une glissière sans le toucher : FRÔLÉ ! Des points en plus et un instant de ralenti. Les boosters vous propulsent en avant. Tapez un rail trop fort et vous passez par-dessus.',
+    abWorldsT: 'Neuf mondes', abWorlds: 'Le monde change tous les 500 m, en boucle : ville tech, campagne, îles au couchant, forêt, néon, mer, désert, abstrait et chaos. Chacun a son ciel, son décor et sa lumière, et le soleil et la lune suivent l’heure réelle (ou le réglage choisi).',
+    abSkinsT: 'Pistes et billes', abSkins: 'Cinq pistes : néon carbone, acier & or, jouet bois, marbre glacé et gazon (plus lent et bosselé, avec des touffes qui font rebondir). Cinq billes : chrome, verre, or, plasma et bonbon, chacune sa matière, et toutes reflètent le monde autour d’elles.',
+    abAiT: 'Écrit par une IA', abAi: 'Le code, les shaders, la musique et les tests ont été écrits par Claude, le modèle d’IA d’Anthropic, dans Claude Code, à partir de demandes en langage courant. Il prépare chaque changement, construit le jeu, y joue dans un navigateur sans écran, regarde ses propres captures et corrige ce qu’il voit.',
+    ab3dT: 'Moteur 3D', ab3d: 'Un moteur WebGL écrit de zéro : shaders GLSL, dessin instancié pour des milliers d’objets, une cube map de reflets en direct dans la bille, bloom, flou de vitesse, brume et ciels peints avec un vrai soleil et une vraie lune. Il adapte sa résolution pour tenir 60 images par seconde.',
+    abPhysT: 'Physique', abPhys: 'Sa propre physique à 120 pas par seconde : roulement avec rotation, adhérence et frottement, gravité dans les pentes et les virages relevés, sauts et atterrissages, rebonds sur les poteaux, glissières et rails. La piste est une courbe échantillonnée tous les 50 cm et construite 230 m à l’avance à partir d’une graine : le défi du jour est le même pour tous.',
+    abSoundT: 'Moteur sonore', abSound: 'Aucun fichier audio : Web Audio synthétise tout en direct. La musique joue accords, basse et arpèges, accélère avec le star power et s’étouffe au ralenti ; le roulement, le vent, les chocs et la réverbération naissent de bruit et d’oscillateurs.',
+    abVideoT: 'Captures et vidéos', abVideo: 'Pendant la partie, le jeu garde des images de l’action. À la fin, choisissez la meilleure image pour une capture, ou créez une vidéo (accélérée ou à vitesse réelle, story, carrée ou large, de 480p à 1080p), dessinée sur un canvas et enregistrée avec sa propre musique par MediaRecorder, directement sur l’appareil.',
+    abGyroT: 'Gyroscope', abGyro: 'L’inclinaison est lue comme deux angles par rapport à votre position de repos, dans le repère du téléphone : même sensation à plat, debout ou allongé. La position de repos est mesurée avant chaque partie et suit les lentes dérives de vos mains.',
+    linkRepo: 'Code source sur GitHub', linkRepoSub: 'Tout le jeu, ligne à ligne', linkX: 'Suivre @diwann', aboutFoot: 'Open source · licence MIT',
   },
   en: {
     play: 'PLAY', music: 'MUSIC', sfx: 'SFX', options: 'OPTIONS', done: 'DONE', control: 'CONTROLS',
@@ -991,15 +1159,19 @@ const I18N = {
     modeRandom: 'TRAINING', modeDaily: 'DAILY RUN', infoRandom: 'Endless track · you restart at the last checkpoint', infoContinue: 'Back at the {d} m checkpoint', newTrack: '↻ RESET TRACK', infoDaily: 'Same track for everyone · {date}',
     track: 'TRACK', ball: 'BALL', pause: 'PAUSE', resume: 'RESUME', recal: 'RECALIBRATE GYROSCOPE', mainMenu: 'MAIN MENU',
     gameOver: 'GAME OVER', newRecord: 'NEW RECORD', retry: 'PLAY AGAIN', menu: 'MENU',
-    share: 'SHARE MY SCORE', shareBusy: 'PREPARING VIDEO…', shareSaved: 'VIDEO SAVED ✓', shareReady: 'SHARE THE VIDEO ▶', shareImg: 'SHARE MY SCORE',
+    share: 'SHARE', shTitle: 'SHARE YOUR RUN', shImg: 'SCREENSHOT', shImgSub: 'Pick the best moment of the replay', shVid: 'VIDEO', shVidSub: 'Timelapse or real speed, with music',
+    shNoVideo: 'This browser can’t record videos', shFormat: 'FORMAT', shSpeed: 'SPEED', shQuality: 'QUALITY', shFast: 'TIMELAPSE', shReal: 'REAL SPEED',
+    shFastInfo: 'The whole run, sped up', shRealInfo: 'The last {s} seconds', shSpecs: '{type} · {s} s · ~{mb} MB', shMake: 'CREATE THE VIDEO', shMaking: 'CREATING… {p} %',
+    shDownload: 'DOWNLOAD', shShare: 'SHARE', shSaved: 'SAVED ✓', shCopied: 'LINK COPIED ✓', shPlay: 'Play the replay', shFrame: 'Replay picture',
     shareText: 'I rolled {d} m in GYROLL (score {s})! Can you beat it?', shareDaily: 'Daily run {date}',
     calib: 'CALIBRATION', calibSub: 'Hold your phone in a natural position', ready: 'READY?',
-    touchHint: 'Drag your finger to steer the ball', camHint: 'Drag to turn the camera · pinch to zoom', keysHint: 'Arrows / WASD · or drag with the mouse',
+    touchHint: 'Drag your finger to steer the ball', camHint: 'Drag to turn the camera · pinch to zoom', keysHint: 'Arrows / WASD or drag to steer · middle or right drag, or the trackpad, to look around',
     permDenied: 'Gyroscope access denied — touch control enabled.', permNone: 'Gyroscope unavailable — touch control enabled.',
-    ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TOUCH', ctrlKeys: 'KEYBOARD', record: 'NEW RECORD!', dailyTag: 'DAILY RUN · {date}', randomTag: 'TRAINING',
-    kid: 'KID MODE · SIDE RAILS', kidInfo: 'Small rails catch the ball on the sides', kidBadge: '🛡 Achieved with side rails on', kidShare: 'with side rails on', kidTag: 'RAILS', tooFast: 'TOO FAST!',
+    ctrlTilt: 'GYROSCOPE', ctrlTouch: 'TOUCH', record: 'NEW RECORD!', dailyTag: 'DAILY RUN · {date}', randomTag: 'TRAINING',
+    kid: 'KID MODE · SIDE RAILS', kidInfo: 'Small rails catch the ball on the sides', kidBadge: '🛡 Achieved with side rails on', kidShare: 'with side rails on', tooFast: 'TOO FAST!',
     star: 'STAR POWER', starGo: 'FLICK PHONE UP ↑', starGoTouch: 'DOUBLE-TAP', starGoKeys: 'PRESS SPACE', starReady: 'STAR POWER READY!',
     starOn: '★ STAR POWER ★', starActive: '★ SCORE ×2', starEnd: 'STAR POWER OVER', combo: 'COINS ×{n}', comboLost: 'STREAK LOST', nearMiss: 'CLOSE CALL! +{n}',
+    fallWarn: 'SPEED UP!', fallWarnSub: 'The track is collapsing · {m} m',
     install: 'INSTALL',
     insKicker: 'THE APP', insTitle: 'Install GYROLL', insLead: 'Right on your Home Screen: full screen, no browser bars, and it even plays offline.',
     insIos1: 'Tap Share', insIos1h: 'In Safari: in the toolbar, or in the ··· menu',
@@ -1018,11 +1190,22 @@ const I18N = {
     insIn2: 'Then install it from Safari or Chrome', insIn2h: 'The INSTALL button is in the options',
     insHelp: 'Stuck? Open {host} in Safari (iPhone, iPad) or Chrome (Android).', copyLink: 'COPY THE LINK', linkCopied: 'LINK COPIED ✓', installed: 'APP INSTALLED ✓',
     noGL: 'WebGL is not available on this device / browser. Enable hardware acceleration or try a recent Chrome / Safari.',
-    about: 'ABOUT', close: 'Close', aboutKicker: 'THE STORY', statLines: 'LINES OF CODE', statSize: 'KB · ONE index.html', statLibs: 'LIBRARIES',
+    about: 'ABOUT', close: 'Close', aboutKicker: 'THE GAME', statLines: 'LINES OF CODE', statSize: 'KB · ONE index.html', statLibs: 'LIBRARIES',
     aboutLead: 'An endless marble run you steer by tilting your phone. The track floats in the void, twists, narrows and falls apart behind you. How far can you go?',
-    aboutP1: 'GYROLL started on 25 September 2026 with one long prompt, written in French: a complete 3D game in a single HTML file, with no libraries and no assets. Erwann Robin then shaped it prompt after prompt with Claude Code: nine worlds, the daily run, star power, kid mode, mirror-like marbles, the sun and the moon.',
-    aboutP2: 'Everything lives in that one file: HTML, CSS, JavaScript, GLSL shaders, and music and sounds made on the fly. The track, the worlds and the skies are generated by code, and the game works offline.',
-    linkRepo: 'Source code on GitHub', linkX: 'Follow @diwann', aboutFoot: 'Open source · MIT license',
+    abPlay: 'HOW TO PLAY', abMade: 'HOW IT IS MADE',
+    abRulesT: 'Roll, and don’t stop', abRules: 'Tilt the phone to roll the marble (or drag a finger, or use the arrow keys). The track falls apart behind you: slow down too long and it catches you. Fall off the edge and the run ends. Points grow with the distance, times your speed: ×2 from 29 km/h, up to ×5 from 108 km/h.',
+    abStarT: 'Coins and star power', abStar: 'Every coin fills the star gauge. Coins in a row raise the coin multiplier up to ×4, and one missed coin resets it. With a full gauge, flick the phone up (or double-tap, or press Space): for about 6 seconds glowing rails guard the edges, the marble smashes posts and sliders (+500), the music speeds up and every point counts double.',
+    abModesT: 'Checkpoints and modes', abModes: 'A checkpoint gate every 250 m gives 1,000 points. Training is one endless track: after a fall you start again at your last checkpoint. The Daily run is the same track for everyone all day, from 0 m. Kid mode adds side rails and keeps its own records.',
+    abBonusT: 'Close calls and boosts', abBonus: 'Pass a post or a slider fast, less than 35 cm away, without touching it: CLOSE CALL! Bonus points and a moment of slow motion. Booster pads launch you forward. Hit a rail too hard and you jump over it.',
+    abWorldsT: 'Nine worlds', abWorlds: 'The world changes every 500 m and loops: tech city, countryside, sunset islands, forest, neon, sea, desert, abstract and chaos. Each has its own sky, scenery and light, and the sun and moon follow the real time of day (or the setting you choose).',
+    abSkinsT: 'Tracks and marbles', abSkins: 'Five tracks: neon carbon, steel & gold, wooden toy, ice marble and grass (slower and bumpy, with tufts that bounce you). Five marbles: chrome, glass, gold, plasma and candy, each its own material, and all of them mirror the world around them.',
+    abAiT: 'Written by an AI', abAi: 'The code, shaders, music and tests were written by Claude, Anthropic’s AI model, working in Claude Code from requests in plain words. It plans each change, builds the game, plays it in a headless browser, looks at its own screenshots and fixes what it sees.',
+    ab3dT: '3D engine', ab3d: 'A WebGL renderer written from scratch: GLSL shaders, instanced drawing for thousands of objects, a live reflection cube map in the marble, bloom, speed blur, haze and painted skies with a real sun and moon. It adapts its resolution to hold 60 frames per second.',
+    abPhysT: 'Physics', abPhys: 'Its own physics at 120 steps per second: rolling with spin, grip and drag, gravity on slopes and banked turns, jumps and landings, bounces on posts, sliders and rails. The track is a curve sampled every 50 cm and built 230 m ahead from a seed, so the daily run is the same for everyone.',
+    abSoundT: 'Sound engine', abSound: 'No audio files: Web Audio synthesizes everything live. The music plays chords, bass and arpeggios, speeds up with star power and goes muffled in slow motion; the rolling, the wind, the impacts and the reverb are made from noise and oscillators.',
+    abVideoT: 'Screenshots and videos', abVideo: 'During a run the game keeps pictures of the action. At the end, pick the best frame for a screenshot, or make a video (timelapse or real speed, story, square or wide, 480p to 1080p), drawn on a canvas and recorded with its own music by MediaRecorder, right on your device.',
+    abGyroT: 'Gyroscope', abGyro: 'The tilt is read as two angles away from your resting pose, in the phone’s own frame, so it feels the same flat, upright or lying in bed. The resting pose is measured before each run and follows the slow drift of your hands.',
+    linkRepo: 'Source code on GitHub', linkRepoSub: 'The whole game, line by line', linkX: 'Follow @diwann', aboutFoot: 'Open source · MIT license',
   },
 };
 let LANG = 'en';
@@ -1040,7 +1223,7 @@ const tr = (key, vars) => {
 
 // ---------------------------------------------------------------- about
 // Size of the built index.html, shown on the About screen: scripts/build.mjs writes the numbers.
-const BUILD_INFO = { lines: 6657, kb: 422 };
+const BUILD_INFO = { lines: 7178, kb: 465 };
 const REPO_URL = 'https://github.com/ErwannRobin/gyro';
 const X_URL = 'https://x.com/diwann';
 
@@ -3841,6 +4024,7 @@ class InputManager {
     window.addEventListener('blur', () => { this.keys.clear(); this.release(); });
     canvas.addEventListener('pointerdown', (e) => {
       if (!this.enabled || this.ptr !== null || this.tilt) return;     // with the gyroscope, fingers move the camera (CamGestures)
+      if (e.pointerType === 'mouse' && e.button !== 0) return;          // the middle and right buttons move the camera
       e.preventDefault();
       const now = performance.now();
       if (now - this.lastTap < 320) this.doubleTap = true;
@@ -4010,15 +4194,19 @@ class InputManager {
 // zooms. `accept(target, event)` says whether a press belongs to the camera; the game takes the
 // totals every frame. Quick taps are counted (two in a row make a double tap).
 // =====================================================================
+// Camera gestures: one finger (or a mouse button) drags the view, two fingers pinch to zoom.
+// On a computer the mouse wheel zooms, while a trackpad's two-finger swipe turns the view and its
+// pinch zooms.
 class CamGestures {
   constructor(accept) {
-    this.accept = accept; this.pts = new Map(); this.pinchD = 0; this.lastTap = -1e4; this.onTap = null;
+    this.accept = accept; this.pts = new Map(); this.pinchD = 0; this.lastTap = -1e4; this.onTap = null; this.padT = -1e4; this.wheelT = -1e4; this.pad = false;
     this.take();
     window.addEventListener('pointerdown', (e) => {
       if (!this.accept(e.target, e)) return;
+      if (e.button === 1) e.preventDefault();                   // no auto-scroll on a middle click
       const multi = this.pts.size > 0;
       for (const p of this.pts.values()) p.multi = true;
-      this.pts.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t: performance.now(), multi });
+      this.pts.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t: performance.now(), multi, btn: e.button });
       this.pinchD = this.spread();
     });
     window.addEventListener('pointermove', (e) => {
@@ -4033,7 +4221,7 @@ class CamGestures {
       if (!p) return;
       this.pts.delete(e.pointerId); this.pinchD = this.spread();
       const now = performance.now();
-      if (e.type === 'pointerup' && !p.multi && now - p.t < 280 && Math.hypot(p.x - p.x0, p.y - p.y0) < 12) {
+      if (e.type === 'pointerup' && !p.multi && !p.btn && now - p.t < 280 && Math.hypot(p.x - p.x0, p.y - p.y0) < 12) {
         this.taps++; if (now - this.lastTap < 350) this.double = true;
         this.lastTap = now;
         if (this.onTap) this.onTap();
@@ -4042,8 +4230,22 @@ class CamGestures {
     window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up); window.addEventListener('blur', () => this.reset());
     window.addEventListener('wheel', (e) => {
       if (!this.accept(e.target, e)) return;
-      e.preventDefault(); this.zoom *= Math.exp(clamp(e.deltaY, -120, 120) * 0.0016);
+      e.preventDefault();
+      const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1, dx = e.deltaX * k, dy = e.deltaY * k;
+      if (e.ctrlKey) { this.zoom *= Math.exp(clamp(dy, -50, 50) * 0.012); return; }      // trackpad pinch (or Ctrl + wheel)
+      if (this.isPad(e)) { this.dx -= dx; this.dy -= dy; return; }                     // two-finger swipe: drag the view
+      this.zoom *= Math.exp(clamp(dy, -120, 120) * 0.0016);                            // mouse wheel
     }, { passive: false });
+  }
+  // A trackpad sends small pixel steps, often sideways; a mouse wheel sends big line or pixel steps.
+  // The first event of a gesture decides for the whole gesture. A guess: some mice on some systems
+  // look like trackpads (their wheel then turns the view; Ctrl + wheel still zooms).
+  isPad(e) {
+    const now = performance.now();
+    if (now - this.wheelT > 300) this.pad = e.deltaMode === 0 && (e.deltaX !== 0 || Math.abs(e.deltaY) < 40 || !Number.isInteger(e.deltaY));
+    else if (e.deltaX !== 0 && e.deltaMode === 0) this.pad = true;
+    this.wheelT = now;
+    return this.pad;
   }
   spread() { if (this.pts.size < 2) return 0; const [a, b] = this.pts.values(); return Math.hypot(a.x - b.x, a.y - b.y); }
   get held() { return this.pts.size > 0; }
@@ -5068,12 +5270,13 @@ class UI {
     this.$ = $;
     this.el = {
       hud: $('hud'), dist: $('hDist'), score: $('hScore'), best: $('hBest'), speed: $('hSpeed'), bar: $('hSpeedBar'), mult: $('mult'),
-      ctrl: $('ctrlTag'), toasts: $('toasts'), danger: $('danger'), flash: $('flash'), menu: $('menu'), calib: $('calib'),
+      toasts: $('toasts'), danger: $('danger'), flash: $('flash'), menu: $('menu'), calib: $('calib'),
       calibNum: $('calibNum'), calibTxt: $('calibTxt'), calibSub: $('calibSub'), go: $('go'), pause: $('pause'), over: $('over'),
       record: $('record'), ovDist: $('ovDist'), ovScore: $('ovScore'), ovBest: $('ovBest'), ovMode: $('ovMode'), ovRails: $('ovRails'), mBest: $('mBest'), perm: $('permMsg'),
       btnPlay: $('btnPlay'), btnOpts: $('btnOpts'), sheet: $('sheet'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), modeTxt: $('modeTxt'), newTrack: $('btnNewTrack'), share: $('btnShare'), recal: $('btnRecal'),
       power: $('power'), pwCoin: $('pwCoin'), pwTxt: $('pwTxt'), pwFill: $('pwFill'), about: $('about'), btnAbout: $('btnAbout'),
       install: $('install'), insPhone: $('insPhone'), insSteps: $('insSteps'),
+      fallWarn: $('fallWarn'), fwTxt: $('fwTxt'), fwBar: $('fwBar'),
     };
     $('abRepo').href = REPO_URL; $('abX').href = X_URL;
     this.cache = {};
@@ -5089,6 +5292,8 @@ class UI {
       clearTimeout(e._t); e._t = setTimeout(() => { if (e.classList.contains('fade')) e.classList.add('hidden'); }, 450);
     }
   }
+  // Phones in landscape: two columns, the settings slide in from the right as a side panel.
+  sidePanel() { return matchMedia('(orientation: landscape) and (max-height: 640px)').matches; }
   // Menu offsets (portrait): PLAY in the middle of the screen (lower if the header needs the room),
   // and for options mode the title's move into the top bar, the mode switch's move under it and the
   // top of the sheet. Layout offsets ignore transforms, so the values hold while the animations play.
@@ -5098,7 +5303,7 @@ class UI {
     const top = (el) => { let y = 0; for (let e = el; e && e !== m; e = e.offsetParent) y += e.offsetTop; return y; };
     const set = (k, v) => m.style.setProperty(k, Math.round(v) + 'px');
     const bar = $('menuTop');
-    if (matchMedia('(orientation: landscape) and (max-height: 640px)').matches) {
+    if (this.sidePanel()) {
       for (const k of ['--playY', '--tY', '--hY', '--sheetTop']) set(k, 0);
       // OPTIONS sits in its slot under BEST; as DONE it glides to the middle of the top bar
       const slot = $('optSlot'), left = (el) => { let x = 0; for (let e = el; e && e !== m; e = e.offsetParent) x += e.offsetLeft; return x; };
@@ -5107,11 +5312,14 @@ class UI {
       set('--dX', m.clientWidth / 2 - x); set('--dY', top(bar) + bar.offsetHeight / 2 - this.el.btnOpts.offsetHeight / 2 - y);
       return;
     }
-    const title = $('title'), seg = $('modeSeg'), info = this.el.modeInfo, links = $('optLinks'), head = top(info) + info.offsetHeight;
+    const title = $('title'), info = this.el.modeInfo, links = $('optLinks'), head = top(info) + info.offsetHeight;
     set('--playY', Math.max(H / 2 - this.el.btnPlay.offsetHeight / 2, head + 14));
     set('--tY', top(bar) + bar.offsetHeight / 2 - top(title) - title.offsetHeight / 2);
-    const hY = top(bar) + bar.offsetHeight + 12 - top(seg);
-    set('--hY', hY); set('--sheetTop', top(links) + links.offsetHeight + hY + 16);
+    // ABOUT and INSTALL sit in the middle of the free space between the top bar and the sheet
+    // (right under the bar when that space is tight; the sheet then scrolls)
+    const barB = top(bar) + bar.offsetHeight, free = H - this.el.sheet.scrollHeight - barB, lh = links.offsetHeight;
+    const y = free - lh > 40 ? barB + (free - lh) / 2 : barB + 16, hY = y - top(links);
+    set('--hY', hY); set('--sheetTop', y + lh + 16);
   }
   // About: a circle opens from the About button, the marble draws its track, the numbers count up.
   get aboutOpen() { return this.el.about.classList.contains('open'); }
@@ -5258,6 +5466,14 @@ class UI {
       document.body.classList.toggle('star', st === 'on');
     }
   }
+  // Collapse warning: shown while the falling edge catches up; gap = meters left, k = gap / warning range.
+  fallWarn(on, gap, k) {
+    if (this.cache.fw !== on) { this.cache.fw = on; this.el.fallWarn.classList.toggle('on', on); }
+    if (!on) return;
+    this.set('fwt', this.el.fwTxt, tr('fallWarnSub', { m: Math.max(0, Math.round(gap)) }));
+    const w = Math.round(clamp(k, 0, 1) * 50) * 2 + '%';
+    if (this.cache.fwb !== w) { this.cache.fwb = w; this.el.fwBar.style.width = w; }
+  }
   toast(txt, cls = '', big = false) {
     const el = document.createElement('div');
     el.className = 'toast ' + cls + (big ? ' big' : ''); el.textContent = txt;
@@ -5314,61 +5530,72 @@ class UI {
     const txt = TRACK_THEMES[this.ti].name[LANG] + '  ·  ' + BALL_SKINS[this.bi].name[LANG];
     for (const set of this.skinSets) set.name.textContent = txt;
   }
-  shareState(state, p = 0) {
-    const b = this.el.share, prog = b.querySelector('.prog');
-    const key = state + LANG;
-    if (this.cache.share !== key) {
-      this.cache.share = key;
-      b.classList.toggle('busy', state === 'busy'); b.disabled = state === 'busy';
-      b.classList.toggle('ready', state === 'ready');
-      b.querySelector('.lbl').textContent = tr({ busy: 'shareBusy', saved: 'shareSaved', ready: 'shareReady' }[state] || 'share');
-      b.classList.toggle('hidden', state === 'none');
-    }
-    const w = state === 'busy' ? Math.round(p * 20) * 5 + '%' : '0';          // 5 % steps: few DOM writes
-    if (this.cache.shareW !== w) { this.cache.shareW = w; prog.style.width = w; }
-  }
 }
-
 // =====================================================================
-// Replay — records a light timelapse of the run (small JPEG snapshots of the
-// WebGL canvas) and turns it into a short accelerated video at game over,
-// using MediaRecorder on an offscreen canvas, with its own music when the
-// browser can record sound. Falls back to a score image.
+// Replay — keeps pictures of the run and turns them into a screenshot or a video at game over.
+// While playing, the WebGL canvas is copied as a JPEG about 24 times a second. The last 10
+// seconds stay complete (real speed video, frame picker); older pictures thin out into an even
+// timelapse of the whole run. At the end the chosen pictures are drawn on a 2D canvas with the
+// score around them: a JPEG for a screenshot, or a video recorded by MediaRecorder, with its own
+// music when the browser can record sound.
 // =====================================================================
+const REPLAY_FPS = 24, REPLAY_KEEP = 10;
+const SHARE_FMT = { story: [9, 16], square: [1, 1], wide: [16, 9] };
+const SHARE_RATE = { 480: 2500000, 720: 5000000, 1080: 8000000 };     // video bits per second for each quality
 class Replay {
-  constructor(audio) {
+  constructor(audio, mobile) {
     this.audio = audio;
+    this.caps = mobile ? [720, 960, 1280, 1280] : [960, 1280, 1920, 1920];   // longest side of a kept picture, per quality level
+    this.cap = this.caps[3];
     this.snap = document.createElement('canvas'); this.snapCx = this.snap.getContext('2d');
     this.pending = 0;
     this.canVideo = typeof window.MediaRecorder === 'function' && typeof HTMLCanvasElement.prototype.captureStream === 'function';
     this.reset();
   }
+  // A slower device (lower quality level) keeps smaller pictures, so filming costs it less.
+  setLevel(level) { this.cap = this.caps[clamp(level | 0, 0, 3)]; }
   reset() {
     if (this.job) this.job.abort = true;
-    this.frames = []; this.ending = []; this.interval = 0.25; this.acc = 0; this.job = null; this.gen = (this.gen || 0) + 1;
+    this.frames = []; this.recent = []; this.interval = 0.25; this.acc = 0; this.t = 0; this.job = null; this.gen = (this.gen || 0) + 1;
   }
   // Must run right after the frame was rendered (the drawing buffer is still valid).
-  capture(src, dt, dist, ending) {
-    this.acc += dt;
-    const iv = ending ? 1 / 12 : this.interval;
-    if (this.acc < iv || this.pending > 4) return;
-    if (ending && this.ending.length >= 26) return;
-    this.acc = 0;
-    const k = 640 / Math.max(src.width, src.height, 1);
+  // dt: real seconds since the last call; fall: the ball is falling (the end of the run).
+  capture(src, dt, dist, speed, fall) {
+    this.t += dt; this.acc += dt;
+    if (this.acc < 1 / REPLAY_FPS - 1e-4 || this.pending > 3) return;
+    this.acc = Math.min(this.acc - 1 / REPLAY_FPS, 1 / REPLAY_FPS);
+    const k = Math.min(1, this.cap / Math.max(src.width, src.height, 1));
     const w = Math.max(2, Math.round(src.width * k / 2) * 2), h = Math.max(2, Math.round(src.height * k / 2) * 2);
     if (this.snap.width !== w || this.snap.height !== h) { this.snap.width = w; this.snap.height = h; }
     try { this.snapCx.drawImage(src, 0, 0, w, h); } catch (e) { return; }
     this.pending++;
-    const gen = this.gen;
+    const gen = this.gen, f = { b: null, t: this.t, dist, speed, fall: !!fall };
     this.snap.toBlob((b) => {
       this.pending--;
-      if (!b || gen !== this.gen) return;
-      (ending ? this.ending : this.frames).push({ b, dist });
-      if (!ending && this.frames.length > 90) {                          // keep a uniform timelapse of the whole run
-        this.frames = this.frames.filter((_, i) => i % 2 === 0); this.interval *= 2;
-      }
-    }, 'image/jpeg', 0.72);
+      if (b && gen === this.gen) { f.b = b; this.keep(f); }
+    }, 'image/jpeg', 0.8);
   }
+  keep(f) {
+    const R = this.recent;
+    let i = R.length; while (i > 0 && R[i - 1].t > f.t) i--;
+    R.splice(i, 0, f);
+    const last = R[R.length - 1].t;
+    while (R.length && R[0].t < last - REPLAY_KEEP) {              // older pictures thin out into the timelapse
+      const o = R.shift(), F = this.frames;
+      if (!F.length || o.t - F[F.length - 1].t >= this.interval - 1e-3) F.push(o);
+      if (F.length > 90) { this.frames = F.filter((_, j) => j % 2 === 0); this.interval *= 2; }
+    }
+  }
+  // Every kept picture, oldest first (the frame picker).
+  all() { return this.frames.concat(this.recent); }
+  // The best moment for a screenshot: the fastest one before the fall.
+  bestIndex() {
+    const A = this.all();
+    let bi = A.length - 1, bs = -1;
+    A.forEach((f, i) => { if (!f.fall && f.speed >= bs) { bs = f.speed; bi = i; } });
+    return Math.max(0, bi);
+  }
+  get span() { const R = this.recent; return R.length ? R[R.length - 1].t - R[0].t + 1 / REPLAY_FPS : 0; }
   decode(blob) {
     if (typeof createImageBitmap === 'function') return createImageBitmap(blob).catch(() => this.decodeImg(blob));
     return this.decodeImg(blob);
@@ -5377,25 +5604,58 @@ class Replay {
     return new Promise((res) => { const u = URL.createObjectURL(blob), im = new Image(); im.onload = () => { URL.revokeObjectURL(u); res(im); }; im.onerror = () => { URL.revokeObjectURL(u); res(null); }; im.src = u; });
   }
 
-  // info: { dist, score, best, record, tag, accent, accent2, portrait }
-  async make(info, onProgress, attempt = 0) {
+  // The video's plan. 'fast': an intro, the whole run as a timelapse (about 7 s), the fall at real
+  // speed, the score card. 'real': the same around the last seconds, all at real speed.
+  // seq: pictures with their start time (t0) and phase (1 run, 2 fall).
+  timeline(speed) {
+    const R = this.recent, INTRO = 0.7, OUTRO = 2.4, seq = [];
+    const live = R.filter((f) => !f.fall), fall = R.filter((f) => f.fall);
+    let tMain, badge;
+    if (speed === 'real') {
+      const t0 = R.length ? R[0].t : 0;
+      for (const f of live) seq.push({ f, t0: INTRO + f.t - t0, ph: 1 });
+      tMain = fall.length ? fall[0].t - t0 : live.length ? live[live.length - 1].t - t0 + 1 / REPLAY_FPS : 0;
+      badge = '1×';
+    } else {
+      const main = this.frames.slice();
+      let last = main.length ? main[main.length - 1].t : -1e9;
+      for (const f of live) if (f.t - last >= this.interval - 1e-3) { main.push(f); last = f.t; }
+      const fps = Math.max(12, main.length / 7), step = main.length > 1 ? (main[main.length - 1].t - main[0].t) / (main.length - 1) : this.interval;
+      main.forEach((f, i) => seq.push({ f, t0: INTRO + i / fps, ph: 1 }));
+      tMain = main.length / fps;
+      badge = '⏩ ' + Math.max(2, Math.round(step * fps)) + '×';
+    }
+    const e0 = fall.length ? fall[0].t : 0;
+    for (const f of fall) seq.push({ f, t0: INTRO + tMain + f.t - e0, ph: 2 });
+    const tEnd = fall.length ? fall[fall.length - 1].t - e0 + 1 / REPLAY_FPS : 0;
+    return { seq, intro: INTRO, main: tMain, end: tEnd, outro: OUTRO, total: INTRO + tMain + tEnd + OUTRO, badge };
+  }
+  // What the video shows at time t: the picture (index in T.seq) and the phase (0 intro … 3 card).
+  at(T, t) {
+    const S = T.seq;
+    if (!S.length) return { i: -1, ph: 3 };
+    if (t >= T.intro + T.main + T.end) return { i: S.length - 1, ph: 3 };
+    let lo = 0, hi = S.length - 1;
+    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (S[mid].t0 <= t) lo = mid; else hi = mid - 1; }
+    return { i: lo, ph: t < T.intro ? 0 : S[lo].ph };
+  }
+  // Output size for a format ('story' 9:16, 'square', 'wide' 16:9) and a quality (its short side).
+  size(fmt, res) {
+    const [a, b] = SHARE_FMT[fmt] || SHARE_FMT.story, k = res / Math.min(a, b), even = (x) => Math.round(x / 2) * 2;
+    return [even(a * k), even(b * k)];
+  }
+
+  // Records the video. o: { speed, fmt, res }. onProgress(0..1), onFrame(canvas) after each picture.
+  async make(info, o, onProgress, onFrame, attempt = 0) {
+    const T = this.timeline(o.speed);
+    if (!this.canVideo || !T.seq.length) return null;
     const job = { abort: false }; this.job = job;
-    const list = this.frames.concat(this.ending);
-    const W = info.portrait ? 540 : 960, H = info.portrait ? 960 : 540;
+    const [W, H] = this.size(o.fmt, o.res);
     const out = document.createElement('canvas'); out.width = W; out.height = H;
     const g = out.getContext('2d');
-    const card = async () => this.card(g, W, H, list.length ? await this.decode(list[list.length - 1].b) : null, info, 1);
-    if (!this.canVideo || !list.length) {
-      await card();
-      const blob = await new Promise((r) => out.toBlob(r, 'image/png'));
-      return blob ? new File([blob], `gyroll-${Math.floor(info.dist)}m.png`, { type: 'image/png' }) : null;
-    }
-    const nMain = this.frames.length, fps = Math.max(12, nMain / 7), tMain = nMain / fps, tEnd = this.ending.length / 12;
-    const INTRO = 0.7, OUTRO = 2.4, total = INTRO + tMain + tEnd + OUTRO;
-    const speedX = Math.max(2, Math.round(this.interval * fps));
     // music fitted to the four parts; a browser that fails to record it gets silent videos from then on
     let tune = null;
-    if (!this.noAudio && this.audio) tune = await this.audio.videoMusic({ intro: INTRO, main: tMain, end: tEnd, outro: OUTRO, total, record: info.record }).catch(() => null);
+    if (!this.noAudio && this.audio) tune = await this.audio.videoMusic({ intro: T.intro, main: T.main, end: T.end, outro: T.outro, total: T.total, record: info.record }).catch(() => null);
     if (job.abort) { if (tune) tune.stop(); return null; }
     const types = tune ? ['video/mp4;codecs=avc1,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']
       : ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'];
@@ -5404,98 +5664,358 @@ class Replay {
     try {
       const stream = out.captureStream(30); track = stream.getVideoTracks()[0];
       if (tune) stream.addTrack(tune.track);
-      rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 3000000 } : undefined);
-    }
-    catch (e) {
-      if (tune) { tune.stop(); this.noAudio = true; return this.make(info, onProgress, attempt); }
-      this.canVideo = false; return this.make(info, onProgress);
+      rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: SHARE_RATE[o.res] || SHARE_RATE[720] } : undefined);
+    } catch (e) {
+      if (tune) { tune.stop(); this.noAudio = true; return this.make(info, o, onProgress, onFrame, attempt); }
+      this.canVideo = false; return null;
     }
     const chunks = [];
     rec.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
     const done = new Promise((r) => { rec.onstop = r; });
-    // sliding window of decoded frames so memory stays small
-    const cache = new Map();
-    const want = (i) => { if (i < 0 || i >= list.length || cache.has(i)) return; cache.set(i, this.decode(list[i].b)); };
-    const get = async (i) => { want(i); const im = await cache.get(i); for (let j = i + 1; j <= i + 4; j++) want(j); for (const k of cache.keys()) if (k < i - 1) { cache.get(k).then((b) => b && b.close && b.close()); cache.delete(k); } return im; };
+    // sliding window of decoded pictures so memory stays small
+    const S = T.seq, cache = new Map();
+    const want = (i) => { if (i < 0 || i >= S.length || cache.has(i)) return; cache.set(i, this.decode(S[i].f.b)); };
+    const get = async (i) => {
+      want(i); const im = await cache.get(i);
+      for (let j = i + 1; j <= i + 5; j++) want(j);
+      for (const k of cache.keys()) if (k < i - 1) { cache.get(k).then((b) => b && b.close && b.close()); cache.delete(k); }
+      return im;
+    };
+    const draw = (t, im, a) => {
+      if (a.ph === 3) this.card(g, W, H, im, info, clamp((t - T.intro - T.main - T.end) / 0.5, 0, 1));
+      else this.frame(g, W, H, im, info, S[a.i].f.dist, a.ph, t, T.badge);
+      if (track && track.requestFrame) track.requestFrame();
+      if (onFrame) onFrame(out);
+    };
     const first = await get(0);
-    this.frame(g, W, H, first, info, list[0].dist, 0, 0, speedX);          // prime the stream before recording
+    draw(0, first, { i: 0, ph: 0 });                                    // prime the stream before recording
     rec.start(250);
-    for (let k = 0; k < (attempt ? 30 : 4); k++) { await new Promise((r) => setTimeout(r, 40)); this.frame(g, W, H, first, info, list[0].dist, 0, 0, speedX); }
-    if (tune) tune.start();                                    // the music and the pictures share the same start
+    for (let k = 0; k < (attempt ? 30 : 4); k++) { await new Promise((r) => setTimeout(r, 40)); draw(0, first, { i: 0, ph: 0 }); }
+    if (tune) tune.start();                                              // the music and the pictures share the same start
     const t0 = performance.now();
-    let last = null;
+    let last = first;
     while (!job.abort) {
       const t = (performance.now() - t0) / 1000;
-      if (t >= total) break;
-      let i, phase;
-      if (t < INTRO) { i = 0; phase = 0; }
-      else if (t < INTRO + tMain) { i = Math.min(nMain - 1, Math.floor((t - INTRO) * fps)); phase = 1; }
-      else if (t < INTRO + tMain + tEnd) { i = nMain + Math.min(this.ending.length - 1, Math.floor((t - INTRO - tMain) * 12)); phase = 2; }
-      else { i = list.length - 1; phase = 3; }
-      const im = await get(i); if (im) last = im;
-      if (phase === 3) this.card(g, W, H, last, info, clamp((t - INTRO - tMain - tEnd) / 0.5, 0, 1));
-      else this.frame(g, W, H, last, info, list[i].dist, phase, t, speedX);
-      if (track && track.requestFrame) track.requestFrame();
-      onProgress(t / total);
-      await new Promise((r) => setTimeout(r, 30));
+      if (t >= T.total) break;
+      const a = this.at(T, t), im = await get(a.i);
+      if (im) last = im;
+      draw(t, last, a);
+      onProgress(t / T.total);
+      await new Promise((r) => setTimeout(r, 1000 / 30));
     }
     try { rec.requestData(); } catch (e) { /* ignore */ }
     rec.stop(); await done;
     if (tune) tune.stop();
     for (const p of cache.values()) p.then((b) => b && b.close && b.close());
+    if (this.job === job) this.job = null;
     if (job.abort) return null;
-    if (!chunks.length) {                                   // some encoders need a warm-up: retry once, then use an image
+    if (!chunks.length) {                                               // some encoders need a warm-up: retry once
       if (tune) this.noAudio = true;
-      if (attempt === 0) return this.make(info, onProgress, 1);
-      this.canVideo = false; const f = await this.make(info, onProgress, 2); this.canVideo = true; return f;
+      if (attempt === 0) return this.make(info, o, onProgress, onFrame, 1);
+      return null;
     }
     const type = (mime || chunks[0].type || 'video/webm').split(';')[0];
-    const ext = type.includes('mp4') ? 'mp4' : 'webm';
-    return new File(chunks, `gyroll-${Math.floor(info.dist)}m.${ext}`, { type });
+    return new File(chunks, `gyroll-${Math.floor(info.dist)}m.${type.includes('mp4') ? 'mp4' : 'webm'}`, { type });
   }
+  // The file type this browser records into (for the settings line), or null.
+  videoType() {
+    if (!this.canVideo) return null;
+    const t = ['video/mp4', 'video/webm'].find((x) => { try { return MediaRecorder.isTypeSupported(x); } catch (e) { return false; } });
+    return t ? t.split('/')[1].toUpperCase() : 'WEBM';
+  }
+  // A screenshot as a JPEG file, made at once (it stays inside the tap, so it can be shared).
+  imageFile(im, info, fmt) {
+    const [W, H] = this.size(fmt, 1080), c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d');
+    if (im) this.still(g, W, H, im, info); else this.card(g, W, H, null, info, 1);
+    const url = c.toDataURL('image/jpeg', 0.92), bin = atob(url.slice(url.indexOf(',') + 1)), a = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+    return new File([a], `gyroll-${Math.floor(info.dist)}m.jpg`, { type: 'image/jpeg' });
+  }
+
+  // ---- drawing (every size is in units of u: 1/540 of the picture's short side)
   cover(g, W, H, im) {
     if (!im) { g.fillStyle = '#05060d'; g.fillRect(0, 0, W, H); return; }
     const k = Math.max(W / im.width, H / im.height), w = im.width * k, h = im.height * k;
     g.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
   }
-  font(px, w = 900) { return `${w} ${px}px -apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Arial,sans-serif`; }
+  font(px, w = 900) { return `${w} ${Math.round(px)}px -apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",Roboto,Arial,sans-serif`; }
   logo(g, x, y, px, info, align = 'center') {
     g.font = this.font(px); g.textAlign = align; g.textBaseline = 'middle';
     const gr = g.createLinearGradient(x - px * 2, 0, x + px * 2, 0);
     gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.45, info.accent); gr.addColorStop(1, info.accent2);
     g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = px * 0.3; g.fillStyle = gr; g.fillText('GYROLL', x, y); g.shadowBlur = 0;
   }
-  frame(g, W, H, im, info, dist, phase, t, speedX) {
+  shade(g, W, H, y0, y1) {
+    const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, 'rgba(0,0,0,.62)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = gr; g.fillRect(0, Math.min(y0, y1), W, Math.abs(y1 - y0));
+  }
+  // One picture of the video: the run with the logo, the distance there and the speed badge.
+  frame(g, W, H, im, info, dist, ph, t, badge) {
+    const u = Math.min(W, H) / 540;
     this.cover(g, W, H, im);
-    const top = g.createLinearGradient(0, 0, 0, H * 0.22); top.addColorStop(0, 'rgba(0,0,0,.65)'); top.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = top; g.fillRect(0, 0, W, H * 0.22);
-    this.logo(g, 22, 34, 26, info, 'left');
-    g.font = this.font(Math.round(W * 0.1)); g.textAlign = 'center'; g.fillStyle = '#fff'; g.shadowColor = 'rgba(0,0,0,.7)'; g.shadowBlur = 12;
-    g.fillText(fmt(dist) + ' m', W / 2, H * 0.11); g.shadowBlur = 0;
-    g.font = this.font(18, 800); g.textAlign = 'right'; g.fillStyle = info.accent;
-    g.fillText(phase === 2 ? '1×' : '⏩ ' + speedX + '×', W - 20, 34);
-    if (info.tag) { g.font = this.font(14, 800); g.textAlign = 'center'; g.fillStyle = 'rgba(255,255,255,.8)'; g.fillText(info.tag, W / 2, H - 28); }
-    if (phase === 0) {
+    this.shade(g, W, H, 0, 150 * u);
+    this.logo(g, 22 * u, 34 * u, 26 * u, info, 'left');
+    g.font = this.font(54 * u); g.textAlign = 'center'; g.fillStyle = '#fff'; g.shadowColor = 'rgba(0,0,0,.7)'; g.shadowBlur = 12 * u;
+    g.fillText(fmt(dist) + ' m', W / 2, 96 * u); g.shadowBlur = 0;
+    g.font = this.font(18 * u, 800); g.textAlign = 'right'; g.fillStyle = info.accent;
+    g.fillText(ph === 2 ? '1×' : badge, W - 20 * u, 34 * u);
+    if (info.tag) { g.font = this.font(14 * u, 800); g.textAlign = 'center'; g.fillStyle = 'rgba(255,255,255,.8)'; g.fillText(info.tag, W / 2, H - 28 * u); }
+    if (ph === 0) {
       const a = 1 - clamp(t / 0.7, 0, 1);
       g.fillStyle = `rgba(5,6,13,${0.75 * a})`; g.fillRect(0, 0, W, H);
-      g.globalAlpha = a; this.logo(g, W / 2, H / 2, Math.round(W * 0.16), info); g.globalAlpha = 1;
+      g.globalAlpha = a; this.logo(g, W / 2, H / 2, 86 * u, info); g.globalAlpha = 1;
     }
+  }
+  // A screenshot: the chosen moment, with the run's result above and the score and the link below.
+  still(g, W, H, im, info) {
+    const u = Math.min(W, H) / 540;
+    this.cover(g, W, H, im);
+    this.shade(g, W, H, 0, 160 * u); this.shade(g, W, H, H, H - 150 * u);
+    this.logo(g, 22 * u, 34 * u, 26 * u, info, 'left');
+    g.textAlign = 'center'; g.fillStyle = '#fff'; g.shadowColor = 'rgba(0,0,0,.7)'; g.shadowBlur = 12 * u;
+    g.font = this.font(58 * u); g.fillText(fmt(info.dist) + ' m', W / 2, 100 * u);
+    g.font = this.font(20 * u, 800); g.fillText('SCORE ' + fmt(info.score), W / 2, H - (info.tag ? 88 : 64) * u);
+    if (info.tag) { g.font = this.font(14 * u, 800); g.fillStyle = 'rgba(255,255,255,.85)'; g.fillText(info.tag, W / 2, H - 60 * u); }
+    g.font = this.font(16 * u, 800); g.fillStyle = info.accent; g.fillText(PROD_HOST, W / 2, H - 32 * u);
+    g.shadowBlur = 0;
   }
   card(g, W, H, im, info, a) {
     this.cover(g, W, H, im);
     g.fillStyle = `rgba(5,6,13,${0.72 * a})`; g.fillRect(0, 0, W, H);
     g.globalAlpha = a;
     const cy = H / 2, u = Math.min(W, H) / 540;
-    this.logo(g, W / 2, cy - 190 * u, Math.round(62 * u), info);
+    this.logo(g, W / 2, cy - 190 * u, 62 * u, info);
     g.textAlign = 'center'; g.fillStyle = '#fff';
-    if (info.record) { g.font = this.font(Math.round(26 * u)); g.fillStyle = '#ffd36b'; g.fillText(info.recordTxt, W / 2, cy - 105 * u); g.fillStyle = '#fff'; }
-    g.font = this.font(Math.round(104 * u)); g.fillText(fmt(info.dist) + ' m', W / 2, cy - 10 * u);
-    g.font = this.font(Math.round(24 * u), 800); g.fillText('SCORE ' + fmt(info.score), W / 2, cy + 75 * u);
-    g.fillStyle = 'rgba(255,255,255,.7)'; g.font = this.font(Math.round(18 * u), 800); g.fillText('BEST ' + fmt(info.best) + ' m', W / 2, cy + 112 * u);
-    if (info.tag) { g.fillStyle = info.accent; g.font = this.font(Math.round(16 * u), 800); g.fillText(info.tag, W / 2, cy + 150 * u); }
-    g.fillStyle = 'rgba(255,255,255,.85)'; g.font = this.font(Math.round(20 * u), 500); g.fillText('How far can you go?', W / 2, cy + 200 * u);
-    g.fillStyle = info.accent; g.font = this.font(Math.round(18 * u), 800); g.fillText(PROD_HOST, W / 2, cy + 236 * u);
+    if (info.record) { g.font = this.font(26 * u); g.fillStyle = '#ffd36b'; g.fillText(info.recordTxt, W / 2, cy - 105 * u); g.fillStyle = '#fff'; }
+    g.font = this.font(104 * u); g.fillText(fmt(info.dist) + ' m', W / 2, cy - 10 * u);
+    g.font = this.font(24 * u, 800); g.fillText('SCORE ' + fmt(info.score), W / 2, cy + 75 * u);
+    g.fillStyle = 'rgba(255,255,255,.7)'; g.font = this.font(18 * u, 800); g.fillText('BEST ' + fmt(info.best) + ' m', W / 2, cy + 112 * u);
+    if (info.tag) { g.fillStyle = info.accent; g.font = this.font(16 * u, 800); g.fillText(info.tag, W / 2, cy + 150 * u); }
+    g.fillStyle = 'rgba(255,255,255,.85)'; g.font = this.font(20 * u, 500); g.fillText('How far can you go?', W / 2, cy + 200 * u);
+    g.fillStyle = info.accent; g.font = this.font(18 * u, 800); g.fillText(PROD_HOST, W / 2, cy + 236 * u);
     g.globalAlpha = 1;
+  }
+}
+
+// =====================================================================
+// ShareBox — the SHARE popup of the game over screen. Choose a screenshot (scrub the replay to
+// the best moment) or a video (timelapse or real speed, format, quality); DOWNLOAD and SHARE turn
+// on once there is something to send.
+// =====================================================================
+class ShareBox {
+  constructor(game) {
+    const $ = (id) => document.getElementById(id);
+    this.g = game; this.R = game.replay;
+    this.el = { box: $('shareBox'), panel: $('shPanel'), view: $('shView'), cv: $('shCanvas'), vid: $('shVideo'), frame: $('shFrame'), lbl: $('shFrameLbl'), play: $('btnShPlay'),
+      info: $('shInfo'), make: $('btnShMake'), dl: $('btnShDl'), share: $('btnShShare'), note: $('shNote') };
+    this.cx = this.el.cv.getContext('2d');
+    this.kind = ''; this.fmt = 'story'; this.speed = 'fast'; this.res = 720; this.info = null;
+    this.file = null; this.url = null; this.busy = false; this.pic = null; this.picI = -1; this.anim = 0;
+    const tap = (el, fn) => el.addEventListener('click', (e) => { e.preventDefault(); fn(e); });
+    for (const b of document.querySelectorAll('.shTile')) tap(b, () => { this.setKind(b.dataset.kind); this.g.audio.tick(); });
+    for (const b of document.querySelectorAll('#shFmt button')) tap(b, () => { if (b.dataset.fmt !== this.fmt) { this.fmt = b.dataset.fmt; this.changed(); this.g.audio.tick(); } });
+    for (const b of document.querySelectorAll('#shSpeed button')) tap(b, () => { if (b.dataset.speed !== this.speed) { this.speed = b.dataset.speed; this.changed(); this.g.audio.tick(); } });
+    for (const b of document.querySelectorAll('#shRes button')) tap(b, () => { if (+b.dataset.res !== this.res) { this.res = +b.dataset.res; this.changed(); this.g.audio.tick(); } });
+    tap($('btnShClose'), () => { this.close(); this.g.audio.tick(); });
+    this.el.box.addEventListener('click', (e) => { if (e.target === this.el.box) this.close(); });   // a tap outside the panel
+    tap(this.el.play, () => this.togglePlay());
+    this.el.frame.addEventListener('input', () => { this.stopPlay(); this.pick(+this.el.frame.value); });
+    tap(this.el.make, () => this.makeVideo());
+    tap(this.el.dl, () => this.download());
+    tap(this.el.share, () => this.send());
+    window.addEventListener('resize', () => { if (this.open) this.layout(); });
+  }
+  get open() { return this.el.box.classList.contains('open'); }
+  show(info) {
+    const E = this.el;
+    this.info = info; this.kind = ''; this.clearFile();
+    this.fmt = this.g.R.h >= this.g.R.w ? 'story' : 'wide';
+    const A = this.R.all(); this.picI = -1; this.pic = null;
+    E.frame.max = String(Math.max(0, A.length - 1)); E.frame.value = String(this.R.bestIndex());
+    E.box.dataset.kind = '';
+    clearTimeout(E.box._t); E.box.classList.remove('hidden'); void E.box.offsetWidth; E.box.classList.add('open');
+    this.texts(); this.layout();
+    try { document.getElementById('btnShClose').focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+  }
+  close() {
+    const E = this.el;
+    if (!this.open) return;
+    if (this.R.job) this.R.job.abort = true;
+    this.busy = false; this.stopPlay(); cancelAnimationFrame(this.anim); this.anim = 0;
+    E.vid.pause(); E.box.classList.remove('open');
+    clearTimeout(E.box._t); E.box._t = setTimeout(() => { if (!this.open) { E.box.classList.add('hidden'); this.clearFile(); } }, 350);
+  }
+  setKind(k) {
+    if (k === 'video' && !this.R.videoType()) return;
+    if (k === this.kind) return;
+    this.kind = k; this.el.box.dataset.kind = k;
+    this.changed();
+  }
+  // Any setting changed: a screenshot is ready at once, a video has to be made again.
+  changed() {
+    if (this.R.job) this.R.job.abort = true;
+    this.busy = false; this.clearFile(); this.stopPlay();
+    this.texts(); this.layout();
+  }
+  clearFile() {
+    this.file = null;
+    if (this.url) { URL.revokeObjectURL(this.url); this.url = null; }
+    const v = this.el.vid; v.pause(); v.removeAttribute('src'); v.classList.add('hidden'); this.el.cv.classList.remove('hidden');
+    try { v.load(); } catch (e) { /* ignore */ }
+  }
+  // Labels, pills, the settings line and which buttons can be used.
+  texts() {
+    const E = this.el, U = this.g.ui, k = this.kind, vt = this.R.videoType();
+    for (const b of document.querySelectorAll('.shTile')) {
+      b.classList.toggle('on', b.dataset.kind === k);
+      if (b.dataset.kind === 'video') { b.disabled = !vt; b.querySelector('small').textContent = tr(vt ? 'shVidSub' : 'shNoVideo'); }
+    }
+    U.setSeg('shFmt', 'fmt', this.fmt); U.setSeg('shSpeed', 'speed', this.speed); U.setSeg('shRes', 'res', String(this.res));
+    const T = this.R.timeline(this.speed), sec = Math.max(1, Math.round(T.total)), mb = Math.max(0.1, (SHARE_RATE[this.res] + 128000) * T.total / 8 / 1048576);
+    E.info.textContent = (this.speed === 'real' ? tr('shRealInfo', { s: Math.max(1, Math.round(this.R.span)) }) : tr('shFastInfo')) + ' · ' +
+      tr('shSpecs', { type: vt || '', s: sec, mb: mb < 10 ? mb.toFixed(1) : Math.round(mb) });
+    const ready = k === 'image' ? this.pic !== null || !this.R.all().length : k === 'video' && !!this.file;
+    E.dl.disabled = E.share.disabled = !ready;
+    E.make.classList.toggle('hidden', k !== 'video' || !!this.file);
+    this.makeLabel();
+  }
+  makeLabel(p) {
+    const b = this.el.make;
+    b.classList.toggle('busy', this.busy); b.disabled = this.busy;
+    b.querySelector('.lbl').textContent = this.busy ? tr('shMaking', { p: Math.round((p || 0) * 100) }) : tr('shMake');
+    b.querySelector('.prog').style.width = this.busy ? Math.round((p || 0) * 100) + '%' : '0';
+  }
+  // The preview keeps the output's shape and fits the free space.
+  layout() {
+    const E = this.el, [a, b] = SHARE_FMT[this.fmt], vw = E.view.clientWidth, vh = E.view.clientHeight;
+    if (!vw || !vh) return;
+    const k = Math.min(vw / a, vh / b), w = Math.floor(a * k), h = Math.floor(b * k), dpr = Math.min(window.devicePixelRatio || 1, 2);
+    for (const e of [E.cv, E.vid]) { e.style.width = w + 'px'; e.style.height = h + 'px'; }
+    const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+    if (E.cv.width !== pw || E.cv.height !== ph) { E.cv.width = pw; E.cv.height = ph; }
+    this.paint();
+  }
+  // Draws the preview for the current choice: the score card, the chosen moment, or the video's plan playing.
+  paint() {
+    const E = this.el, W = E.cv.width, H = E.cv.height, g = this.cx;
+    if (!this.info || !W) return;
+    cancelAnimationFrame(this.anim); this.anim = 0;
+    if (this.kind === 'image') {
+      if (this.R.all().length) this.pick(+E.frame.value, true); else this.R.card(g, W, H, null, this.info, 1);
+      return;
+    }
+    if (this.kind === 'video' && !this.busy && !this.file) { this.loop(); return; }
+    if (this.kind === '') {
+      const A = this.R.all(), f = A.length ? A[A.length - 1] : null;
+      this.R.card(g, W, H, null, this.info, 1);
+      if (f) this.R.decode(f.b).then((im) => { if (this.kind === '' && im) this.R.card(g, W, H, im, this.info, 1); });
+    }
+  }
+  // Screenshot: shows picture i of the replay; once decoded it is the one a tap sends.
+  pick(i, force) {
+    const A = this.R.all(), E = this.el;
+    if (!A.length) return;
+    i = clamp(i | 0, 0, A.length - 1); E.frame.value = String(i);
+    const f = A[i];
+    this.g.ui.set('shLbl', E.lbl, fmt(f.dist) + ' m');
+    if (i === this.picI && this.pic && !force) return;
+    const want = this.want = i;
+    this.R.decode(f.b).then((im) => {
+      if (want !== this.want || !im || this.kind !== 'image') return;
+      if (this.pic && this.pic.close && this.pic !== im) this.pic.close();
+      this.pic = im; this.picI = i;
+      this.R.still(this.cx, E.cv.width, E.cv.height, im, this.info);
+      if (E.dl.disabled) this.texts();
+    });
+  }
+  togglePlay() { if (this.playT) this.stopPlay(); else this.startPlay(); }
+  startPlay() {
+    const E = this.el, A = this.R.all();
+    if (A.length < 2) return;
+    let i = +E.frame.value; if (i >= A.length - 1) i = 0;
+    E.play.classList.add('on');
+    const step = () => {
+      this.pick(i);
+      if (++i >= A.length) { this.stopPlay(); return; }
+      this.playT = setTimeout(step, clamp((A[i].t - A[i - 1].t) * 1000, 40, 90));    // real speed, the timelapse part a little faster
+    };
+    step();
+  }
+  stopPlay() { clearTimeout(this.playT); this.playT = 0; this.el.play.classList.remove('on'); }
+  // Video, before it is made: its plan plays in the preview, in a loop.
+  loop() {
+    const E = this.el, T = this.R.timeline(this.speed), S = T.seq, cache = new Map(), t0 = performance.now();
+    const W = E.cv.width, H = E.cv.height;
+    let last = null;
+    const frame = () => {
+      if (this.kind !== 'video' || this.busy || this.file || !this.open) return;
+      const t = ((performance.now() - t0) / 1000) % T.total, a = this.R.at(T, t);
+      if (a.i >= 0 && !cache.has(a.i)) { const i = a.i; cache.set(i, null); this.R.decode(S[i].f.b).then((im) => { if (cache.has(i)) cache.set(i, im); else if (im && im.close) im.close(); }); }
+      for (const k of cache.keys()) if (k < a.i - 2 || k > a.i + 40) { const im = cache.get(k); if (im && im.close && im !== last) im.close(); cache.delete(k); }
+      const im = cache.get(a.i); if (im) last = im;
+      if (a.ph === 3) this.R.card(this.cx, W, H, last, this.info, clamp((t - T.intro - T.main - T.end) / 0.5, 0, 1));
+      else if (a.i >= 0) this.R.frame(this.cx, W, H, last, this.info, S[a.i].f.dist, a.ph, t, T.badge);
+      this.anim = requestAnimationFrame(frame);
+    };
+    if (!S.length) { this.R.card(this.cx, W, H, null, this.info, 1); return; }
+    frame();
+  }
+  makeVideo() {
+    if (this.busy || this.kind !== 'video') return;
+    const E = this.el, o = { speed: this.speed, fmt: this.fmt, res: this.res };
+    this.busy = true; cancelAnimationFrame(this.anim); this.anim = 0; this.texts();
+    const go = () => {
+      if (!this.busy) return;
+      if (this.R.pending > 0) { setTimeout(go, 100); return; }                     // last pictures still encoding
+      this.R.make(this.info, o, (p) => { if (this.busy) this.makeLabel(p); },
+        (out) => { if (this.busy) this.cx.drawImage(out, 0, 0, E.cv.width, E.cv.height); })
+        .then((f) => this.made(f, o)).catch(() => this.made(null, o));
+    };
+    go();
+  }
+  made(f, o) {
+    if (!this.busy || o.speed !== this.speed || o.fmt !== this.fmt || o.res !== this.res) return;
+    this.busy = false;
+    if (!f) { this.texts(); this.paint(); return; }
+    this.file = f; this.url = URL.createObjectURL(f);
+    const v = this.el.vid; v.src = this.url; v.classList.remove('hidden'); this.el.cv.classList.add('hidden');
+    v.muted = true; v.play().catch(() => {});
+    this.texts();
+    Analytics.event('share_make', { kind: 'video', speed: o.speed, fmt: o.fmt, res: o.res });
+  }
+  // The file to send: the video made, or the screenshot drawn now at full size.
+  current() {
+    if (this.kind === 'video') return this.file;
+    if (this.kind === 'image') return this.R.imageFile(this.pic, this.info, this.fmt);
+    return null;
+  }
+  download() {
+    const f = this.current();
+    if (!f) return;
+    const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    this.flash(this.el.dl, 'shSaved', 'shDownload');
+    Analytics.event('share', { kind: this.kind, via: 'download' });
+  }
+  send() {
+    const f = this.current(), text = this.g.shareText();
+    if (!f) return;
+    let canFiles;
+    try { canFiles = !!(navigator.canShare && navigator.canShare({ files: [f] })); } catch (e) { canFiles = false; }
+    if (navigator.share) {
+      Analytics.event('share', { kind: this.kind, via: canFiles ? 'share' : 'text' });
+      navigator.share(canFiles ? { files: [f], text, title: 'GYROLL' } : { text, title: 'GYROLL' }).catch(() => {});
+      return;
+    }
+    // no share sheet (most desktops): save the file and copy the text with the link
+    this.download();
+    try { if (navigator.clipboard) navigator.clipboard.writeText(text).then(() => this.flash(this.el.share, 'shCopied', 'shShare'), () => {}); } catch (e) { /* ignore */ }
+  }
+  flash(b, key, back) {
+    const s = b.querySelector('span'); s.textContent = tr(key);
+    clearTimeout(b._t); b._t = setTimeout(() => { s.textContent = tr(back); }, 2200);
   }
 }
 
@@ -5503,6 +6023,7 @@ class Replay {
 // Game — state machine, main loop, glue between all systems.
 // States: menu → calib → play → falling → over  (+ paused)
 // =====================================================================
+const FALL_WARN = 24;   // meters between the ball and the falling edge under which a slow ball is warned
 const GEM_COL = hex(0xffd36b), STAR_COL = [1, 0.82, 0.4], TUFT_COL = hex(0x62b236), TUFT_COL2 = hex(0x8fd24c);
 class Game {
   constructor() {
@@ -5525,7 +6046,8 @@ class Game {
     this.parts = new ParticleSystem(this.quality.cur.particles);
     this.env = new Environment();
     this.fx = new FxBuilder();
-    this.replay = new Replay(this.audio);
+    this.replay = new Replay(this.audio, this.mobile); this.replay.setLevel(this.quality.level);
+    this.shareBox = new ShareBox(this);
     this.chunks = new Map(); this.nextChunk = 0;
     this.themeIdx = clamp(Store.get('theme', 0) | 0, 0, TRACK_THEMES.length - 1);
     this.skinIdx = clamp(Store.get('skin', 0) | 0, 0, BALL_SKINS.length - 1);
@@ -5578,6 +6100,7 @@ class Game {
     for (const b of document.querySelectorAll('#langSeg button')) tap(b, () => { LANG = b.dataset.lang; Store.set('lang', LANG); this.refreshTexts(); this.audio.tick(); });
     // the options toggle raises the settings sheet (and hides PLAY); a tap outside the sheet closes it
     tap(E.btnOpts, () => { if (this.state === 'menu') { this.setOpts(!E.menu.classList.contains('opts')); this.audio.tick(); } });
+    this.bindGrip();
     for (const b of document.querySelectorAll('#ctrlSeg button')) tap(b, () => { if (b.dataset.ctrl !== this.ctrl) { this.setCtrl(b.dataset.ctrl); this.audio.tick(); } });
     for (const b of document.querySelectorAll('#todSeg button')) tap(b, () => { if (b.dataset.tod !== this.tod) { this.setTod(b.dataset.tod); this.audio.tick(); } });
     if (!this.mobile) $('ctrlRow').classList.add('hidden');                 // keyboard and mouse only
@@ -5617,6 +6140,7 @@ class Game {
       const k = e.key.toLowerCase();
       if (U.aboutOpen) { if (k === 'escape') U.closeAbout(); return; }
       if (U.installOpen) { if (k === 'escape') U.closeInstall(); return; }
+      if (this.shareBox.open) { if (k === 'escape') this.shareBox.close(); return; }
       if ((k === 'escape' || k === 'p') && (this.state === 'play' || this.state === 'calib')) this.pause();
       else if (k === 'escape' && this.state === 'menu') this.setOpts(false);
       else if (k === ' ' && this.state === 'play') this.starKey = true;
@@ -5624,6 +6148,35 @@ class Game {
       else if ((k === ' ' || k === 'enter') && this.state === 'menu' && !this.mobile) { this.audio.init(); this.input.tilt = false; this.startRun('keys'); }
       else if ((k === ' ' || k === 'enter') && this.state === 'over' && this.overT > 0.6) { this.audio.init(); this.startRun(this.mode); }
     });
+  }
+  // The settings sheet follows a drag on its grip (down, or right for the landscape side panel) and
+  // closes when let go far enough or fast enough; otherwise it springs back.
+  bindGrip() {
+    const U = this.ui, sh = U.el.sheet, grip = U.$('sheetGrip');
+    let d = null;
+    grip.addEventListener('pointerdown', (e) => {
+      if (d || !U.el.menu.classList.contains('opts') || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      e.preventDefault();
+      const side = U.sidePanel();                                          // landscape: the grip runs along the panel's edge
+      d = { id: e.pointerId, x: e.clientX, y: e.clientY, side, pos: 0, v: 0, t: performance.now(), size: side ? sh.offsetWidth : sh.offsetHeight };
+      try { grip.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      sh.classList.add('drag');
+    });
+    grip.addEventListener('pointermove', (e) => {
+      if (!d || e.pointerId !== d.id) return;
+      const raw = d.side ? e.clientX - d.x : e.clientY - d.y, pos = raw > 0 ? raw : raw / (1 - raw / 40) * 0.5;   // pulling the wrong way only stretches a little
+      const now = performance.now(), dt = Math.max(1, now - d.t);
+      d.v = lerp(d.v, (pos - d.pos) / dt, 0.5); d.pos = pos; d.t = now;
+      sh.style.transform = d.side ? `translateX(${pos.toFixed(1)}px)` : `translateY(${pos.toFixed(1)}px)`;
+    });
+    const end = (e) => {
+      if (!d || e.pointerId !== d.id) return;
+      const close = e.type === 'pointerup' && (d.pos > d.size * 0.3 || (d.v > 0.45 && d.pos > 12));
+      sh.classList.remove('drag'); sh.style.transform = '';     // the transition runs on from where the finger left it
+      d = null;
+      if (close) { this.setOpts(false); this.audio.tick(); }
+    };
+    grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
   }
   refreshTexts() {
     const U = this.ui, E = U.el;
@@ -5634,7 +6187,7 @@ class Game {
     E.newTrack.classList.toggle('hidden', !cont);
     E.mBest.textContent = fmt(this.modeBest()) + ' m';
     const kb = U.$('tgKid'); kb.classList.toggle('off', !this.kid); kb.title = tr('kidInfo');
-    if (this.shareSt) U.shareState(this.shareSt, this.shareP || 0);
+    if (this.shareBox.open) this.shareBox.texts();
     U.pills();
   }
   // PLAY starts with the chosen control; the gyroscope asks for permission first (iOS) and falls
@@ -5673,12 +6226,12 @@ class Game {
     m.classList.remove('intro'); void m.offsetWidth; m.classList.add('intro');
     clearTimeout(this.introT); this.introT = setTimeout(() => m.classList.remove('intro'), 1600);
   }
-  // Presses that move the camera: the menu background, or the game itself in gyroscope play
-  // (the wheel zooms in every kind of play).
+  // Presses that move the camera: the menu background, or the game itself in gyroscope play; with
+  // a mouse, the middle or right button (and the wheel or a trackpad) in every kind of play.
   camTarget(t, e) {
     const st = this.state;
     if (st === 'menu') return !!(t && t.closest && t.closest('#menu') && !t.closest('button,input,a,.seg,.skinRow,.tgRow,#sheet'));
-    if (st === 'play' || st === 'calib' || st === 'falling') return t === this.canvas && (this.mode === 'tilt' || e.type === 'wheel');
+    if (st === 'play' || st === 'calib' || st === 'falling') return t === this.canvas && (this.mode === 'tilt' || e.type === 'wheel' || (e.pointerType === 'mouse' && e.button > 0));
     return false;
   }
   // ------------------------------------------------------------- game modes
@@ -5758,8 +6311,9 @@ class Game {
     });
     window.addEventListener('blur', () => { if (this.state === 'play' && !this.mobile) this.pause(); });
     window.addEventListener('pagehide', () => this.audio.suspend());
-    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement) && !e.target.closest('#sheet, #abScroll, #insScroll')) e.preventDefault(); }, { passive: false });
+    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement) && !e.target.closest('#sheet, #abScroll, #insScroll, #shSide')) e.preventDefault(); }, { passive: false });
     document.addEventListener('gesturestart', (e) => e.preventDefault());
+    document.addEventListener('contextmenu', (e) => { if (!e.target.closest('a, input, #abScroll, #insScroll')) e.preventDefault(); });
     document.addEventListener('dblclick', (e) => e.preventDefault());
     this.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.glLost = true; if (this.state === 'play') this.pause(); });
     this.canvas.addEventListener('webglcontextrestored', () => {
@@ -5783,6 +6337,7 @@ class Game {
     const q = this.quality.cur;
     this.parts.max = Math.min(q.particles, this.parts.cap); if (this.parts.n > this.parts.max) this.parts.n = this.parts.max;
     this.env.setDust(q.dust); this.env.density = clamp(q.env / 22, 0.4, 1.2);
+    this.replay.setLevel(this.quality.level);
     this.resize(true);
   }
 
@@ -5812,6 +6367,7 @@ class Game {
     this.lastCP = b.s;
     this.startS = b.s; this.maxS = b.s; this.score = 0; this.dist = 0; this.mult = 1; this.recordShown = false;
     this.danger = 0; this.timeScale = 1; this.acc = 0; this.runT = 0;
+    this.fallOn = false; this.fallGap = 99; this.sRate = 0; this.prevS = b.s;
     // star power: coins fill the gauge, a streak of coins raises the coin multiplier
     this.power = 0; this.star = false; this.physics.star = false; this.starK = 0; this.starN = 0;
     this.coinStreak = 0; this.coinMult = 1; this.coins = 0;
@@ -5819,7 +6375,7 @@ class Game {
     this.audio.setTempo(1); this.ui.updatePower(0, 1, 'fill', '');
     this.parts.clear(); this.debris.length = 0; this.bobY = this.bobV = 0;
     this.tw.t = 9; this.nearCool = 0; this.slowK = this.rushK = this.impactK = 0; this.sq = this.sqV = 0; this.rings.length = 0;
-    this.replay.reset(); this.shareToken = (this.shareToken || 0) + 1; this.shareFile = null; this.shareInfo = null;
+    this.replay.reset(); this.shareBox.close(); this.shareInfo = null;
     this.updateChunks(99);
     this.env.reset(this.track, b.s, this.quality.cur.env, this.quality.cur.dust, this.R.meshes);
     this.floorY = b.surfY - 62; this.zoneIdx = 0; this.R.setZones(0, 0, 0);
@@ -5850,7 +6406,6 @@ class Game {
     this.best = this.modeBest();
     U.show('menu', false); U.show('over', false); U.show('pause', false); U.setOpts(false);
     U.hud(true);
-    U.el.ctrl.textContent = tr(mode === 'tilt' ? 'ctrlTilt' : mode === 'keys' ? 'ctrlKeys' : 'ctrlTouch') + (this.kid ? ' · 🛡 ' + tr('kidTag') : '');
     E.recal.classList.toggle('hidden', mode !== 'tilt');
     this.input.enabled = true; this.input.release();
     this.cam.mode = 'follow';
@@ -6096,6 +6651,12 @@ class Game {
       this.danger = clamp(1 - (gap - 3) / 11, 0, 1);
       this.warnT -= dt;
       if (this.danger > 0.45 && this.warnT <= 0) { this.audio.warn(); this.warnT = lerp(0.7, 0.25, this.danger); }
+      // warn early when the ball is too slow: the falling edge gains on it (with some hysteresis)
+      if (dt > 0) this.sRate += (clamp((b.s - this.prevS) / dt, -30, 60) - this.sRate) * damp(4, dt);
+      this.prevS = b.s; this.fallGap = gap;
+      const closing = vc - this.sRate, was = this.fallOn;
+      this.fallOn = was ? gap < FALL_WARN + 4 && !(closing < -1.5 && gap > 14) : vc > 0 && gap < FALL_WARN && (closing > 0.3 || gap < 12);
+      if (this.fallOn && !was) { this.audio.warn(); this.ui.el.touchHint.style.opacity = 0; }
     } else if (st !== 'paused') this.danger = Math.max(0, this.danger - dtR * 2);
 
     if (sim) {
@@ -6127,14 +6688,15 @@ class Game {
         this.audio.setWind(st === 'play' ? b.speed : 0, !b.grounded); this.audio.setSlow(this.slowK);
       }
     }
-    // while the replay video is being encoded, draw the backdrop at half rate
-    if (draw && st === 'over' && this.shareSt === 'busy' && (this.halfTick = !this.halfTick)) draw = false;
+    // the share popup covers the game: no need to draw it (the video encoder gets the time)
+    if (draw && st === 'over' && this.shareBox.open) draw = false;
     if (draw && (st === 'menu' || st === 'paused')) this.previews(dtR);
     if (draw) {
       this.render();
-      if (st === 'play' || st === 'falling') this.replay.capture(this.canvas, dtR, this.dist, st === 'falling');
+      if (st === 'play' || st === 'falling') this.replay.capture(this.canvas, dtR, this.dist, b.speed, st === 'falling');
     }
     this.ui.frame(dtR, this.danger);
+    this.ui.fallWarn(st === 'play' && this.fallOn && !b.lost, this.fallGap, this.fallGap / FALL_WARN);
     if (st === 'play' || st === 'calib') {
       this.ui.updateHud(this.dist, this.score, Math.max(this.best, this.dist), b.speed, this.mult, b.boost);
       this.ui.updatePower(this.power, this.coinMult, this.star ? 'on' : this.power >= 1 ? 'ready' : 'fill',
@@ -6584,61 +7146,20 @@ class Game {
   // ------------------------------------------------------------- sharing
   prepareShare(record) {
     const th = TRACK_THEMES[this.themeIdx], css = (c) => `rgb(${c.map((v) => Math.round(v * 255)).join(',')})`;
-    const info = {
+    this.shareInfo = {
       dist: Math.floor(this.dist), score: Math.floor(this.score), best: Math.floor(this.best), record, recordTxt: tr('newRecord'),
       tag: [this.gameMode === 'daily' ? tr('dailyTag', { date: dayLabel(this.runDay || dayKey()) }) : '', this.kid ? '🛡 ' + tr('kidShare').toUpperCase() : ''].filter(Boolean).join(' · '),
-      accent: css(th.accent), accent2: css(th.accent2), portrait: this.R.h >= this.R.w,
+      accent: css(th.accent), accent2: css(th.accent2),
     };
-    this.shareInfo = info; this.shareFile = null; this.shareToken = (this.shareToken || 0) + 1;
-    this.setShare('idle');
   }
-  // The video is only made when asked for (first tap). Making it takes longer than the browser
-  // keeps the tap "active", so sharing it needs a second tap unless it was quick (image fallback).
-  makeShare() {
-    const token = this.shareToken, t0 = performance.now();
-    this.setShare('busy', 0);
-    const done = (f) => {
-      if (token !== this.shareToken) return;
-      this.shareFile = f;
-      if (performance.now() - t0 < 900) this.share(); else this.setShare('ready');
-    };
-    const go = () => {
-      if (token !== this.shareToken) return;
-      if (this.replay.pending > 0) { setTimeout(go, 100); return; }          // last snapshots still encoding
-      this.replay.make(this.shareInfo, (p) => { if (token === this.shareToken) this.setShare('busy', p); })
-        .then(done).catch(() => done(null));
-    };
-    go();
-  }
-  setShare(st, p = 0) { this.shareSt = st; this.shareP = p; this.ui.shareState(st, p); }
-  share() {
-    const f = this.shareFile, info = this.shareInfo;
-    if (!info || this.shareSt === 'busy') return;
-    if (this.shareSt === 'idle') { this.makeShare(); return; }
-    const url = PROD_URL + (this.gameMode === 'daily' ? '?mode=daily' : '');
+  // SHARE opens the popup: a screenshot or a video of this run, then download or share it.
+  share() { if (this.state === 'over' && this.shareInfo) this.shareBox.show(this.shareInfo); }
+  shareText() {
+    const info = this.shareInfo, url = PROD_URL + (this.gameMode === 'daily' ? '?mode=daily' : '');
     let text = tr('shareText', { d: fmt(info.dist), s: fmt(info.score) });
     if (this.gameMode === 'daily') text += ' — ' + tr('shareDaily', { date: dayLabel(this.runDay || dayKey()) });
     if (this.kid) text += ' (🛡 ' + tr('kidShare') + ')';
-    text += ' ' + url;
-    let canFiles;
-    try { canFiles = !!(f && navigator.canShare && navigator.canShare({ files: [f] })); } catch (e) { canFiles = false; }
-    const kind = f ? (f.type.startsWith('video') ? 'video' : 'image') : 'text';
-    if (navigator.share && (canFiles || !f)) {
-      Analytics.event('share', { kind, via: 'share' });
-      navigator.share(canFiles ? { files: [f], text, title: 'GYROLL' } : { text, title: 'GYROLL' })
-        .catch((e) => { if (!e || e.name !== 'AbortError') this.download(f, text); });
-      return;
-    }
-    Analytics.event('share', { kind, via: 'download' });
-    this.download(f, text);
-  }
-  download(f, text) {
-    try { if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {}); } catch (e) { /* ignore */ }
-    if (!f) return;
-    const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 8000);
-    this.setShare('saved');
+    return text + ' ' + url;
   }
 
   // ------------------------------------------------------------- misc

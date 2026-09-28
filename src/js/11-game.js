@@ -3,6 +3,7 @@
 // Game — state machine, main loop, glue between all systems.
 // States: menu → calib → play → falling → over  (+ paused)
 // =====================================================================
+const FALL_WARN = 24;   // meters between the ball and the falling edge under which a slow ball is warned
 const GEM_COL = hex(0xffd36b), STAR_COL = [1, 0.82, 0.4], TUFT_COL = hex(0x62b236), TUFT_COL2 = hex(0x8fd24c);
 class Game {
   constructor() {
@@ -25,7 +26,8 @@ class Game {
     this.parts = new ParticleSystem(this.quality.cur.particles);
     this.env = new Environment();
     this.fx = new FxBuilder();
-    this.replay = new Replay(this.audio);
+    this.replay = new Replay(this.audio, this.mobile); this.replay.setLevel(this.quality.level);
+    this.shareBox = new ShareBox(this);
     this.chunks = new Map(); this.nextChunk = 0;
     this.themeIdx = clamp(Store.get('theme', 0) | 0, 0, TRACK_THEMES.length - 1);
     this.skinIdx = clamp(Store.get('skin', 0) | 0, 0, BALL_SKINS.length - 1);
@@ -78,6 +80,7 @@ class Game {
     for (const b of document.querySelectorAll('#langSeg button')) tap(b, () => { LANG = b.dataset.lang; Store.set('lang', LANG); this.refreshTexts(); this.audio.tick(); });
     // the options toggle raises the settings sheet (and hides PLAY); a tap outside the sheet closes it
     tap(E.btnOpts, () => { if (this.state === 'menu') { this.setOpts(!E.menu.classList.contains('opts')); this.audio.tick(); } });
+    this.bindGrip();
     for (const b of document.querySelectorAll('#ctrlSeg button')) tap(b, () => { if (b.dataset.ctrl !== this.ctrl) { this.setCtrl(b.dataset.ctrl); this.audio.tick(); } });
     for (const b of document.querySelectorAll('#todSeg button')) tap(b, () => { if (b.dataset.tod !== this.tod) { this.setTod(b.dataset.tod); this.audio.tick(); } });
     if (!this.mobile) $('ctrlRow').classList.add('hidden');                 // keyboard and mouse only
@@ -117,6 +120,7 @@ class Game {
       const k = e.key.toLowerCase();
       if (U.aboutOpen) { if (k === 'escape') U.closeAbout(); return; }
       if (U.installOpen) { if (k === 'escape') U.closeInstall(); return; }
+      if (this.shareBox.open) { if (k === 'escape') this.shareBox.close(); return; }
       if ((k === 'escape' || k === 'p') && (this.state === 'play' || this.state === 'calib')) this.pause();
       else if (k === 'escape' && this.state === 'menu') this.setOpts(false);
       else if (k === ' ' && this.state === 'play') this.starKey = true;
@@ -124,6 +128,35 @@ class Game {
       else if ((k === ' ' || k === 'enter') && this.state === 'menu' && !this.mobile) { this.audio.init(); this.input.tilt = false; this.startRun('keys'); }
       else if ((k === ' ' || k === 'enter') && this.state === 'over' && this.overT > 0.6) { this.audio.init(); this.startRun(this.mode); }
     });
+  }
+  // The settings sheet follows a drag on its grip (down, or right for the landscape side panel) and
+  // closes when let go far enough or fast enough; otherwise it springs back.
+  bindGrip() {
+    const U = this.ui, sh = U.el.sheet, grip = U.$('sheetGrip');
+    let d = null;
+    grip.addEventListener('pointerdown', (e) => {
+      if (d || !U.el.menu.classList.contains('opts') || (e.pointerType === 'mouse' && e.button !== 0)) return;
+      e.preventDefault();
+      const side = U.sidePanel();                                          // landscape: the grip runs along the panel's edge
+      d = { id: e.pointerId, x: e.clientX, y: e.clientY, side, pos: 0, v: 0, t: performance.now(), size: side ? sh.offsetWidth : sh.offsetHeight };
+      try { grip.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      sh.classList.add('drag');
+    });
+    grip.addEventListener('pointermove', (e) => {
+      if (!d || e.pointerId !== d.id) return;
+      const raw = d.side ? e.clientX - d.x : e.clientY - d.y, pos = raw > 0 ? raw : raw / (1 - raw / 40) * 0.5;   // pulling the wrong way only stretches a little
+      const now = performance.now(), dt = Math.max(1, now - d.t);
+      d.v = lerp(d.v, (pos - d.pos) / dt, 0.5); d.pos = pos; d.t = now;
+      sh.style.transform = d.side ? `translateX(${pos.toFixed(1)}px)` : `translateY(${pos.toFixed(1)}px)`;
+    });
+    const end = (e) => {
+      if (!d || e.pointerId !== d.id) return;
+      const close = e.type === 'pointerup' && (d.pos > d.size * 0.3 || (d.v > 0.45 && d.pos > 12));
+      sh.classList.remove('drag'); sh.style.transform = '';     // the transition runs on from where the finger left it
+      d = null;
+      if (close) { this.setOpts(false); this.audio.tick(); }
+    };
+    grip.addEventListener('pointerup', end); grip.addEventListener('pointercancel', end);
   }
   refreshTexts() {
     const U = this.ui, E = U.el;
@@ -134,7 +167,7 @@ class Game {
     E.newTrack.classList.toggle('hidden', !cont);
     E.mBest.textContent = fmt(this.modeBest()) + ' m';
     const kb = U.$('tgKid'); kb.classList.toggle('off', !this.kid); kb.title = tr('kidInfo');
-    if (this.shareSt) U.shareState(this.shareSt, this.shareP || 0);
+    if (this.shareBox.open) this.shareBox.texts();
     U.pills();
   }
   // PLAY starts with the chosen control; the gyroscope asks for permission first (iOS) and falls
@@ -173,12 +206,12 @@ class Game {
     m.classList.remove('intro'); void m.offsetWidth; m.classList.add('intro');
     clearTimeout(this.introT); this.introT = setTimeout(() => m.classList.remove('intro'), 1600);
   }
-  // Presses that move the camera: the menu background, or the game itself in gyroscope play
-  // (the wheel zooms in every kind of play).
+  // Presses that move the camera: the menu background, or the game itself in gyroscope play; with
+  // a mouse, the middle or right button (and the wheel or a trackpad) in every kind of play.
   camTarget(t, e) {
     const st = this.state;
     if (st === 'menu') return !!(t && t.closest && t.closest('#menu') && !t.closest('button,input,a,.seg,.skinRow,.tgRow,#sheet'));
-    if (st === 'play' || st === 'calib' || st === 'falling') return t === this.canvas && (this.mode === 'tilt' || e.type === 'wheel');
+    if (st === 'play' || st === 'calib' || st === 'falling') return t === this.canvas && (this.mode === 'tilt' || e.type === 'wheel' || (e.pointerType === 'mouse' && e.button > 0));
     return false;
   }
   // ------------------------------------------------------------- game modes
@@ -258,8 +291,9 @@ class Game {
     });
     window.addEventListener('blur', () => { if (this.state === 'play' && !this.mobile) this.pause(); });
     window.addEventListener('pagehide', () => this.audio.suspend());
-    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement) && !e.target.closest('#sheet, #abScroll, #insScroll')) e.preventDefault(); }, { passive: false });
+    document.addEventListener('touchmove', (e) => { if (!(e.target instanceof HTMLInputElement) && !e.target.closest('#sheet, #abScroll, #insScroll, #shSide')) e.preventDefault(); }, { passive: false });
     document.addEventListener('gesturestart', (e) => e.preventDefault());
+    document.addEventListener('contextmenu', (e) => { if (!e.target.closest('a, input, #abScroll, #insScroll')) e.preventDefault(); });
     document.addEventListener('dblclick', (e) => e.preventDefault());
     this.canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.glLost = true; if (this.state === 'play') this.pause(); });
     this.canvas.addEventListener('webglcontextrestored', () => {
@@ -283,6 +317,7 @@ class Game {
     const q = this.quality.cur;
     this.parts.max = Math.min(q.particles, this.parts.cap); if (this.parts.n > this.parts.max) this.parts.n = this.parts.max;
     this.env.setDust(q.dust); this.env.density = clamp(q.env / 22, 0.4, 1.2);
+    this.replay.setLevel(this.quality.level);
     this.resize(true);
   }
 
@@ -312,6 +347,7 @@ class Game {
     this.lastCP = b.s;
     this.startS = b.s; this.maxS = b.s; this.score = 0; this.dist = 0; this.mult = 1; this.recordShown = false;
     this.danger = 0; this.timeScale = 1; this.acc = 0; this.runT = 0;
+    this.fallOn = false; this.fallGap = 99; this.sRate = 0; this.prevS = b.s;
     // star power: coins fill the gauge, a streak of coins raises the coin multiplier
     this.power = 0; this.star = false; this.physics.star = false; this.starK = 0; this.starN = 0;
     this.coinStreak = 0; this.coinMult = 1; this.coins = 0;
@@ -319,7 +355,7 @@ class Game {
     this.audio.setTempo(1); this.ui.updatePower(0, 1, 'fill', '');
     this.parts.clear(); this.debris.length = 0; this.bobY = this.bobV = 0;
     this.tw.t = 9; this.nearCool = 0; this.slowK = this.rushK = this.impactK = 0; this.sq = this.sqV = 0; this.rings.length = 0;
-    this.replay.reset(); this.shareToken = (this.shareToken || 0) + 1; this.shareFile = null; this.shareInfo = null;
+    this.replay.reset(); this.shareBox.close(); this.shareInfo = null;
     this.updateChunks(99);
     this.env.reset(this.track, b.s, this.quality.cur.env, this.quality.cur.dust, this.R.meshes);
     this.floorY = b.surfY - 62; this.zoneIdx = 0; this.R.setZones(0, 0, 0);
@@ -350,7 +386,6 @@ class Game {
     this.best = this.modeBest();
     U.show('menu', false); U.show('over', false); U.show('pause', false); U.setOpts(false);
     U.hud(true);
-    U.el.ctrl.textContent = tr(mode === 'tilt' ? 'ctrlTilt' : mode === 'keys' ? 'ctrlKeys' : 'ctrlTouch') + (this.kid ? ' · 🛡 ' + tr('kidTag') : '');
     E.recal.classList.toggle('hidden', mode !== 'tilt');
     this.input.enabled = true; this.input.release();
     this.cam.mode = 'follow';
@@ -596,6 +631,12 @@ class Game {
       this.danger = clamp(1 - (gap - 3) / 11, 0, 1);
       this.warnT -= dt;
       if (this.danger > 0.45 && this.warnT <= 0) { this.audio.warn(); this.warnT = lerp(0.7, 0.25, this.danger); }
+      // warn early when the ball is too slow: the falling edge gains on it (with some hysteresis)
+      if (dt > 0) this.sRate += (clamp((b.s - this.prevS) / dt, -30, 60) - this.sRate) * damp(4, dt);
+      this.prevS = b.s; this.fallGap = gap;
+      const closing = vc - this.sRate, was = this.fallOn;
+      this.fallOn = was ? gap < FALL_WARN + 4 && !(closing < -1.5 && gap > 14) : vc > 0 && gap < FALL_WARN && (closing > 0.3 || gap < 12);
+      if (this.fallOn && !was) { this.audio.warn(); this.ui.el.touchHint.style.opacity = 0; }
     } else if (st !== 'paused') this.danger = Math.max(0, this.danger - dtR * 2);
 
     if (sim) {
@@ -627,14 +668,15 @@ class Game {
         this.audio.setWind(st === 'play' ? b.speed : 0, !b.grounded); this.audio.setSlow(this.slowK);
       }
     }
-    // while the replay video is being encoded, draw the backdrop at half rate
-    if (draw && st === 'over' && this.shareSt === 'busy' && (this.halfTick = !this.halfTick)) draw = false;
+    // the share popup covers the game: no need to draw it (the video encoder gets the time)
+    if (draw && st === 'over' && this.shareBox.open) draw = false;
     if (draw && (st === 'menu' || st === 'paused')) this.previews(dtR);
     if (draw) {
       this.render();
-      if (st === 'play' || st === 'falling') this.replay.capture(this.canvas, dtR, this.dist, st === 'falling');
+      if (st === 'play' || st === 'falling') this.replay.capture(this.canvas, dtR, this.dist, b.speed, st === 'falling');
     }
     this.ui.frame(dtR, this.danger);
+    this.ui.fallWarn(st === 'play' && this.fallOn && !b.lost, this.fallGap, this.fallGap / FALL_WARN);
     if (st === 'play' || st === 'calib') {
       this.ui.updateHud(this.dist, this.score, Math.max(this.best, this.dist), b.speed, this.mult, b.boost);
       this.ui.updatePower(this.power, this.coinMult, this.star ? 'on' : this.power >= 1 ? 'ready' : 'fill',
@@ -1084,61 +1126,20 @@ class Game {
   // ------------------------------------------------------------- sharing
   prepareShare(record) {
     const th = TRACK_THEMES[this.themeIdx], css = (c) => `rgb(${c.map((v) => Math.round(v * 255)).join(',')})`;
-    const info = {
+    this.shareInfo = {
       dist: Math.floor(this.dist), score: Math.floor(this.score), best: Math.floor(this.best), record, recordTxt: tr('newRecord'),
       tag: [this.gameMode === 'daily' ? tr('dailyTag', { date: dayLabel(this.runDay || dayKey()) }) : '', this.kid ? '🛡 ' + tr('kidShare').toUpperCase() : ''].filter(Boolean).join(' · '),
-      accent: css(th.accent), accent2: css(th.accent2), portrait: this.R.h >= this.R.w,
+      accent: css(th.accent), accent2: css(th.accent2),
     };
-    this.shareInfo = info; this.shareFile = null; this.shareToken = (this.shareToken || 0) + 1;
-    this.setShare('idle');
   }
-  // The video is only made when asked for (first tap). Making it takes longer than the browser
-  // keeps the tap "active", so sharing it needs a second tap unless it was quick (image fallback).
-  makeShare() {
-    const token = this.shareToken, t0 = performance.now();
-    this.setShare('busy', 0);
-    const done = (f) => {
-      if (token !== this.shareToken) return;
-      this.shareFile = f;
-      if (performance.now() - t0 < 900) this.share(); else this.setShare('ready');
-    };
-    const go = () => {
-      if (token !== this.shareToken) return;
-      if (this.replay.pending > 0) { setTimeout(go, 100); return; }          // last snapshots still encoding
-      this.replay.make(this.shareInfo, (p) => { if (token === this.shareToken) this.setShare('busy', p); })
-        .then(done).catch(() => done(null));
-    };
-    go();
-  }
-  setShare(st, p = 0) { this.shareSt = st; this.shareP = p; this.ui.shareState(st, p); }
-  share() {
-    const f = this.shareFile, info = this.shareInfo;
-    if (!info || this.shareSt === 'busy') return;
-    if (this.shareSt === 'idle') { this.makeShare(); return; }
-    const url = PROD_URL + (this.gameMode === 'daily' ? '?mode=daily' : '');
+  // SHARE opens the popup: a screenshot or a video of this run, then download or share it.
+  share() { if (this.state === 'over' && this.shareInfo) this.shareBox.show(this.shareInfo); }
+  shareText() {
+    const info = this.shareInfo, url = PROD_URL + (this.gameMode === 'daily' ? '?mode=daily' : '');
     let text = tr('shareText', { d: fmt(info.dist), s: fmt(info.score) });
     if (this.gameMode === 'daily') text += ' — ' + tr('shareDaily', { date: dayLabel(this.runDay || dayKey()) });
     if (this.kid) text += ' (🛡 ' + tr('kidShare') + ')';
-    text += ' ' + url;
-    let canFiles;
-    try { canFiles = !!(f && navigator.canShare && navigator.canShare({ files: [f] })); } catch (e) { canFiles = false; }
-    const kind = f ? (f.type.startsWith('video') ? 'video' : 'image') : 'text';
-    if (navigator.share && (canFiles || !f)) {
-      Analytics.event('share', { kind, via: 'share' });
-      navigator.share(canFiles ? { files: [f], text, title: 'GYROLL' } : { text, title: 'GYROLL' })
-        .catch((e) => { if (!e || e.name !== 'AbortError') this.download(f, text); });
-      return;
-    }
-    Analytics.event('share', { kind, via: 'download' });
-    this.download(f, text);
-  }
-  download(f, text) {
-    try { if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {}); } catch (e) { /* ignore */ }
-    if (!f) return;
-    const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 8000);
-    this.setShare('saved');
+    return text + ' ' + url;
   }
 
   // ------------------------------------------------------------- misc

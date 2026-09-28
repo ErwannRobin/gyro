@@ -81,30 +81,6 @@ test('daily run always starts from the beginning', async ({ page }) => {
   expect(await page.evaluate(() => window.__game.ball.s - CFG.START_S)).toBeLessThan(1);
 });
 
-test('the share video is only made when the button is pressed', async ({ page }) => {
-  await openGame(page);
-  await page.evaluate(() => { const g = window.__game; for (let k = 0; k < 12; k++) g.replay.capture(g.canvas, 1, k * 10, false); });
-  await fallAt(page, 60);
-  await expect(page.locator('#over')).toBeVisible();
-  expect(await page.evaluate(() => [window.__game.shareSt, window.__game.replay.job])).toEqual(['idle', null]);
-  await expect(page.locator('#btnShare')).toContainText('SHARE MY SCORE');
-  await page.click('#btnShare');
-  expect(await page.evaluate(() => window.__game.shareSt)).not.toBe('idle');
-  await page.waitForFunction(() => ['ready', 'saved'].includes(window.__game.shareSt), null, { timeout: 60_000 });
-  if (await page.evaluate(() => window.__game.shareSt === 'ready')) await expect(page.locator('#btnShare')).toContainText('SHARE THE VIDEO');
-  // the video carries its own music (its sound track decodes to a real, non-silent signal)
-  const au = await page.evaluate(async () => {
-    const f = window.__game.shareFile;
-    if (!f || !f.type.startsWith('video')) return f ? f.type : 'none';
-    const b = await new AudioContext().decodeAudioData(await f.arrayBuffer()), d = b.getChannelData(0);
-    let e = 0; for (let i = 0; i < d.length; i++) e += d[i] * d[i];
-    return { dur: b.duration, rms: Math.sqrt(e / d.length) };
-  });
-  expect(au).toEqual({ dur: expect.any(Number), rms: expect.any(Number) });
-  expect(au.dur).toBeGreaterThan(2.5);
-  expect(au.rms).toBeGreaterThan(0.01);
-});
-
 test('on the menu, turning and tilting the phone moves the camera around the ball', async ({ page }) => {
   await openGame(page);
   const r = await page.evaluate(() => {

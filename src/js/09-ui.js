@@ -73,12 +73,13 @@ class UI {
     this.$ = $;
     this.el = {
       hud: $('hud'), dist: $('hDist'), score: $('hScore'), best: $('hBest'), speed: $('hSpeed'), bar: $('hSpeedBar'), mult: $('mult'),
-      ctrl: $('ctrlTag'), toasts: $('toasts'), danger: $('danger'), flash: $('flash'), menu: $('menu'), calib: $('calib'),
+      toasts: $('toasts'), danger: $('danger'), flash: $('flash'), menu: $('menu'), calib: $('calib'),
       calibNum: $('calibNum'), calibTxt: $('calibTxt'), calibSub: $('calibSub'), go: $('go'), pause: $('pause'), over: $('over'),
       record: $('record'), ovDist: $('ovDist'), ovScore: $('ovScore'), ovBest: $('ovBest'), ovMode: $('ovMode'), ovRails: $('ovRails'), mBest: $('mBest'), perm: $('permMsg'),
       btnPlay: $('btnPlay'), btnOpts: $('btnOpts'), sheet: $('sheet'), touchHint: $('touchHint'), modeInfo: $('modeInfo'), modeTxt: $('modeTxt'), newTrack: $('btnNewTrack'), share: $('btnShare'), recal: $('btnRecal'),
       power: $('power'), pwCoin: $('pwCoin'), pwTxt: $('pwTxt'), pwFill: $('pwFill'), about: $('about'), btnAbout: $('btnAbout'),
       install: $('install'), insPhone: $('insPhone'), insSteps: $('insSteps'),
+      fallWarn: $('fallWarn'), fwTxt: $('fwTxt'), fwBar: $('fwBar'),
     };
     $('abRepo').href = REPO_URL; $('abX').href = X_URL;
     this.cache = {};
@@ -94,6 +95,8 @@ class UI {
       clearTimeout(e._t); e._t = setTimeout(() => { if (e.classList.contains('fade')) e.classList.add('hidden'); }, 450);
     }
   }
+  // Phones in landscape: two columns, the settings slide in from the right as a side panel.
+  sidePanel() { return matchMedia('(orientation: landscape) and (max-height: 640px)').matches; }
   // Menu offsets (portrait): PLAY in the middle of the screen (lower if the header needs the room),
   // and for options mode the title's move into the top bar, the mode switch's move under it and the
   // top of the sheet. Layout offsets ignore transforms, so the values hold while the animations play.
@@ -103,7 +106,7 @@ class UI {
     const top = (el) => { let y = 0; for (let e = el; e && e !== m; e = e.offsetParent) y += e.offsetTop; return y; };
     const set = (k, v) => m.style.setProperty(k, Math.round(v) + 'px');
     const bar = $('menuTop');
-    if (matchMedia('(orientation: landscape) and (max-height: 640px)').matches) {
+    if (this.sidePanel()) {
       for (const k of ['--playY', '--tY', '--hY', '--sheetTop']) set(k, 0);
       // OPTIONS sits in its slot under BEST; as DONE it glides to the middle of the top bar
       const slot = $('optSlot'), left = (el) => { let x = 0; for (let e = el; e && e !== m; e = e.offsetParent) x += e.offsetLeft; return x; };
@@ -112,11 +115,14 @@ class UI {
       set('--dX', m.clientWidth / 2 - x); set('--dY', top(bar) + bar.offsetHeight / 2 - this.el.btnOpts.offsetHeight / 2 - y);
       return;
     }
-    const title = $('title'), seg = $('modeSeg'), info = this.el.modeInfo, links = $('optLinks'), head = top(info) + info.offsetHeight;
+    const title = $('title'), info = this.el.modeInfo, links = $('optLinks'), head = top(info) + info.offsetHeight;
     set('--playY', Math.max(H / 2 - this.el.btnPlay.offsetHeight / 2, head + 14));
     set('--tY', top(bar) + bar.offsetHeight / 2 - top(title) - title.offsetHeight / 2);
-    const hY = top(bar) + bar.offsetHeight + 12 - top(seg);
-    set('--hY', hY); set('--sheetTop', top(links) + links.offsetHeight + hY + 16);
+    // ABOUT and INSTALL sit in the middle of the free space between the top bar and the sheet
+    // (right under the bar when that space is tight; the sheet then scrolls)
+    const barB = top(bar) + bar.offsetHeight, free = H - this.el.sheet.scrollHeight - barB, lh = links.offsetHeight;
+    const y = free - lh > 40 ? barB + (free - lh) / 2 : barB + 16, hY = y - top(links);
+    set('--hY', hY); set('--sheetTop', y + lh + 16);
   }
   // About: a circle opens from the About button, the marble draws its track, the numbers count up.
   get aboutOpen() { return this.el.about.classList.contains('open'); }
@@ -263,6 +269,14 @@ class UI {
       document.body.classList.toggle('star', st === 'on');
     }
   }
+  // Collapse warning: shown while the falling edge catches up; gap = meters left, k = gap / warning range.
+  fallWarn(on, gap, k) {
+    if (this.cache.fw !== on) { this.cache.fw = on; this.el.fallWarn.classList.toggle('on', on); }
+    if (!on) return;
+    this.set('fwt', this.el.fwTxt, tr('fallWarnSub', { m: Math.max(0, Math.round(gap)) }));
+    const w = Math.round(clamp(k, 0, 1) * 50) * 2 + '%';
+    if (this.cache.fwb !== w) { this.cache.fwb = w; this.el.fwBar.style.width = w; }
+  }
   toast(txt, cls = '', big = false) {
     const el = document.createElement('div');
     el.className = 'toast ' + cls + (big ? ' big' : ''); el.textContent = txt;
@@ -318,18 +332,5 @@ class UI {
     if (this.ti === undefined) return;
     const txt = TRACK_THEMES[this.ti].name[LANG] + '  ·  ' + BALL_SKINS[this.bi].name[LANG];
     for (const set of this.skinSets) set.name.textContent = txt;
-  }
-  shareState(state, p = 0) {
-    const b = this.el.share, prog = b.querySelector('.prog');
-    const key = state + LANG;
-    if (this.cache.share !== key) {
-      this.cache.share = key;
-      b.classList.toggle('busy', state === 'busy'); b.disabled = state === 'busy';
-      b.classList.toggle('ready', state === 'ready');
-      b.querySelector('.lbl').textContent = tr({ busy: 'shareBusy', saved: 'shareSaved', ready: 'shareReady' }[state] || 'share');
-      b.classList.toggle('hidden', state === 'none');
-    }
-    const w = state === 'busy' ? Math.round(p * 20) * 5 + '%' : '0';          // 5 % steps: few DOM writes
-    if (this.cache.shareW !== w) { this.cache.shareW = w; prog.style.width = w; }
   }
 }

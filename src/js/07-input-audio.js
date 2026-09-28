@@ -41,6 +41,7 @@ class InputManager {
     window.addEventListener('blur', () => { this.keys.clear(); this.release(); });
     canvas.addEventListener('pointerdown', (e) => {
       if (!this.enabled || this.ptr !== null || this.tilt) return;     // with the gyroscope, fingers move the camera (CamGestures)
+      if (e.pointerType === 'mouse' && e.button !== 0) return;          // the middle and right buttons move the camera
       e.preventDefault();
       const now = performance.now();
       if (now - this.lastTap < 320) this.doubleTap = true;
@@ -210,15 +211,19 @@ class InputManager {
 // zooms. `accept(target, event)` says whether a press belongs to the camera; the game takes the
 // totals every frame. Quick taps are counted (two in a row make a double tap).
 // =====================================================================
+// Camera gestures: one finger (or a mouse button) drags the view, two fingers pinch to zoom.
+// On a computer the mouse wheel zooms, while a trackpad's two-finger swipe turns the view and its
+// pinch zooms.
 class CamGestures {
   constructor(accept) {
-    this.accept = accept; this.pts = new Map(); this.pinchD = 0; this.lastTap = -1e4; this.onTap = null;
+    this.accept = accept; this.pts = new Map(); this.pinchD = 0; this.lastTap = -1e4; this.onTap = null; this.padT = -1e4; this.wheelT = -1e4; this.pad = false;
     this.take();
     window.addEventListener('pointerdown', (e) => {
       if (!this.accept(e.target, e)) return;
+      if (e.button === 1) e.preventDefault();                   // no auto-scroll on a middle click
       const multi = this.pts.size > 0;
       for (const p of this.pts.values()) p.multi = true;
-      this.pts.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t: performance.now(), multi });
+      this.pts.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, t: performance.now(), multi, btn: e.button });
       this.pinchD = this.spread();
     });
     window.addEventListener('pointermove', (e) => {
@@ -233,7 +238,7 @@ class CamGestures {
       if (!p) return;
       this.pts.delete(e.pointerId); this.pinchD = this.spread();
       const now = performance.now();
-      if (e.type === 'pointerup' && !p.multi && now - p.t < 280 && Math.hypot(p.x - p.x0, p.y - p.y0) < 12) {
+      if (e.type === 'pointerup' && !p.multi && !p.btn && now - p.t < 280 && Math.hypot(p.x - p.x0, p.y - p.y0) < 12) {
         this.taps++; if (now - this.lastTap < 350) this.double = true;
         this.lastTap = now;
         if (this.onTap) this.onTap();
@@ -242,8 +247,22 @@ class CamGestures {
     window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up); window.addEventListener('blur', () => this.reset());
     window.addEventListener('wheel', (e) => {
       if (!this.accept(e.target, e)) return;
-      e.preventDefault(); this.zoom *= Math.exp(clamp(e.deltaY, -120, 120) * 0.0016);
+      e.preventDefault();
+      const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1, dx = e.deltaX * k, dy = e.deltaY * k;
+      if (e.ctrlKey) { this.zoom *= Math.exp(clamp(dy, -50, 50) * 0.012); return; }      // trackpad pinch (or Ctrl + wheel)
+      if (this.isPad(e)) { this.dx -= dx; this.dy -= dy; return; }                     // two-finger swipe: drag the view
+      this.zoom *= Math.exp(clamp(dy, -120, 120) * 0.0016);                            // mouse wheel
     }, { passive: false });
+  }
+  // A trackpad sends small pixel steps, often sideways; a mouse wheel sends big line or pixel steps.
+  // The first event of a gesture decides for the whole gesture. A guess: some mice on some systems
+  // look like trackpads (their wheel then turns the view; Ctrl + wheel still zooms).
+  isPad(e) {
+    const now = performance.now();
+    if (now - this.wheelT > 300) this.pad = e.deltaMode === 0 && (e.deltaX !== 0 || Math.abs(e.deltaY) < 40 || !Number.isInteger(e.deltaY));
+    else if (e.deltaX !== 0 && e.deltaMode === 0) this.pad = true;
+    this.wheelT = now;
+    return this.pad;
   }
   spread() { if (this.pts.size < 2) return 0; const [a, b] = this.pts.values(); return Math.hypot(a.x - b.x, a.y - b.y); }
   get held() { return this.pts.size > 0; }

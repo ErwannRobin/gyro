@@ -44,10 +44,8 @@ test('share text links to the production URL', async ({ page }) => {
   await openGame(page, '/?mode=daily');
   const texts = await page.evaluate(() => {
     const g = window.__game, out = [];
-    navigator.share = (d) => { out.push(d.text); return Promise.resolve(); };
-    navigator.canShare = () => true;
-    g.shareInfo = { dist: 1284, score: 48920 }; g.shareSt = 'ready'; g.runDay = dayKey(); g.share();
-    g.setGameMode('random'); g.shareInfo = { dist: 1284, score: 48920 }; g.shareSt = 'ready'; g.share();
+    g.shareInfo = { dist: 1284, score: 48920 }; g.runDay = dayKey(); out.push(g.shareText());
+    g.setGameMode('random'); g.shareInfo = { dist: 1284, score: 48920 }; out.push(g.shareText());
     return out;
   });
   expect(texts[0]).toContain(PROD_URL_EXPECTED + '?mode=daily');

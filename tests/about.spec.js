@@ -20,8 +20,12 @@ test('ABOUT opens from the options: the story, the real size of index.html and t
   await expect(about).toHaveClass(/open/);
   // the circle grows from the button until the screen covers everything, over the options
   await expect.poll(() => page.evaluate(() => [[5, 5], [385, 775], [195, 400]].map(([x, y]) => !!document.elementFromPoint(x, y).closest('#about')))).toEqual([true, true, true]);
-  await expect(about).toContainText('25 September 2026');
+  // the rules and how it is made, as cards; no author name and no prompt story
+  await expect(page.locator('.abSec h3')).toHaveText(['HOW TO PLAY', 'HOW IT IS MADE']);
+  await expect(page.locator('.abCard h4')).toHaveText(['Roll, and don’t stop', 'Coins and star power', 'Checkpoints and modes', 'Close calls and boosts', 'Nine worlds', 'Tracks and marbles',
+    'Written by an AI', '3D engine', 'Physics', 'Sound engine', 'Screenshots and videos', 'Gyroscope']);
   await expect(about).toContainText('Claude Code');
+  for (const t of ['Erwann', 'Robin', 'prompt', '2026']) await expect(about).not.toContainText(t);
   // the numbers count up to the real values, while the marble rolls along the track it draws
   const marble = () => page.locator('#abMarble').getAttribute('transform');
   const m0 = await marble();
@@ -51,9 +55,25 @@ test('ABOUT in French, and it scrolls on a short landscape screen', async ({ pag
   await openOptions(page);
   await expect(page.locator('#btnAbout')).toHaveText('À PROPOS');
   await page.click('#btnAbout');
-  await expect(page.locator('#about')).toContainText('25 septembre 2026');
+  await expect(page.locator('.abSec h3')).toHaveText(['COMMENT JOUER', 'COMMENT C’EST FAIT']);
+  await expect(page.locator('#about')).toContainText('Moteur sonore');
   await expect(page.locator('#abX')).toContainText('Suivre @diwann');
   const s = await page.evaluate(() => { const e = document.getElementById('abScroll'); return [e.scrollHeight > e.clientHeight, e.scrollWidth <= e.clientWidth]; });
   expect(s).toEqual([true, true]);
+  expect(errors).toEqual([]);
+});
+
+test('ABOUT uses a wide screen: the cards stand in three columns', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const errors = await openGame(page);
+  await openOptions(page);
+  await page.click('#btnAbout');
+  await expect(page.locator('#about')).toHaveClass(/open/);
+  const cols = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('.abSec:first-of-type .abCard')].map((c) => c.getBoundingClientRect());
+    return { tops: new Set(cards.slice(0, 3).map((r) => Math.round(r.top))).size, lefts: new Set(cards.map((r) => Math.round(r.left))).size, width: cards[0].width };
+  });
+  expect(cols).toEqual({ tops: 1, lefts: 3, width: expect.any(Number) });
+  expect(cols.width).toBeGreaterThan(300);
   expect(errors).toEqual([]);
 });
